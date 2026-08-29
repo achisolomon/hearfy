@@ -1,6 +1,7 @@
-# HEARMI Patient MVP
+# HearFy Patient Demo
 
-Investor-grade interactive patient journey based on the HEARMI pitch-deck visual language.
+Investor-grade interactive patient journey based on the pitch-deck visual language.
+The brand name is configurable via `BRAND_NAME` in `lib/mock-data.ts`.
 
 ## Included
 - 27 connected patient screens

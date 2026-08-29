@@ -1,2 +1,2 @@
-import { HearMiApp } from "@/components/screens";
-export default function Page() { return <HearMiApp/>; }
+import { PatientApp } from "@/components/screens";
+export default function Page() { return <PatientApp/>; }

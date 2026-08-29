@@ -1,0 +1,8 @@
+"use client";
+import { CalendarDays,ChevronRight,Headphones,MessageCircle,Video,LifeBuoy } from "lucide-react";
+import { Card,PageHeader,SecondaryButton,SecureFooter } from "../../ui";
+import { BRAND_NAME } from "@/lib/mock-data";
+import { ScreenId } from "../registry";
+import { Shell } from "../shared";
+
+export function Support({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="We’re here after delivery" subtitle={`Your ${BRAND_NAME} care team stays with you through setup and adjustment.`} onBack={back} eyebrow="Ongoing care"/><Card className="overflow-hidden bg-gradient-to-br from-[#e5f8f6] to-white p-5"><LifeBuoy className="text-brand-teal" size={30}/><h2 className="mt-5 text-2xl font-extrabold">Your 30-day support plan</h2><p className="mt-2 text-sm leading-6 text-slate-500">Guided setup, remote adjustments, and a follow-up hearing check are included.</p></Card><div className="mt-4 grid grid-cols-2 gap-3">{[[MessageCircle,"Message care team"],[Video,"Video support"],[CalendarDays,"Book follow-up"],[Headphones,"Device tutorials"]].map(([I,t]:any)=><button key={t} className="rounded-[22px] bg-white p-4 text-left shadow-card"><I className="text-brand-teal"/><b className="mt-5 block text-sm">{t}</b></button>)}</div><Card className="mt-4 flex items-center gap-3 p-4"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#e9f8f7] text-brand-teal"><MessageCircle/></span><div className="flex-1"><b className="text-sm">{BRAND_NAME} Care</b><p className="text-xs text-slate-500">Typical reply in under 2 minutes</p></div><ChevronRight/></Card><div className="mt-6"><SecondaryButton onClick={()=>go("home")}>Return home</SecondaryButton></div><SecureFooter/></Shell>}

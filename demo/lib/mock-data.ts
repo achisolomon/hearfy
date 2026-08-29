@@ -1,3 +1,7 @@
+// The product name is expected to change again (prior names: RightHear, HearMi).
+// All UI must read it from this one constant so a rename is a one-line edit.
+export const BRAND_NAME = "HearFy";
+
 export const patient = { name: "Alex", city: "Miami, FL" };
 export const cma = { name: "Maya L.", role: "Certified Medical Assistant", rating: 4.9, reviews: 128 };
 export const appointment = { date: "Wed, May 21", fullDate: "May 21, 2025", time: "9:00 – 10:00 AM", price: 99 };

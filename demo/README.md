@@ -15,7 +15,6 @@ Investor-grade interactive patient journey based on the HEARMI pitch-deck visual
 
 ## Run
 ```bash
-npm install
-npm run dev
+cd demo && npm install && npm run dev
 ```
 Open http://localhost:3000

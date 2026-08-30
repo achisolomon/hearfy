@@ -109,6 +109,25 @@ describe("progress counters", () => {
   });
 });
 
+describe("story consistency", () => {
+  const app = sourceOf("components/patient-app-2.tsx");
+  const welcome = sourceOf("components/screens/patient/welcome.tsx");
+
+  // Home showed "Visit scheduled · Tomorrow" with a date and an assigned CMA
+  // at stage 1 — Awareness — two beats before the visit is confirmed. The
+  // viewer had not chosen a date, or completed intake, or paid.
+  it("does not claim a booking before the story confirms one", () => {
+    expect(welcome).toContain("booked");
+    expect(app).toContain('booked={beat >= beatIndexById("confirmed")}');
+  });
+
+  it("reads the appointment from the fixture rather than repeating it", () => {
+    // The date lived in three places; the booked card now uses the one source.
+    expect(welcome).toContain("appointment.date");
+    expect(welcome).not.toMatch(/May 21 · 9:00/);
+  });
+});
+
 describe("shell controls", () => {
   // The shell offered Next and no way back, though the context exposed back().
   it("wires every navigation the story context exposes", () => {

@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ScreenId, order } from "./screens/registry";
 import { BottomNav } from "./screens/shared";
-import { beatForScreen, type AnyScreenId } from "@/lib/story";
+import { beatForScreen, beatIndexById, type AnyScreenId } from "@/lib/story";
 import { useStory } from "./shell/story-context";
 import { Welcome, SignIn, HomeScreen } from "./screens/patient/welcome";
 import { IntakeFor, IntakeNeeds, IntakeMedical, IntakeCoverage, IntakePlan } from "./screens/patient/intake";
@@ -69,7 +69,8 @@ export function PatientApp2() {
   const screens = useMemo(() => ({
     welcome: <Welcome go={go}/>,
     signin: <SignIn go={go} back={back}/>,
-    home: <HomeScreen go={go}/>,
+    // The visit is only booked once the story has passed the confirmation beat.
+    home: <HomeScreen go={go} booked={beat >= beatIndexById("confirmed")}/>,
     "intake-for": <IntakeFor go={go} back={back}/>,
     "intake-needs": <IntakeNeeds go={go} back={back}/>,
     "intake-medical": <IntakeMedical go={go} back={back}/>,

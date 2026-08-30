@@ -6,6 +6,7 @@ import { BRAND_NAME } from "@/lib/mock-data";
 import { BEATS, STAGES, ROLES } from "@/lib/story";
 import { personaFor } from "@/lib/personas";
 import { resetAllLatches } from "@/lib/latch";
+import { resetTextSize } from "../a11y/text-size";
 import { PersonaAvatar } from "../persona-avatar";
 import { useStory } from "./story-context";
 
@@ -16,8 +17,9 @@ export function Cover() {
   const { start, startAs } = useStory();
   // The clinical gates latch for the length of a walkthrough, not the page.
   // Every fresh run begins here, so a second demo starts unsigned rather than
-  // skipping the signing beat outright.
-  useEffect(() => { resetAllLatches(); }, []);
+  // skipping the signing beat outright. The text-size choice lives outside
+  // React the same way, so it resets alongside the gates.
+  useEffect(() => { resetAllLatches(); resetTextSize(); }, []);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full max-w-md text-center">

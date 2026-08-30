@@ -10,6 +10,8 @@ import { CmaHandoff } from "../screens/cma/handoff";
 import { AudPanel, AudMonitor } from "../screens/audiologist/supervision";
 import { AudReview, AudSign } from "../screens/audiologist/review";
 import { AudConsult, AudPrescription } from "../screens/audiologist/consult";
+import { CmaStock, CmaTryOn, CmaActivate, CmaCloseout } from "../screens/cma/suitcase";
+import { OperatorDashboard } from "../screens/operator/dashboard";
 
 /** Placeholder for screens Plan D has not built yet. */
 function Stub({ screen }: { screen: string }) {
@@ -46,6 +48,10 @@ export function RoleView() {
       case "cma-speech": return <CmaSpeech next={next} />;
       case "cma-bone": return <CmaBone next={next} />;
       case "cma-handoff": return <CmaHandoff />;
+      case "cma-stock": return <CmaStock next={next} />;
+      case "cma-tryon": return <CmaTryOn next={next} />;
+      case "cma-activate": return <CmaActivate next={next} />;
+      case "cma-closeout": return <CmaCloseout next={next} />;
       default: return <Stub screen={id} />;
     }
   }
@@ -61,6 +67,8 @@ export function RoleView() {
       default: return <Stub screen={id} />;
     }
   }
+
+  if (role === "operator") return <OperatorDashboard />;
 
   return <Stub screen={id} />;
 }

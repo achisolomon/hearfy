@@ -72,39 +72,40 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     setRoleState(BEATS[i].lead);
   }, []);
 
+  /**
+   * Every branch computes the target beat first, then dispatches. Calling a
+   * setter from inside another setter's updater would fire twice under
+   * StrictMode's double-invocation — harmless only while every such call
+   * happens to be idempotent, which is not a property worth depending on.
+   */
   const next = useCallback(() => {
-    setBeat(current => {
-      // Solo: walk only this role's own beats; never switch role.
-      if (mode === "solo") {
-        const i = nextBeatForRole(current, role);
-        if (i === current) setPhase("endcap");
-        return i;
-      }
-      if (isLastBeat(current)) {
-        setPhase("endcap");
-        return current;
-      }
-      const i = nextBeat(current);
-      const lead = BEATS[i].lead;
-      // Guided mode auto-switches the viewer's role at handoffs.
-      setRoleState(previous => {
-        if (previous !== lead) setHandoff(lead);
-        return lead;
-      });
-      return i;
-    });
-  }, [mode, role]);
+    // Solo: walk only this role's own beats; never switch role.
+    if (mode === "solo") {
+      const i = nextBeatForRole(beat, role);
+      if (i === beat) setPhase("endcap");
+      else setBeat(i);
+      return;
+    }
+    if (isLastBeat(beat)) {
+      setPhase("endcap");
+      return;
+    }
+    const i = nextBeat(beat);
+    const lead = BEATS[i].lead;
+    // Guided mode auto-switches the viewer's role at handoffs.
+    if (role !== lead) setHandoff(lead);
+    setRoleState(lead);
+    setBeat(i);
+  }, [beat, mode, role]);
 
   const back = useCallback(() => {
-    setBeat(current => mode === "solo" ? prevBeatForRole(current, role) : prevBeat(current));
-  }, [mode, role]);
+    setBeat(mode === "solo" ? prevBeatForRole(beat, role) : prevBeat(beat));
+  }, [beat, mode, role]);
 
   const goToScreen = useCallback((screen: AnyScreenId) => {
-    setBeat(current => {
-      const i = beatForScreen(role, screen);
-      // A screen outside the script leaves the pointer where it is.
-      return i === -1 ? current : i;
-    });
+    const i = beatForScreen(role, screen);
+    // A screen outside the script leaves the pointer where it is.
+    if (i !== -1) setBeat(i);
   }, [role]);
 
   const start = useCallback(() => {

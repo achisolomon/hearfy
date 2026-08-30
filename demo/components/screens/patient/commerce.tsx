@@ -13,8 +13,8 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     <div className="-mx-5 overflow-x-auto px-5">
       <table className="w-full min-w-[560px] border-separate border-spacing-y-2 text-left text-sm">
         <thead><tr>
-          <th className="w-32"/>
-          {shortlist.map(d=><th key={d.name} className="p-2 align-bottom">
+          <th scope="col" className="w-32"/>
+          {shortlist.map(d=><th key={d.name} scope="col" className="p-2 align-bottom">
             <b className="block text-[13px] leading-tight">{d.name}</b>
             <span className="text-[11px] font-normal text-slate-400">
               ${tierFor(deviceDetail[d.name].tier).monthly}/mo
@@ -22,14 +22,14 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         </tr></thead>
         <tbody>
           {compareCategories.map(cat=><tr key={cat}>
-            <th className="rounded-l-xl bg-white p-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</th>
+            <th scope="row" className="rounded-l-xl bg-white p-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</th>
             {shortlist.map(d=><td key={d.name} className="bg-white p-3 align-top text-[13px] leading-5 text-slate-600 last:rounded-r-xl">
               {deviceDetail[d.name].compare[cat]}</td>)}
           </tr>)}
         </tbody>
       </table>
     </div>
-    <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Choose this one</PrimaryButton></div>
+    <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {devices[0].name}</PrimaryButton></div>
   </Shell>;
 }
 

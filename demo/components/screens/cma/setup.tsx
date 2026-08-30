@@ -19,7 +19,7 @@ export function CmaCalibration({ next }: { next: () => void }) {
             className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left">
             <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${
               done[i] ? "bg-[#dcf5ef] text-emerald-600" : "bg-[#f1f5f6] text-slate-300"}`}>
-              <Check size={16} />
+              {done[i] && <Check size={16} />}
             </span>
             <b className="text-sm">{item}</b>
           </button>

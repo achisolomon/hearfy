@@ -71,7 +71,7 @@ export function CmaBone({ next }: { next: () => void }) {
   return (
     <Shell>
       <PageHeader title={s.title} subtitle={s.procedure} eyebrow="Step 4 of 4 · added" />
-      <SupervisionBar />
+      <SupervisionBar intervening />
       <Card className="mb-4 p-4">
         <p className="text-sm leading-6 text-slate-500">
           The audiologist added this step after reviewing the pure tone result. Run it as instructed.

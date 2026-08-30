@@ -1,11 +1,161 @@
 "use client";
-import { useState } from "react";
-import { Check,PackageCheck } from "lucide-react";
+import { Check } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { devices } from "@/lib/mock-data";
+import { devices, deviceDetail, orderStates, compareCategories } from "@/lib/mock-data";
+import { creditedFirstMonth, tierFor } from "@/lib/commerce";
+import { selectDevice, useSelectedDevice } from "@/lib/selection";
+import { cn } from "@/lib/cn";
 import { ScreenId } from "../registry";
 import { Shell } from "../shared";
 
-export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [a,setA]=useState(0);return <Shell><PageHeader title="Compare your options" subtitle="All devices are clinically appropriate for your results." onBack={back} eyebrow="Device selection"/><div className="space-y-3">{devices.map((d,i)=><button onClick={()=>setA(i)} key={d.name} className={`w-full rounded-[22px] border bg-white p-4 text-left ${a===i?"border-brand-teal":"border-[#dfe9eb]"}`}><div className="flex items-start justify-between"><div><span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-teal">{d.badge}</span><h3 className="mt-1 font-extrabold">{d.name}</h3><p className="mt-1 text-sm text-slate-500">{d.price}</p></div><span className={`grid h-6 w-6 place-items-center rounded-full border ${a===i?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>{a===i&&<Check size={15}/>}</span></div><div className="mt-4 flex items-center gap-3"><div className="h-2 flex-1 rounded-full bg-[#e4ecec]"><div className="h-full rounded-full bg-brand-teal" style={{width:`${d.fit}%`}}/></div><b className="text-xs">{d.fit}% fit</b></div></button>)}</div><div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Choose {devices[a].name}</PrimaryButton></div></Shell>}
-export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Complete your order" subtitle="Your audiologist’s recommendation is attached automatically." onBack={back} eyebrow="Secure checkout"/><Card className="p-5"><div className="flex items-center gap-4"><div className="h-20 w-16 rounded-[30px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b]"/><div className="flex-1"><b>Phonak Audéo L50</b><p className="mt-1 text-xs text-slate-500">Pair · Champagne</p></div><b>$1,590</b></div><div className="my-5 border-t border-[#e5eeee]"/><div className="space-y-3 text-sm"><div className="flex justify-between"><span className="text-slate-500">Device pair</span><span>$1,590</span></div><div className="flex justify-between"><span className="text-slate-500">Remote fitting</span><span>Included</span></div><div className="flex justify-between"><span className="text-slate-500">Shipping</span><span>Free</span></div><div className="flex justify-between pt-2 text-lg font-extrabold"><span>Total</span><span>$1,590</span></div></div></Card><Card className="mt-4 flex gap-3 p-4"><PackageCheck className="text-brand-teal"/><div><b className="text-sm">30-day care guarantee</b><p className="mt-1 text-xs leading-5 text-slate-500">Includes delivery, activation, fitting, and follow-up support.</p></div></Card><div className="mt-6"><PrimaryButton onClick={()=>go("order")}>Place order</PrimaryButton></div></Shell>}
-export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Your order is confirmed" subtitle="We’ll keep you updated at every step." onBack={back} eyebrow="Order HM-84721"/><div className="rounded-[28px] bg-brand-navy p-6 text-white"><div className="grid h-14 w-14 place-items-center rounded-full bg-white/10"><PackageCheck size={29}/></div><h2 className="mt-5 text-2xl font-extrabold">Estimated delivery<br/>May 24–26</h2><p className="mt-2 text-sm text-white/65">Free insured shipping</p></div><Card className="mt-4 p-5"><div className="space-y-6">{[["Order received","Today · 11:42 AM",true],["Clinical configuration","In progress",true],["Shipped","Next",false],["Delivered & activated","Pending",false]].map(([t,s,done]:any,i)=><div key={t} className="flex gap-4"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${done?"bg-brand-teal text-white":"bg-[#edf2f2] text-slate-400"}`}>{done?<Check size={16}/>:i+1}</span><div><b className={done?"":"text-slate-400"}>{t}</b><p className="mt-1 text-xs text-slate-500">{s}</p></div></div>)}</div></Card><div className="mt-6"><PrimaryButton onClick={()=>go("support")}>View support plan</PrimaryButton></div></Shell>}
+export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const shortlist = devices.slice(0,3);
+  const selected = useSelectedDevice();
+  // Shell's `wide` prop is opt-in and only widens this screen from `lg` up;
+  // every other screen stays phone-width. Below `lg`, stacked cards; from
+  // `lg`, the side-by-side table — both trees are in the DOM, toggled by
+  // Tailwind visibility. Device columns are `fr` units on purpose (no
+  // px/rem floor), so the table can never overflow or need a scrollbar.
+  return <Shell wide>
+    <PageHeader title="Compare devices" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
+
+    {/* Desktop / tablet-landscape: a real side-by-side table. Fluid grid
+       columns (fr units) mean the table can only ever get narrower or wider
+       with its container — never wider than the viewport, never a fixed
+       floor to clip or scroll past. */}
+    <div className="hidden lg:block">
+      <Card className="overflow-hidden p-0">
+        <div className="grid grid-cols-[9rem_repeat(3,1fr)]">
+          <div/>
+          {shortlist.map(d=>{
+            const isSel = d.name===selected.name;
+            const detail = deviceDetail[d.name];
+            return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 text-left transition",
+              isSel?"bg-brand-teal/10":"")}>
+              <b className="block text-[15px] leading-tight">{d.name}</b>
+              <span className="mt-1 block text-[12px] text-slate-500">
+                ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
+              </span>
+              <button
+                type="button"
+                aria-pressed={isSel}
+                onClick={()=>selectDevice(d.name)}
+                className={cn("mt-3 w-full rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
+                  isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500 hover:bg-[#e4eef0]")}>
+                {isSel?"Selected":"Select"}
+              </button>
+            </div>;
+          })}
+        </div>
+        {compareCategories.map(cat=><div key={cat} className="grid grid-cols-[9rem_repeat(3,1fr)] border-t border-[#eef4f5]">
+          <div className="p-4"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</span></div>
+          {shortlist.map(d=>{
+            const isSel = d.name===selected.name;
+            const detail = deviceDetail[d.name];
+            return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 transition",isSel?"bg-brand-teal/5":"")}>
+              <p className="text-[13px] leading-5 text-slate-600">{detail.compare[cat]}</p>
+            </div>;
+          })}
+        </div>)}
+      </Card>
+    </div>
+
+    {/* Phone / tablet-portrait: stacked one-card-per-device, unchanged from
+       the previous attempt — no scroll structurally, since every value
+       wraps in a single column instead of fighting for table width. */}
+    <div className="space-y-4 lg:hidden">
+      {shortlist.map(d=>{
+        const isSel = d.name===selected.name;
+        const detail = deviceDetail[d.name];
+        return <Card key={d.name} className={cn("overflow-hidden p-0 transition",
+          isSel?"border-brand-teal ring-2 ring-brand-teal":"border-[#e4eef0]")}>
+          <button
+            type="button"
+            aria-pressed={isSel}
+            onClick={()=>selectDevice(d.name)}
+            className={cn("flex w-full items-center justify-between gap-3 p-4 text-left transition",
+              isSel?"bg-brand-teal/10":"hover:bg-[#f8fafb]")}>
+            <span>
+              <b className="block text-[15px] leading-tight">{d.name}</b>
+              <span className="mt-1 block text-[12px] text-slate-500">
+                ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
+              </span>
+            </span>
+            <span className={cn("shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider",
+              isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500")}>
+              {isSel?"Selected":"Select"}
+            </span>
+          </button>
+          <div className="space-y-3 border-t border-[#eef4f5] p-4">
+            {compareCategories.map(cat=><div key={cat}>
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</span>
+              <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{detail.compare[cat]}</p>
+            </div>)}
+          </div>
+        </Card>;
+      })}
+    </div>
+
+    <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {selected.name}</PrimaryButton></div>
+  </Shell>;
+}
+
+export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const chosen = useSelectedDevice();
+  const tier = tierFor(deviceDetail[chosen.name].tier);
+  const {monthly,credit,dueNow} = creditedFirstMonth(tier.id);
+  return <Shell>
+    <PageHeader title="Start your membership" subtitle={`${chosen.name} · ${tier.name}`} onBack={back} eyebrow="Checkout"/>
+    <Card className="p-5">
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
+        {/* The promise made at booking, visibly kept (spec §9a). */}
+        <div className="flex justify-between text-sm text-brand-teal">
+          <span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
+        <div className="flex items-center justify-between border-t border-[#eef4f5] pt-3">
+          <b>Due today</b><b className="text-2xl">${dueNow}</b></div>
+      </div>
+      {dueNow===0&&<p className="mt-4 rounded-xl bg-[#edfbfa] p-3 text-sm leading-6 text-[#087d7a]">
+        Your visit was free — the $99 you paid covers your first month.</p>}
+    </Card>
+    <Card className="mt-3 p-4">
+      <p className="text-sm leading-6 text-slate-500">
+        ${monthly} per month from next month. Includes the devices, ongoing care and remote
+        adjustments. Cancel with 30 days&rsquo; notice.</p>
+    </Card>
+    <div className="mt-6"><PrimaryButton onClick={()=>go("order")}>Confirm membership</PrimaryButton></div>
+  </Shell>;
+}
+
+export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const chosen = useSelectedDevice();
+  const inCase = deviceDetail[chosen.name].inCase;
+  // In-case devices (Fulfilment: "In the case — fitted today") were fitted
+  // during the home visit, so every state is already complete. A device that
+  // ships later (Fulfilment: "Ships to you — fitted at a follow-up", e.g. the
+  // Oticon Intent 2) has not been fitted yet — claiming "Activated" for it
+  // would be the same dishonesty the compare screen used to hide: telling the
+  // patient they were fitted today when they were not. So it stops at
+  // "Fitting due", one step short of complete.
+  const done = inCase ? orderStates.length : orderStates.indexOf("Fitting due") + 1;
+  return <Shell>
+    <PageHeader
+      title={inCase ? "Fitted and active" : "On its way"}
+      subtitle={inCase ? "You left your visit hearing." : "Ships to you, fitted at a follow-up visit."}
+      onBack={back} eyebrow="Your device"/>
+    <Card className="p-5">
+      <div className="space-y-0">
+        {orderStates.map((s,i)=><div key={s} className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <span className={`grid h-7 w-7 place-items-center rounded-full ${i<done?"bg-brand-teal text-white":"bg-[#eef4f5] text-slate-300"}`}>
+              <Check size={14}/></span>
+            {i<orderStates.length-1&&<span className={`w-0.5 flex-1 ${i<done-1?"bg-brand-teal":"bg-[#eef4f5]"}`}/>}
+          </div>
+          <div className="pb-5"><b className="text-sm">{s}</b>
+            {s==="Activated"&&i<done&&<p className="mt-1 text-xs text-slate-500">Serial HF-2284-L / HF-2284-R</p>}</div>
+        </div>)}
+      </div>
+    </Card>
+    <div className="mt-6"><PrimaryButton onClick={()=>go("support")}>Ongoing care</PrimaryButton></div>
+  </Shell>;
+}

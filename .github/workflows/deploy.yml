@@ -29,6 +29,9 @@ jobs:
           cache-dependency-path: demo/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      # Named explicitly as well as via prebuild, so a failing regression test
+      # is reported as its own red step rather than buried in the build log.
+      - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

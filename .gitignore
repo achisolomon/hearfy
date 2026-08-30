@@ -13,6 +13,11 @@ internal/
 *.pdf
 *SOURCES*
 *persona*
+# …but the demo's own persona code is application source, not a spec: it holds
+# names, initials and avatar colours for four fictional characters. Exempted by
+# exact path, so a stray `persona-spec.md` anywhere still gets blocked.
+!demo/lib/personas.ts
+!demo/components/persona-avatar.tsx
 *pitch*deck*
 *Pitch*Deck*
 *MRD*

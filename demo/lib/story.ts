@@ -140,3 +140,85 @@ export const BEATS: Beat[] = [
   { id: "support", stage: 9, lead: "patient",
     screens: { patient: "support", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
 ];
+
+/** Clamp an index into the valid beat range. */
+function clamp(i: number): number {
+  if (i < 0) return 0;
+  if (i > BEATS.length - 1) return BEATS.length - 1;
+  return i;
+}
+
+export function beatIndexById(id: string): number {
+  return BEATS.findIndex(b => b.id === id);
+}
+
+/** Index of the first beat of a stage; 0 if the stage has no beats. */
+export function firstBeatOfStage(stage: StageNumber): number {
+  const i = BEATS.findIndex(b => b.stage === stage);
+  return i === -1 ? 0 : i;
+}
+
+export function nextBeat(i: number): number {
+  return clamp(i + 1);
+}
+
+export function prevBeat(i: number): number {
+  return clamp(i - 1);
+}
+
+export function isLastBeat(i: number): boolean {
+  return i >= BEATS.length - 1;
+}
+
+/** The screen a role shows at a beat. Out-of-range indices clamp. */
+export function screenFor(i: number, role: Role): AnyScreenId {
+  return BEATS[clamp(i)].screens[role];
+}
+
+/**
+ * Reverse lookup: the beat a role's screen belongs to, so free navigation
+ * inside a role moves the shared pointer (no detached browsing).
+ * Returns the FIRST matching beat, or -1 when the screen is not in the script.
+ */
+export function beatForScreen(role: Role, screen: AnyScreenId): number {
+  return BEATS.findIndex(b => b.screens[role] === screen);
+}
+
+/**
+ * SOLO MODE — per-persona entry.
+ *
+ * Beats where this role's screen actually changes. Walking these lets a viewer
+ * enter as one persona and stay there: `Next` moves through that role's own
+ * story without ever switching roles. Consecutive beats showing the same screen
+ * collapse to one, so a CMA does not press Next three times on one screen while
+ * the patient's side advances.
+ */
+export function beatsForRole(role: Role): number[] {
+  const out: number[] = [];
+  let last: AnyScreenId | null = null;
+  BEATS.forEach((b, i) => {
+    const s = b.screens[role];
+    if (s !== last) { out.push(i); last = s; }
+  });
+  return out;
+}
+
+/**
+ * The next beat in a role's solo walk; stays put at the end.
+ *
+ * `i` need not itself be in the walk. When it sits inside a stretch where this
+ * role's screen never changes, the next stop is the first walk beat strictly
+ * after it — not the one after that.
+ */
+export function nextBeatForRole(i: number, role: Role): number {
+  const beats = beatsForRole(role);
+  const nextIdx = beats.find(b => b > i);
+  return nextIdx ?? beats[beats.length - 1] ?? i;
+}
+
+/** The previous beat in a role's solo walk; stays put at the start. */
+export function prevBeatForRole(i: number, role: Role): number {
+  const beats = beatsForRole(role);
+  const earlier = beats.filter(b => b < i);
+  return earlier.length ? earlier[earlier.length - 1] : (beats[0] ?? i);
+}

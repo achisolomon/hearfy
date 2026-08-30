@@ -182,7 +182,8 @@ export const pipeline = [
  */
 export const metrics = {
   activeMemberships: 1284,
-  mrr: 148_916,
+  /** Derived from `mix`: 702×99 + 431×149 + 151×299. Keep in step if the mix changes. */
+  mrr: 178_866,
   newThisMonth: 96,
   mix: [
     { tier: "Essential", count: 702, monthly: 99 },

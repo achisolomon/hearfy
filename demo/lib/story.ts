@@ -123,7 +123,11 @@ export const BEATS: Beat[] = [
     screens: { patient: "recommendation", cma: "cma-stock", audiologist: "aud-prescription", operator: "op-dashboard" } },
 
   // ---- Stage 8: Sale ----
-  { id: "stock", stage: 8, lead: "cma",
+  // Choosing the device is the patient's decision — the audiologist prescribes
+  // what is clinically suitable, the patient picks from it. Led by the CMA, the
+  // guided walk went from the prescription straight to checkout, so the viewer
+  // was billed for a device nobody had let them choose.
+  { id: "stock", stage: 8, lead: "patient",
     screens: { patient: "compare", cma: "cma-stock", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "tryon", stage: 8, lead: "cma",
     screens: { patient: "compare", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },

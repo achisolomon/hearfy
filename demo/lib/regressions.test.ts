@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForScreen, type Role } from "./story";
+import { BEATS, ROLES, beatForScreen, beatIndexById, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 
 const order = screenOrder();
@@ -125,6 +125,38 @@ describe("story consistency", () => {
     // The date lived in three places; the booked card now uses the one source.
     expect(welcome).toContain("appointment.date");
     expect(welcome).not.toMatch(/May 21 · 9:00/);
+  });
+});
+
+describe("who decides what", () => {
+  const beatOf = (id: string) => BEATS[beatIndexById(id)];
+
+  // The guided walk went prescription -> CMA stub -> CMA stub -> checkout, so
+  // the viewer was asked to pay for a device they were never offered a choice
+  // of. Choosing is the patient's decision; the audiologist only prescribes
+  // what is clinically suitable.
+  it("lets the patient choose the device before paying for it", () => {
+    const choose = BEATS.findIndex(b => b.screens.patient === "compare" && b.lead === "patient");
+    const pay = BEATS.findIndex(b => b.screens.patient === "checkout");
+    expect(choose, "no patient-led beat shows the device choice").toBeGreaterThan(-1);
+    expect(choose).toBeLessThan(pay);
+  });
+
+  it("prescribes before the patient chooses", () => {
+    expect(beatIndexById("prescription")).toBeLessThan(beatIndexById("stock"));
+  });
+
+  // The clinical gates belong to the audiologist, the purchase to the patient.
+  it("keeps the signature and prescription beats with the audiologist", () => {
+    for (const id of ["review", "sign", "consult", "prescription"]) {
+      expect(beatOf(id).lead, id).toBe("audiologist");
+    }
+  });
+
+  it("keeps the purchase beats with the patient", () => {
+    for (const id of ["payment", "checkout"]) {
+      expect(beatOf(id).lead, id).toBe("patient");
+    }
   });
 });
 

@@ -146,6 +146,21 @@ describe("who decides what", () => {
     expect(beatIndexById("prescription")).toBeLessThan(beatIndexById("stock"));
   });
 
+  // The guided walk went intake -> payment -> confirmed, so the viewer was
+  // billed $99 for a visit whose date and time they were never asked to
+  // choose, then told a specific date as though they had picked it. Choosing
+  // the slot is the patient's decision; book-date and book-time already exist
+  // and render, the script just never narrated them.
+  it("lets the patient choose the visit slot before paying for it", () => {
+    const chooseDate = BEATS.findIndex(b => b.screens.patient === "book-date" && b.lead === "patient");
+    const chooseTime = BEATS.findIndex(b => b.screens.patient === "book-time" && b.lead === "patient");
+    const pay = BEATS.findIndex(b => b.screens.patient === "payment");
+    expect(chooseDate, "no patient-led beat shows the date choice").toBeGreaterThan(-1);
+    expect(chooseTime, "no patient-led beat shows the time choice").toBeGreaterThan(-1);
+    expect(chooseDate).toBeLessThan(pay);
+    expect(chooseTime).toBeLessThan(pay);
+  });
+
   // The clinical gates belong to the audiologist, the purchase to the patient.
   it("keeps the signature and prescription beats with the audiologist", () => {
     for (const id of ["review", "sign", "consult", "prescription"]) {

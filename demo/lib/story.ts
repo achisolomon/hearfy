@@ -63,16 +63,24 @@ export const BEATS: Beat[] = [
     screens: { patient: "home", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
 
   // ---- Stage 2: Booking & intake ----
-  // Collapsed from nine beats to four (decided 2026-08-30). The guided story
-  // hits the fork, the safety gate, the money and the confirmation; the five
-  // skipped screens (intake-needs, intake-coverage, intake-plan, book-date,
-  // book-time) stay fully reachable by free navigation and in solo patient
+  // Collapsed from nine beats to six (decided 2026-08-30). The guided story
+  // hits the fork, the safety gate, the visit slot, the money and the
+  // confirmation; the three skipped screens (intake-needs, intake-coverage,
+  // intake-plan) stay fully reachable by free navigation and in solo patient
   // mode. Nothing is deleted — the guided path just stops narrating all nine
   // before the four-role story starts.
   { id: "intake-for", stage: 2, lead: "patient",
     screens: { patient: "intake-for", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "intake-medical", stage: 2, lead: "patient",
     screens: { patient: "intake-medical", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // Choosing the visit slot is the patient's decision. The guided walk went
+  // straight from intake to payment, so the viewer was billed $99 for a visit
+  // whose date and time they were never asked to pick, then told a specific
+  // date on the confirmation as though they had chosen it.
+  { id: "book-date", stage: 2, lead: "patient",
+    screens: { patient: "book-date", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
+  { id: "book-time", stage: 2, lead: "patient",
+    screens: { patient: "book-time", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "payment", stage: 2, lead: "patient",
     screens: { patient: "payment", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "confirmed", stage: 2, lead: "patient",

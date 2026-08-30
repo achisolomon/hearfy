@@ -3,9 +3,18 @@ import { useState } from "react";
 import { Briefcase, Check, PackageCheck, Truck } from "lucide-react";
 import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
+import { createLatch } from "@/lib/latch";
 import { Shell } from "../shared";
 import { devices, deviceDetail, patient } from "@/lib/mock-data";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
+
+/**
+ * The story shell remounts this screen on back-navigation, which would clear
+ * `tried` and re-close a gate the presenter already opened. This latch keeps
+ * the one-way fact — a try-on was recorded at least once — so returning here
+ * mid-demo doesn't dead-end the continue button.
+ */
+const triedLatch = createLatch();
 
 /** The audiologist's signed shortlist, marked by what is physically in the case. */
 export function CmaStock({ next }: { next: () => void }) {
@@ -25,6 +34,8 @@ export function CmaStock({ next }: { next: () => void }) {
                 </div>
                 {detail.inCase
                   ? <StatusPill tone="green">In your case</StatusPill>
+                  // Bespoke pill: StatusPill always renders a leading Check, which would
+                  // wrongly imply "done" for a device that hasn't arrived yet.
                   : <span className="flex items-center gap-1.5 rounded-full bg-[#edf4fb] px-3 py-1 text-xs font-bold text-[#235f98]">
                       <Truck size={12} /> Ships
                     </span>}
@@ -48,6 +59,7 @@ export function CmaStock({ next }: { next: () => void }) {
 export function CmaTryOn({ next }: { next: () => void }) {
   const inCase = devices.filter(d => deviceDetail[d.name].inCase);
   const [tried, setTried] = useState<string[]>([]);
+  const gateOpen = tried.length > 0 || triedLatch.use();
   return (
     <Shell>
       <PageHeader title="Try-on" subtitle="Fit each device. Record which ones were tried." eyebrow="In the home" />
@@ -56,7 +68,8 @@ export function CmaTryOn({ next }: { next: () => void }) {
           const on = tried.includes(d.name);
           return (
             <button key={d.name}
-              onClick={() => setTried(t => on ? t.filter(n => n !== d.name) : [...t, d.name])}
+              aria-pressed={on}
+              onClick={() => { setTried(t => on ? t.filter(n => n !== d.name) : [...t, d.name]); triedLatch.set(); }}
               className={cn("flex w-full items-center gap-3 rounded-2xl border p-4 text-left",
                 on ? "border-brand-teal bg-[#edfbfa]" : "border-[#dfeaec] bg-white")}>
               <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full",
@@ -77,8 +90,8 @@ export function CmaTryOn({ next }: { next: () => void }) {
         </p>
       </Card>
       <div className="mt-6">
-        <PrimaryButton disabled={tried.length === 0} onClick={next}>
-          {tried.length === 0 ? "Record a try-on to continue" : "Patient has chosen"}
+        <PrimaryButton disabled={!gateOpen} onClick={next}>
+          {gateOpen ? "Patient has chosen" : "Record a try-on to continue"}
         </PrimaryButton>
       </div>
     </Shell>

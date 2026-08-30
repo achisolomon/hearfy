@@ -19,12 +19,14 @@ export function AudConsult({ next }: { next: () => void }) {
             <h1 className="mt-1 text-[26px] font-extrabold tracking-[-.02em]">Device shortlist for {patient.name}</h1>
           </div>
           <span className="flex items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600">
-            <span className="h-2 w-2 rounded-full bg-red-500" /> REC
+            <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
+            <span aria-hidden>REC</span>
+            <span className="sr-only">This consult is being recorded</span>
           </span>
         </header>
 
         <Card className="mb-4 flex items-center gap-3 p-4">
-          <Video size={18} className="text-brand-teal" />
+          <Video size={18} className="text-brand-teal" aria-hidden />
           <p className="text-sm text-slate-500">
             Recording is visible to the patient throughout, per their consent.
           </p>
@@ -42,13 +44,14 @@ export function AudConsult({ next }: { next: () => void }) {
                     <p className="mt-1 text-xs text-slate-500">{d.features.join(" · ")}</p>
                     {isEx && (
                       <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-[#9d6514]">
-                        <Ban size={13} className="mt-0.5 shrink-0" />
+                        <Ban size={13} className="mt-0.5 shrink-0" aria-hidden />
                         Excluded: open fitting is unsuitable with the air–bone gap on the left.
                       </p>
                     )}
                   </div>
                   {!isEx && (
                     <button
+                      aria-pressed={isRec}
                       onClick={() => setRecommended(r => isRec ? r.filter(n => n !== d.name) : [...r, d.name])}
                       className={cn("shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
                         isRec ? "bg-brand-teal text-white" : "bg-[#f1f5f6] text-slate-500")}>
@@ -64,12 +67,18 @@ export function AudConsult({ next }: { next: () => void }) {
         <Card className="mt-4 p-4">
           <p className="text-xs leading-5 text-slate-400">
             Clinical suitability only. Tier and price ({tiers.map(t => `${t.name} $${t.monthly}`).join(" · ")})
-            are the patient&rsquo;s decision — stock and cost are not shown here.
+            are the patient&rsquo;s decision.
           </p>
         </Card>
 
+        {/* A prescription locks a shortlist, so there has to be one. */}
         <div className="mt-5 max-w-sm">
-          <PrimaryButton onClick={next}>Continue to prescription</PrimaryButton>
+          <PrimaryButton disabled={recommended.length === 0} onClick={next}>
+            Continue to prescription
+          </PrimaryButton>
+          {recommended.length === 0 && (
+            <p className="mt-2 text-xs text-[#9d6514]">Recommend at least one device to continue.</p>
+          )}
         </div>
       </div>
     </div>
@@ -82,7 +91,7 @@ export function AudPrescription() {
     <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 text-brand-navy">
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
-          <Lock size={21} />
+          <Lock size={21} aria-hidden />
         </span>
         <h1 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">
           {locked ? "Prescription locked" : "Sign & lock the prescription"}

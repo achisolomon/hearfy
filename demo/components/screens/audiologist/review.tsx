@@ -39,7 +39,7 @@ export function AudReview({ next }: { next: () => void }) {
         {/* Findings / interpretation / candidacy stay visibly distinct (MRD). */}
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {[
-            ["Findings", "Bilateral air thresholds 40–65 dB HL sloping. Bone thresholds 15–35 dB HL. Air–bone gap present."],
+            ["Findings", "Bilateral air thresholds 20–65 dB HL sloping. Bone thresholds 15–35 dB HL. Air–bone gap present."],
             ["Interpretation", "Moderate mixed hearing loss, worse on the left. Speech recognition preserved."],
             ["Candidacy", "Candidate for bilateral amplification. No red flags requiring referral."],
           ].map(([h, body]) => (
@@ -62,7 +62,7 @@ export function AudSign({ next }: { next: () => void }) {
     <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 text-brand-navy">
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
-          {signed ? <Lock size={21} /> : <PenLine size={21} />}
+          {signed ? <Lock size={21} aria-hidden /> : <PenLine size={21} aria-hidden />}
         </span>
         <h1 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">
           {signed ? "Report signed and locked" : "Sign the report"}

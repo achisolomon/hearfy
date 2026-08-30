@@ -47,7 +47,10 @@ export function AudConsult({ next }: { next: () => void }) {
               <Card key={d.name} className={cn("p-4", isRec && "border-brand-teal", isEx && "opacity-70")}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <b className="text-[15px]">{d.name}</b>
+                    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                      <b className="text-[15px]">{d.name}</b>
+                      <span className="text-xs font-bold text-slate-400">{d.price}</span>
+                    </div>
                     <p className="mt-1 text-xs text-slate-500">{d.features.join(" · ")}</p>
                     {isEx && (
                       <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-[#9d6514]">
@@ -73,8 +76,9 @@ export function AudConsult({ next }: { next: () => void }) {
 
         <Card className="mt-4 p-4">
           <p className="text-xs leading-5 text-slate-400">
-            Clinical suitability only. Tier and price ({tiers.map(t => `${t.name} $${t.monthly}`).join(" · ")})
-            are the patient&rsquo;s decision.
+            The shortlist is clinical. Which device, and which tier
+            ({tiers.map(t => `${t.name} $${t.monthly}`).join(" · ")}), stay the
+            patient&rsquo;s decision.
           </p>
         </Card>
 

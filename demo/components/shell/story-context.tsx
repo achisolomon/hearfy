@@ -178,3 +178,13 @@ export function useStory(): StoryValue {
   if (!v) throw new Error("useStory must be used inside <StoryProvider>");
   return v;
 }
+
+/**
+ * Non-throwing variant of `useStory`, for components mounted on trees that
+ * are not always beneath `<StoryProvider>` (e.g. `Shell`, which Demo 1's
+ * frozen, provider-less `patient-app.tsx` also renders). Returns `null`
+ * instead of throwing when there is no provider above.
+ */
+export function useStoryOptional(): StoryValue | null {
+  return useContext(StoryContext);
+}

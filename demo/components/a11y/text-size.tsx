@@ -2,6 +2,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { Type } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useStoryOptional } from "../shell/story-context";
 
 const SIZES = [
   { id: "standard", label: "A", scale: 1 },
@@ -48,14 +49,25 @@ export function TextSize() {
   // The server render and the client's first paint must agree, and a fresh
   // page always starts at the standard size.
   const i = useSyncExternalStore(subscribe, getIndex, () => 0);
+  // `Shell` (which mounts this) is also rendered by Demo 1's frozen,
+  // provider-less patient-app.tsx — there `story` is null and this stays
+  // patient-facing as before. Under Demo 2's <StoryProvider>, which hosts
+  // both the patient app and the CMA screens through the same `Shell`, this
+  // must render only for the patient role (patient persona §2) — the CMA is
+  // a working professional on their own device, not this control's audience.
+  const story = useStoryOptional();
+  const hidden = story !== null && story.role !== "patient";
 
   useEffect(() => {
+    if (hidden) return;
     document.documentElement.style.fontSize = `${SIZES[i].scale * 100}%`;
     // No cleanup that resets fontSize here: this component remounts as the
     // presenter moves between beats, and a reset-on-unmount would silently
     // discard the chosen size. The stored index (and `resetTextSize`) is what
     // governs the applied size instead.
-  }, [i]);
+  }, [i, hidden]);
+
+  if (hidden) return null;
 
   return (
     <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-soft" role="group" aria-label="Text size">

@@ -11,18 +11,83 @@ import { Shell } from "../shared";
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
   const selected = useSelectedDevice();
-  // Was a 4-column table (label + 3 devices) in Shell's phone-width
-  // container. Six sentence-length values across three devices cannot fit
-  // that width at any text size — two prior fixes tried a min-width floor
-  // (560px, then 28rem) and both either clipped the last column or forced
-  // the horizontal scrollbar the owner rejected outright ("It looks bad.
-  // Lose this. Lose the scroll."). A stacked card per device removes the
-  // scroll structurally: every value wraps in a single column instead of
-  // fighting for table width. "Side by side" no longer describes this
-  // layout, so the copy below says what it actually is.
-  return <Shell>
-    <PageHeader title="Compare devices" subtitle="The six things worth comparing, one device at a time." onBack={back} eyebrow="Compare"/>
-    <div className="space-y-4">
+  // Root cause of the last three attempts: Shell caps ALL patient content at
+  // max-w-md (28rem = phone width), even on a 1200px+ desktop, so a 4-column
+  // table (label + 3 devices) of sentence-length values could never fit —
+  // not because a table is wrong, but because it never had room. The two
+  // earlier fixes (a 560-pixel floor, then a 28-rem floor, both via an
+  // arbitrary min-width utility) tried to force the table to fit a
+  // phone-width box and either clipped the last column or produced the
+  // horizontal scrollbar the owner rejected outright ("It looks bad. Lose
+  // this. Lose the scroll."). Shell now takes an opt-in
+  // `wide` prop (default false, so every other screen is untouched) that
+  // widens the container from `lg` (1024px) up. So: a real side-by-side
+  // table from `lg` up, where there is room, and the stacked cards below it
+  // where there is not. Both trees render into the DOM together, gated by
+  // Tailwind's `hidden lg:*` / `lg:hidden` visibility idiom (see BottomNav's
+  // sibling screens for the same pattern) rather than a JS width check, so
+  // nothing depends on JS running before first paint.
+  //
+  // Breakpoint arithmetic (lib/regressions.test.ts pins this): Tailwind's
+  // `lg` media query is a fixed 1024px — CSS media features resolve against
+  // the browser's default 16px rem, not `document.documentElement.style
+  // .fontSize`, which is how TextSize (components/a11y/text-size.tsx) scales
+  // text — so the breakpoint itself does not move as text grows. What does
+  // grow is the rem-sized chrome around the table (Shell's px-5 padding, the
+  // 9rem label column), and the table's device columns are
+  // `fr` units, not a px/rem floor, so they simply take whatever space is
+  // left — never less, never forcing a scrollbar. At the 1024px threshold,
+  // each device column still gets roughly 271px (standard, 18px root), 260px
+  // (large, 20.7px root), 250px (larger, 23.4px root) — comfortably readable
+  // at all three settings, and the *actual* available width only grows from
+  // there as the viewport grows past 1024px.
+  return <Shell wide>
+    <PageHeader title="Compare devices" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
+
+    {/* Desktop / tablet-landscape: a real side-by-side table. Fluid grid
+       columns (fr units) mean the table can only ever get narrower or wider
+       with its container — never wider than the viewport, never a fixed
+       floor to clip or scroll past. */}
+    <div className="hidden lg:block">
+      <Card className="overflow-hidden p-0">
+        <div className="grid grid-cols-[9rem_repeat(3,1fr)]">
+          {shortlist.map(d=>{
+            const isSel = d.name===selected.name;
+            const detail = deviceDetail[d.name];
+            return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 text-left transition",
+              isSel?"bg-brand-teal/10":"")}>
+              <b className="block text-[15px] leading-tight">{d.name}</b>
+              <span className="mt-1 block text-[12px] text-slate-500">
+                ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
+              </span>
+              <button
+                type="button"
+                aria-pressed={isSel}
+                onClick={()=>selectDevice(d.name)}
+                className={cn("mt-3 w-full rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
+                  isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500 hover:bg-[#e4eef0]")}>
+                {isSel?"Selected":"Select"}
+              </button>
+            </div>;
+          })}
+        </div>
+        {compareCategories.map(cat=><div key={cat} className="grid grid-cols-[9rem_repeat(3,1fr)] border-t border-[#eef4f5]">
+          <div className="p-4"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</span></div>
+          {shortlist.map(d=>{
+            const isSel = d.name===selected.name;
+            const detail = deviceDetail[d.name];
+            return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 transition",isSel?"bg-brand-teal/5":"")}>
+              <p className="text-[13px] leading-5 text-slate-600">{detail.compare[cat]}</p>
+            </div>;
+          })}
+        </div>)}
+      </Card>
+    </div>
+
+    {/* Phone / tablet-portrait: stacked one-card-per-device, unchanged from
+       the previous attempt — no scroll structurally, since every value
+       wraps in a single column instead of fighting for table width. */}
+    <div className="space-y-4 lg:hidden">
       {shortlist.map(d=>{
         const isSel = d.name===selected.name;
         const detail = deviceDetail[d.name];
@@ -54,6 +119,7 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         </Card>;
       })}
     </div>
+
     <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {selected.name}</PrimaryButton></div>
   </Shell>;
 }

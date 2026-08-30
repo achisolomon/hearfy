@@ -3,10 +3,18 @@ import { motion } from "framer-motion";
 import { Check,Home,MapPin,MessageCircle,Navigation,UserRound } from "lucide-react";
 import { TextSize } from "../a11y/text-size";
 import { PageHeader,PrimaryButton,Progress } from "../ui";
+import { cn } from "@/lib/cn";
 import { ScreenId } from "./registry";
 export { Audiogram } from "../charts/audiogram";
 
-export function Shell({children,dark=false}:{children:React.ReactNode;dark?:boolean}){return <div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className="mx-auto max-w-md px-5 pb-28 pt-6"><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div>}
+// `wide` is opt-in and defaults to false: every existing Shell caller (every
+// other patient screen, every CMA screen) keeps today's max-w-md phone-width
+// column untouched. Only Compare passes wide, so only Compare's container
+// grows from lg (1024px) up — see lib/regressions.test.ts's breakpoint
+// arithmetic for why lg, not a smaller or custom breakpoint. Below lg the
+// class list is identical to the non-wide case, so nothing shifts until the
+// breakpoint fires.
+export function Shell({children,dark=false,wide=false}:{children:React.ReactNode;dark?:boolean;wide?:boolean}){return <div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className={cn("mx-auto px-5 pb-28 pt-6",wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div>}
 export function Avatar({large=false}:{large?:boolean}){return <div className={`${large?"h-20 w-20 text-xl":"h-12 w-12 text-sm"} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-[#c7eeec] to-[#edf8f8] font-extrabold text-brand-navy shadow-soft`}>ML</div>}
 export function Option({title,sub,active,onClick,icon:Icon}:{title:string;sub?:string;active?:boolean;onClick?:()=>void;icon?:any}){return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-[20px] border p-4 text-left transition ${active?"border-brand-teal bg-[#edfbfa]":"border-[#dfeaec] bg-white"}`}>{Icon&&<span className={`grid h-11 w-11 place-items-center rounded-2xl ${active?"bg-brand-teal text-white":"bg-[#f0f6f6] text-brand-teal"}`}><Icon size={21}/></span>}<span className="flex-1"><b className="block text-[15px]">{title}</b>{sub&&<span className="mt-1 block text-xs leading-5 text-slate-500">{sub}</span>}</span><span className={`grid h-5 w-5 place-items-center rounded-full border ${active?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>{active&&<Check size={13}/>}</span></button>}
 export function StepPage({title,subtitle,step,children,onBack,onNext,next="Continue"}:{title:string;subtitle:string;step:number;children:React.ReactNode;onBack:()=>void;onNext:()=>void;next?:string}){return <Shell><PageHeader title={title} subtitle={subtitle} onBack={onBack} eyebrow="Smart matching"/><Progress step={step} total={5}/><div className="space-y-3">{children}</div><div className="mt-7"><PrimaryButton onClick={onNext}>{next}</PrimaryButton></div></Shell>}

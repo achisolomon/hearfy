@@ -410,4 +410,51 @@ describe("text-size clipping", () => {
     expect(shellLine, "could not locate Shell's definition").toBeTruthy();
     expect(shellLine!).not.toMatch(/\bw-\[\d+px\]/);
   });
+
+  // Compare now renders two responsive trees — a wide table (`lg:` and up)
+  // and stacked cards (below `lg:`) — so the DOM holds both branches at
+  // once, gated by Tailwind visibility classes rather than by mounting only
+  // one. That structure makes it possible to fix one branch and quietly
+  // leave the other stale: a category added to the table but not the cards,
+  // or a third device dropped from one branch's map. Pin both branches
+  // independently to the same source of truth (`compareCategories`, three
+  // devices) rather than trusting that fixing one fixed both.
+  it("shows all six categories and all three devices in both the desktop table and the stacked cards", () => {
+    const commerce = sourceOf("components/screens/patient/commerce.tsx");
+    const compareBlock = commerce.split("export function Checkout")[0];
+
+    // The two branches are visibility-gated with Tailwind's `hidden lg:*` /
+    // `lg:hidden` idiom (see the "shows a wide table only from `lg`..." test
+    // below for why that idiom, not a JS media-query check, is what's
+    // asserted here).
+    const desktopMatch = /hidden lg:(?:block|flex|grid)[^"]*"[^]*?(?=lg:hidden|$)/.exec(compareBlock);
+    const mobileMatch = /\blg:hidden\b[^]*$/.exec(compareBlock);
+    expect(desktopMatch, "could not locate a `hidden lg:*` desktop branch in Compare").toBeTruthy();
+    expect(mobileMatch, "could not locate an `lg:hidden` mobile branch in Compare").toBeTruthy();
+
+    const desktopBranch = desktopMatch![0];
+    const mobileBranch = mobileMatch![0];
+
+    for (const branch of [desktopBranch, mobileBranch]) {
+      // All six categories: both branches must iterate the shared array
+      // rather than hand-listing a subset of it.
+      expect(branch).toContain("compareCategories.map");
+      // All three devices: both branches must iterate the same shortlist
+      // rather than hand-listing one or two devices.
+      expect(branch).toMatch(/shortlist\.map/);
+    }
+  });
+
+  // The owner's chosen layout is a wide table on desktop, stacked cards on
+  // phone — not a table that only ever renders narrow. Assert the split
+  // itself exists via Tailwind's responsive-visibility idiom (this
+  // codebase's established way to show/hide by breakpoint — see BottomNav's
+  // sibling screens) rather than a media query or JS width check, so both
+  // trees are always in the DOM and nothing depends on JS running first.
+  it("gives Compare a wide table shown only from `lg` and stacked cards hidden from `lg`", () => {
+    const commerce = sourceOf("components/screens/patient/commerce.tsx");
+    const compareBlock = commerce.split("export function Checkout")[0];
+    expect(compareBlock).toMatch(/hidden lg:(?:block|flex|grid)/);
+    expect(compareBlock).toMatch(/\blg:hidden\b/);
+  });
 });

@@ -246,3 +246,109 @@ describe("clinical screens", () => {
     expect(cma.toLowerCase()).not.toContain("in stock");
   });
 });
+
+describe("text-size clipping", () => {
+  // Compare's table carried min-w-[560px] — an absolute pixel floor — while
+  // the container around it (Shell's max-w-md) is rem-based and shrinks with
+  // the root font size. At the *smallest* text setting the rem container is
+  // narrowest (28rem × 18px = 504px) and the 560px floor exceeds it, so the
+  // rightmost column ran past the edge. At larger text settings the rem
+  // container grows past 560px and the same table looks fine — an inversion
+  // that makes the bug easy to miss testing only at default zoom. Any
+  // absolute-px floor inside a rem-scaled container reproduces this the same
+  // way, so this scans every component rather than re-checking one table.
+  const allComponents = componentFiles("components")
+    .map(f => ({ file: f, src: sourceOf(f) }));
+
+  // Shell (components/screens/shared.tsx) wraps patient/CMA content in
+  // max-w-md = 28rem. The root size is 112.5% (18px) at "standard" per
+  // globals.css, and TextSize (components/a11y/text-size.tsx) only scales
+  // upward from there (1 / 1.15 / 1.3) — it never goes below 112.5% — so
+  // 28rem × 18px = 504px is the narrowest this container is ever asked to be.
+  const NARROWEST_ROOT_PX = 18;
+  const SHELL_MAX_W_REM = 28;
+  const SHELL_CONTENT_PX = SHELL_MAX_W_REM * NARROWEST_ROOT_PX; // 504
+
+  // Matches Tailwind arbitrary-value utilities carrying a literal px floor:
+  // min-w-[560px], w-[3px], etc. Captures the property (min-w/w) and the
+  // number so a failure message can name exactly which class is too wide.
+  const PX_FLOOR = /\b(min-w|w)-\[(\d+)px\]/g;
+
+  // Test A: no absolute-pixel minimum width can exceed the rem-based
+  // container it lives in. A px floor inside a rem container is fine right
+  // up until the rem container shrinks below it — which is exactly what
+  // happens at the smallest text size.
+  it("keeps every absolute-pixel min-width inside the smallest rem-based container it can sit in", () => {
+    const offenders: string[] = [];
+    for (const { file, src } of allComponents) {
+      for (const m of src.matchAll(PX_FLOOR)) {
+        const [full, prop, pxStr] = m;
+        if (prop !== "min-w") continue; // a plain `w-[…]` is a fixed size, not a floor that fights a shrinking container
+        const px = Number(pxStr);
+        if (px > SHELL_CONTENT_PX) {
+          offenders.push(
+            `${file}: \`${full}\` is ${px}px, but Shell's content box is only ` +
+            `${SHELL_CONTENT_PX}px at the smallest text size (28rem × ${NARROWEST_ROOT_PX}px root) — ` +
+            `a px floor inside a rem container clips or forces a scroll once the ` +
+            `container shrinks past it.`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // Test B: a min-width wider than its container must not be able to clip
+  // silently — it must sit inside a horizontally-scrollable ancestor, so the
+  // extra width is reachable rather than lost off the edge.
+  it("wraps every oversized min-width element in a horizontally-scrollable ancestor", () => {
+    const offenders: string[] = [];
+    for (const { file, src } of allComponents) {
+      for (const m of src.matchAll(PX_FLOOR)) {
+        const [full, prop, pxStr] = m;
+        if (prop !== "min-w") continue;
+        if (Number(pxStr) <= SHELL_CONTENT_PX) continue; // never exceeds its container; nothing to scroll
+        const scrollable = /overflow-(x-)?auto|overflow-(x-)?scroll/.test(src);
+        if (!scrollable) {
+          offenders.push(`${file}: \`${full}\` can exceed its container but no overflow-x-auto ancestor was found in the file`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The compare table specifically: confirms the scroll wrapper is present
+  // and wraps the table (not some unrelated element in the same file).
+  it("keeps the compare table's overflow wrapper directly around the table", () => {
+    const commerce = sourceOf("components/screens/patient/commerce.tsx");
+    expect(commerce).toMatch(/overflow-x-auto[^>]*>\s*<table/);
+  });
+
+  // Test C: the page itself must never scroll horizontally. Kept narrow and
+  // source-checkable: no top-level screen wrapper claims a raw viewport
+  // width (`w-screen`) while also carrying horizontal padding/margin, which
+  // is the combination that pushes content past 100vw.
+  it("never combines w-screen with horizontal padding or margin on a screen wrapper", () => {
+    const offenders: string[] = [];
+    for (const { file, src } of allComponents) {
+      if (!/\bw-screen\b/.test(src)) continue;
+      for (const m of src.matchAll(/className="([^"]*\bw-screen\b[^"]*)"/g)) {
+        const cls = m[1];
+        if (/\b(p|px|m|mx)-\d/.test(cls) || /\b(p|m)x?-\[[^\]]+\]/.test(cls)) {
+          offenders.push(`${file}: \`${cls}\` combines w-screen with horizontal padding/margin, which overflows the viewport`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // No top-level screen wrapper (the outermost element Shell/StepPage
+  // return) should carry a fixed pixel width — same failure mode as Test A,
+  // but for the page's own root element rather than a table.
+  it("gives no top-level screen wrapper a fixed pixel width", () => {
+    const shared = sourceOf("components/screens/shared.tsx");
+    const shellLine = shared.split("\n").find(l => l.includes("export function Shell"));
+    expect(shellLine, "could not locate Shell's definition").toBeTruthy();
+    expect(shellLine!).not.toMatch(/\bw-\[\d+px\]/);
+  });
+});

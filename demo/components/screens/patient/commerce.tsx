@@ -11,7 +11,7 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   return <Shell>
     <PageHeader title="Side by side" subtitle="The six things worth comparing." onBack={back} eyebrow="Compare"/>
     <div className="-mx-5 overflow-x-auto px-5">
-      <table className="w-full min-w-[560px] border-separate border-spacing-y-2 text-left text-sm">
+      <table className="w-full min-w-[28rem] border-separate border-spacing-y-2 text-left text-sm">
         <thead><tr>
           <th scope="col" className="w-32"/>
           {shortlist.map(d=><th key={d.name} scope="col" className="p-2 align-bottom">

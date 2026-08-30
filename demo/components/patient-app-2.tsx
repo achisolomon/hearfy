@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { ScreenId, order } from "./screens/registry";
 import { BottomNav } from "./screens/shared";
+import { beatForScreen, nextBeat } from "@/lib/story";
 import { useStory } from "./shell/story-context";
 import { Welcome, SignIn, HomeScreen } from "./screens/patient/welcome";
 import { IntakeFor, IntakeNeeds, IntakeMedical, IntakeCoverage, IntakePlan } from "./screens/patient/intake";
@@ -19,11 +20,25 @@ import { Support } from "./screens/patient/support";
  * shell replaces it. Demo 1's patient-app.tsx stays frozen.
  */
 export function PatientApp2() {
-  const { screen, goToScreen } = useStory();
+  const { screen, beat, mode, goToScreen, next } = useStory();
   const current = screen as ScreenId;
 
-  // Free navigation inside the role moves the shared pointer.
-  const go = (s: ScreenId) => goToScreen(s);
+  /**
+   * A screen's own forward button is the patient taking the story's next step,
+   * so it has to behave like the shell's Next: when the following beat is led
+   * by someone else, the demo hands over to them. `goToScreen` deliberately
+   * stays inside the current role, so using it for a forward move pinned the
+   * viewer to the patient and the handoffs never fired.
+   *
+   * Anything that is not that step — the bottom nav, a jump backwards — is free
+   * navigation and stays in role.
+   */
+  const go = (s: ScreenId) => {
+    const isStoryStep = mode !== "solo" && beatForScreen("patient", s) === nextBeat(beat);
+    if (isStoryStep) next();
+    else goToScreen(s);
+  };
+
   const back = () => {
     const i = order.indexOf(current);
     goToScreen(order[Math.max(0, i - 1)]);
@@ -57,7 +72,9 @@ export function PatientApp2() {
     checkout: <Checkout go={go} back={back}/>,
     order: <Order go={go} back={back}/>,
     support: <Support go={go} back={back}/>,
-  } as Record<ScreenId, React.ReactNode>), [current]);
+    // `go` closes over the beat and the mode, so the cached elements must be
+    // rebuilt when either moves — not only when the screen id changes.
+  } as Record<ScreenId, React.ReactNode>), [current, beat, mode]);
 
   return (
     <main>

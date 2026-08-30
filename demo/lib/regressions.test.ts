@@ -207,6 +207,22 @@ describe("patient device choice", () => {
     const selectionSrc = sourceOf("lib/selection.ts");
     expect(selectionSrc).toMatch(/useSyncExternalStore/);
   });
+
+  // Restacking Compare into per-device cards is a rewrite of the whole
+  // component — exactly the kind of change that could quietly drop the
+  // selection wiring while fixing the layout. Pin both ends of it: Compare
+  // still calls into the shared store rather than reinventing local state,
+  // and Checkout still derives its device from that store rather than
+  // regressing to a literal devices[0].
+  it("keeps Compare and Checkout wired to the shared selection store after the layout rewrite", () => {
+    const compareBlock = commerce.split("export function Checkout")[0];
+    expect(compareBlock).toContain("selectDevice(");
+    expect(compareBlock).toContain("useSelectedDevice(");
+
+    const checkoutBlock = commerce.split("export function Checkout")[1]?.split("export function Order")[0] ?? "";
+    expect(checkoutBlock).toContain("useSelectedDevice(");
+    expect(checkoutBlock).not.toMatch(/devices\[0\]/);
+  });
 });
 
 describe("shell controls", () => {
@@ -351,11 +367,20 @@ describe("text-size clipping", () => {
     expect(offenders).toEqual([]);
   });
 
-  // The compare table specifically: confirms the scroll wrapper is present
-  // and wraps the table (not some unrelated element in the same file).
-  it("keeps the compare table's overflow wrapper directly around the table", () => {
+  // The compare screen specifically: the owner's own words were "It looks
+  // bad. Lose this. Lose the scroll." Two prior fixes (min-w-[560px], then
+  // min-w-[28rem]) both tried to make the four-column table fit by tuning a
+  // width, and both either clipped the rightmost column or forced exactly
+  // the horizontal scrollbar the owner rejected — a table with a label
+  // column plus three device columns of sentence-length values cannot fit
+  // Shell's phone-width container at any text size. The fix is structural:
+  // Compare no longer renders a wide table at all, so there is nothing left
+  // to scroll or to floor with a min-width.
+  it("gives Compare no horizontally-scrolling region — the owner rejected the scrollbar, so the layout must stack instead", () => {
     const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    expect(commerce).toMatch(/overflow-x-auto[^>]*>\s*<table/);
+    const compareBlock = commerce.split("export function Checkout")[0];
+    expect(compareBlock).not.toMatch(/overflow-x-auto|overflow-auto/);
+    expect(compareBlock).not.toMatch(/\bmin-w-\[/);
   });
 
   // Test C: the page itself must never scroll horizontally. Kept narrow and

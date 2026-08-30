@@ -11,41 +11,48 @@ import { Shell } from "../shared";
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
   const selected = useSelectedDevice();
+  // Was a 4-column table (label + 3 devices) in Shell's phone-width
+  // container. Six sentence-length values across three devices cannot fit
+  // that width at any text size — two prior fixes tried a min-width floor
+  // (560px, then 28rem) and both either clipped the last column or forced
+  // the horizontal scrollbar the owner rejected outright ("It looks bad.
+  // Lose this. Lose the scroll."). A stacked card per device removes the
+  // scroll structurally: every value wraps in a single column instead of
+  // fighting for table width. "Side by side" no longer describes this
+  // layout, so the copy below says what it actually is.
   return <Shell>
-    <PageHeader title="Side by side" subtitle="The six things worth comparing." onBack={back} eyebrow="Compare"/>
-    <div className="-mx-5 overflow-x-auto px-5">
-      <table className="w-full min-w-[28rem] border-separate border-spacing-y-2 text-left text-sm">
-        <thead><tr>
-          <th scope="col" className="w-32"/>
-          {shortlist.map(d=>{
-            const isSel = d.name===selected.name;
-            return <th key={d.name} scope="col" className="p-2 align-bottom">
-              <button
-                type="button"
-                aria-pressed={isSel}
-                onClick={()=>selectDevice(d.name)}
-                className={cn("w-full rounded-xl p-2 text-left transition",
-                  isSel?"bg-brand-teal/10 ring-2 ring-brand-teal":"hover:bg-[#f1f5f6]")}>
-                <b className="block text-[13px] leading-tight">{d.name}</b>
-                <span className="text-[11px] font-normal text-slate-400">
-                  ${tierFor(deviceDetail[d.name].tier).monthly}/mo
-                </span>
-                <span className={cn("mt-1 block text-[10px] font-bold uppercase tracking-wider",
-                  isSel?"text-brand-teal":"text-transparent")}>
-                  {isSel?"Selected":"Select"}
-                </span>
-              </button>
-            </th>;
-          })}
-        </tr></thead>
-        <tbody>
-          {compareCategories.map(cat=><tr key={cat}>
-            <th scope="row" className="rounded-l-xl bg-white p-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</th>
-            {shortlist.map(d=><td key={d.name} className="bg-white p-3 align-top text-[13px] leading-5 text-slate-600 last:rounded-r-xl">
-              {deviceDetail[d.name].compare[cat]}</td>)}
-          </tr>)}
-        </tbody>
-      </table>
+    <PageHeader title="Compare devices" subtitle="The six things worth comparing, one device at a time." onBack={back} eyebrow="Compare"/>
+    <div className="space-y-4">
+      {shortlist.map(d=>{
+        const isSel = d.name===selected.name;
+        const detail = deviceDetail[d.name];
+        return <Card key={d.name} className={cn("overflow-hidden p-0 transition",
+          isSel?"border-brand-teal ring-2 ring-brand-teal":"border-[#e4eef0]")}>
+          <button
+            type="button"
+            aria-pressed={isSel}
+            onClick={()=>selectDevice(d.name)}
+            className={cn("flex w-full items-center justify-between gap-3 p-4 text-left transition",
+              isSel?"bg-brand-teal/10":"hover:bg-[#f8fafb]")}>
+            <span>
+              <b className="block text-[15px] leading-tight">{d.name}</b>
+              <span className="mt-1 block text-[12px] text-slate-500">
+                ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
+              </span>
+            </span>
+            <span className={cn("shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider",
+              isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500")}>
+              {isSel?"Selected":"Select"}
+            </span>
+          </button>
+          <div className="space-y-3 border-t border-[#eef4f5] p-4">
+            {compareCategories.map(cat=><div key={cat}>
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</span>
+              <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{detail.compare[cat]}</p>
+            </div>)}
+          </div>
+        </Card>;
+      })}
     </div>
     <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {selected.name}</PrimaryButton></div>
   </Shell>;

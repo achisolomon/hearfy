@@ -44,16 +44,27 @@ export function Metrics() {
         </div>
       </Card>
 
-      {/* Funnel that feeds it. */}
+      {/* Funnel that feeds it. Conversion, Device GP and Supervision have no
+          source in the deck or the MRD — demo placeholders only (spec §14).
+          They're flagged `illustrative` below so investors don't mistake
+          them for sourced figures; Visit fee is the real commercial model
+          and stays unmarked. */}
       <div className="mt-3 grid gap-3 sm:grid-cols-4">
-        {[
-          ["Visit fee", "$99", "credited to month 1"],
-          ["Conversion", `${Math.round(metrics.conversion * 100)}%`, "visit → membership"],
-          ["Device GP", money(metrics.deviceGrossProfit), "per device"],
-          ["Supervision", `1 : ${metrics.supervisionRatio}`, "audiologist : exams"],
-        ].map(([l, v, sub]) => (
+        {([
+          ["Visit fee", "$99", "credited to month 1", false],
+          ["Conversion", `${Math.round(metrics.conversion * 100)}%`, "visit → membership", true],
+          ["Device GP", money(metrics.deviceGrossProfit), "per device", true],
+          ["Supervision", `1 : ${metrics.supervisionRatio}`, "audiologist : exams", true],
+        ] as [label: string, value: string, sub: string, illustrative: boolean][]).map(([l, v, sub, illustrative]) => (
           <Card key={l} className="p-4">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{l}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{l}</span>
+              {illustrative && (
+                <span className="rounded-full bg-[#fff6e8] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#9d6514]">
+                  Illustrative
+                </span>
+              )}
+            </div>
             <b className="mt-1 block text-xl text-brand-navy">{v}</b>
             <span className="text-[11px] text-slate-400">{sub}</span>
           </Card>

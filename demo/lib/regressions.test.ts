@@ -488,3 +488,63 @@ describe("text-size clipping", () => {
     expect(bareRows).toEqual([]);
   });
 });
+
+describe("floating controls clearance", () => {
+  // On a real phone the owner found the floating mobile controls (grid/sheet
+  // button, Back circle, Next pill) sitting on top of the screen's last
+  // content — a teal "Maya has arrived at your home." card cut in half
+  // behind them and behind BottomNav. Everything here is rem-based, and rem
+  // sizes scale together: the root is 112.5% (18px) at "standard" per
+  // globals.css and TextSize (components/a11y/text-size.tsx) only scales
+  // upward from there (×1.15, ×1.3), so whatever gap exists in rem is the
+  // same gap at every text size — but Shell's bottom padding (pb-28 = 7rem)
+  // was smaller than the controls' top edge (bottom-24 + h-12 = 9rem), so
+  // content ran two rem short of clearing them, at every size.
+  //
+  // Tailwind's spacing scale is 0.25rem per step (pb-28 = 28 * 0.25 = 7rem),
+  // which is how every value below is converted from the class name rather
+  // than hand-copied as a number that could drift from the source.
+  const SPACING_UNIT_REM = 0.25;
+  const classValueRem = (src: string, pattern: RegExp): number => {
+    const m = pattern.exec(src);
+    if (!m) throw new Error(`could not find a class matching ${pattern} in source`);
+    return Number(m[1]) * SPACING_UNIT_REM;
+  };
+
+  const shared = sourceOf("components/screens/shared.tsx");
+  const shellLine = shared.split("\n").find(l => l.includes("export function Shell"));
+  if (!shellLine) throw new Error("could not locate Shell's definition in shared.tsx");
+
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  // The phone control row: `fixed inset-x-0 bottom-24 z-40 ... md:hidden`.
+  const controlRowMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlRowMatch) throw new Error("could not locate the fixed phone control row in demo-shell.tsx");
+  const controlRowBlock = demoShell.slice(controlRowMatch.index, demoShell.indexOf("</div>", controlRowMatch.index));
+
+  const shellPaddingRem = classValueRem(shellLine, /\bpb-(\d+)\b/);
+  const controlsBottomRem = classValueRem(demoShell, /fixed inset-x-0 bottom-(\d+) z-40/);
+  // Every button in the floating row shares the same h-12 height; take the
+  // tallest h-* found in the row so the assertion holds even if one button
+  // is changed to be taller than its siblings.
+  const controlHeightsRem = [...controlRowBlock.matchAll(/\bh-(\d+)\b/g)].map(m => Number(m[1]) * SPACING_UNIT_REM);
+  if (controlHeightsRem.length === 0) throw new Error("found no h-* button height inside the phone control row");
+  const controlsTopEdgeRem = controlsBottomRem + Math.max(...controlHeightsRem);
+
+  // The relationship, not the instance: Shell's bottom padding must clear
+  // the controls' top edge with room to spare, whatever the exact numbers
+  // are on either side. A future change to either value (a taller button, a
+  // shell padding "cleanup") that closes this gap should fail here rather
+  // than surface on a phone again.
+  it("gives Shell enough bottom padding to clear the floating mobile controls' top edge", () => {
+    expect(
+      shellPaddingRem,
+      `Shell's bottom padding is ${shellPaddingRem}rem, but the floating phone ` +
+      `controls (demo-shell.tsx) sit from bottom-${controlsBottomRem / SPACING_UNIT_REM} ` +
+      `to bottom-${controlsBottomRem / SPACING_UNIT_REM} + h-${Math.max(...controlHeightsRem) / SPACING_UNIT_REM} ` +
+      `= ${controlsTopEdgeRem}rem above the viewport bottom. Because both values are ` +
+      `rem-based they scale together at every TextSize step, so if padding does not ` +
+      `clear the controls' top edge here, it never does — content sits behind the ` +
+      `grid button, Back circle, and Next pill at every text size, not just one.`,
+    ).toBeGreaterThan(controlsTopEdgeRem);
+  });
+});

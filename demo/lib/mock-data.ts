@@ -82,3 +82,129 @@ export const tiers = [
 
 /** The visit fee, credited to month 1 on purchase (spec §9a). */
 export const visitFee = 99;
+
+/** Which tier each device belongs to, and why it fits (spec §2 gap: explainable fit). */
+export const deviceDetail: Record<string, {
+  tier: string;
+  inCase: boolean;
+  fitFactors: string[];
+  compare: Record<string, string>;
+}> = {
+  "Phonak Audéo L50": {
+    tier: "premium", inCase: true,
+    fitFactors: [
+      "Matches your moderate loss across speech frequencies",
+      "Rechargeable — no small batteries to handle",
+      "Works with your iPhone for calls",
+    ],
+    compare: {
+      "Clinical fit": "Receiver-in-canal, suits your air–bone gap",
+      "Use & lifestyle": "All-day battery, good in restaurants",
+      "Usability": "Rechargeable, magnetic charger",
+      "Commercial": "$149/month Premium tier",
+      "Terms": "3-year warranty, 45-day return",
+      "Fulfilment": "In the case — fitted today",
+    },
+  },
+  "Signia Pure Charge&Go": {
+    tier: "essential", inCase: true,
+    fitFactors: [
+      "Covers your loss at conversational levels",
+      "Rechargeable with a simple two-button control",
+      "Remote adjustments without another visit",
+    ],
+    compare: {
+      "Clinical fit": "Receiver-in-canal, standard fitting",
+      "Use & lifestyle": "Best in quieter settings",
+      "Usability": "Two buttons, no app required",
+      "Commercial": "$99/month Essential tier",
+      "Terms": "2-year warranty, 45-day return",
+      "Fulfilment": "In the case — fitted today",
+    },
+  },
+  "Oticon Intent 2": {
+    tier: "vip", inCase: false,
+    fitFactors: [
+      "Premium processing for noisy environments",
+      "Rechargeable with the longest battery life",
+      "Includes audiologist-at-home care visits",
+    ],
+    compare: {
+      "Clinical fit": "Open fitting — excluded for your left-ear gap",
+      "Use & lifestyle": "Strongest in noise",
+      "Usability": "App-led, more settings to learn",
+      "Commercial": "$299/month VIP tier",
+      "Terms": "3-year warranty, 45-day return",
+      "Fulfilment": "Ships to you — fitted at a follow-up",
+    },
+  },
+};
+
+/** Order states through fitting and activation (spec §2 gap). */
+export const orderStates = [
+  "Submitted", "Supplier accepted", "Configured", "Shipped",
+  "Delivered", "Fitting due", "Activated",
+];
+
+/** Exception queue — the operator's real work (spec §9). */
+export const exceptions = [
+  { kind: "Red flag", patient: "Eleanor M.", stage: 2, age: "4m", severity: "high" as const,
+    detail: "Intake safety trigger — awaiting licensed review" },
+  { kind: "Unsigned report", patient: "Walter K.", stage: 6, age: "14m", severity: "high" as const,
+    detail: "Exam complete, results held from patient" },
+  { kind: "Failed connection", patient: "Hector D.", stage: 5, age: "3m", severity: "medium" as const,
+    detail: "Supervision link degraded mid-exam" },
+  { kind: "Expired kit calibration", patient: "Priya N.", stage: 4, age: "9m", severity: "medium" as const,
+    detail: "Checklist gate blocked the visit" },
+  { kind: "Late arrival", patient: "Marcus T.", stage: 3, age: "6m", severity: "low" as const,
+    detail: "CMA running behind schedule" },
+  { kind: "Missing consent", patient: "Doris P.", stage: 4, age: "2m", severity: "low" as const,
+    detail: "Telehealth consent not captured" },
+];
+
+/** Patients per lifecycle stage — the pipeline panel. */
+export const pipeline = [
+  { stage: 1, name: "Awareness", count: 42 },
+  { stage: 2, name: "Booking & intake", count: 18 },
+  { stage: 3, name: "Dispatch", count: 11 },
+  { stage: 4, name: "Home visit", count: 6 },
+  { stage: 5, name: "Live supervision", count: 6 },
+  { stage: 6, name: "Result", count: 4 },
+  { stage: 7, name: "Consult", count: 3 },
+  { stage: 8, name: "Sale", count: 5 },
+  { stage: 9, name: "Fulfilment", count: 27 },
+];
+
+/**
+ * Operator metrics. ⚠ conversion, deviceGrossProfit, cmaShare and the 1:6 ratio
+ * appear in NEITHER the deck NOR the MRD — demo placeholders only (spec §14).
+ * Never present them to investors as deck figures.
+ */
+export const metrics = {
+  activeMemberships: 1284,
+  mrr: 148_916,
+  newThisMonth: 96,
+  mix: [
+    { tier: "Essential", count: 702, monthly: 99 },
+    { tier: "Premium", count: 431, monthly: 149 },
+    { tier: "VIP", count: 151, monthly: 299 },
+  ],
+  conversion: 0.30,
+  deviceGrossProfit: 915,
+  cmaShare: 70,
+  supervisionRatio: 6,
+};
+
+/** Compressed secondary cards on the operator dashboard. */
+export const opPanels = {
+  dispatch: { visitsToday: 34, cmasActive: 12, unassigned: 2 },
+  kits: { inField: 12, calibrationDue: 2, expired: 1 },
+  orders: { inFlight: 27, fittingDue: 4, activatedToday: 9 },
+  supplier: { open: 6, accepted: 21 },
+  support: { open: 8, breaching: 1 },
+};
+
+/** The six MRD comparison categories, in display order. */
+export const compareCategories = [
+  "Clinical fit", "Use & lifestyle", "Usability", "Commercial", "Terms", "Fulfilment",
+];

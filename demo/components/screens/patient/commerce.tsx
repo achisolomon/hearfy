@@ -3,22 +3,40 @@ import { Check } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
 import { devices, deviceDetail, orderStates, compareCategories } from "@/lib/mock-data";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
+import { selectDevice, useSelectedDevice } from "@/lib/selection";
+import { cn } from "@/lib/cn";
 import { ScreenId } from "../registry";
 import { Shell } from "../shared";
 
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
+  const selected = useSelectedDevice();
   return <Shell>
     <PageHeader title="Side by side" subtitle="The six things worth comparing." onBack={back} eyebrow="Compare"/>
     <div className="-mx-5 overflow-x-auto px-5">
       <table className="w-full min-w-[28rem] border-separate border-spacing-y-2 text-left text-sm">
         <thead><tr>
           <th scope="col" className="w-32"/>
-          {shortlist.map(d=><th key={d.name} scope="col" className="p-2 align-bottom">
-            <b className="block text-[13px] leading-tight">{d.name}</b>
-            <span className="text-[11px] font-normal text-slate-400">
-              ${tierFor(deviceDetail[d.name].tier).monthly}/mo
-            </span></th>)}
+          {shortlist.map(d=>{
+            const isSel = d.name===selected.name;
+            return <th key={d.name} scope="col" className="p-2 align-bottom">
+              <button
+                type="button"
+                aria-pressed={isSel}
+                onClick={()=>selectDevice(d.name)}
+                className={cn("w-full rounded-xl p-2 text-left transition",
+                  isSel?"bg-brand-teal/10 ring-2 ring-brand-teal":"hover:bg-[#f1f5f6]")}>
+                <b className="block text-[13px] leading-tight">{d.name}</b>
+                <span className="text-[11px] font-normal text-slate-400">
+                  ${tierFor(deviceDetail[d.name].tier).monthly}/mo
+                </span>
+                <span className={cn("mt-1 block text-[10px] font-bold uppercase tracking-wider",
+                  isSel?"text-brand-teal":"text-transparent")}>
+                  {isSel?"Selected":"Select"}
+                </span>
+              </button>
+            </th>;
+          })}
         </tr></thead>
         <tbody>
           {compareCategories.map(cat=><tr key={cat}>
@@ -29,12 +47,12 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         </tbody>
       </table>
     </div>
-    <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {devices[0].name}</PrimaryButton></div>
+    <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {selected.name}</PrimaryButton></div>
   </Shell>;
 }
 
 export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
-  const chosen = devices[0];
+  const chosen = useSelectedDevice();
   const tier = tierFor(deviceDetail[chosen.name].tier);
   const {monthly,credit,dueNow} = creditedFirstMonth(tier.id);
   return <Shell>
@@ -61,10 +79,21 @@ export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
 }
 
 export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
-  // The hero was fitted in the home, so every state is already complete.
-  const done = orderStates.length;
+  const chosen = useSelectedDevice();
+  const inCase = deviceDetail[chosen.name].inCase;
+  // In-case devices (Fulfilment: "In the case — fitted today") were fitted
+  // during the home visit, so every state is already complete. A device that
+  // ships later (Fulfilment: "Ships to you — fitted at a follow-up", e.g. the
+  // Oticon Intent 2) has not been fitted yet — claiming "Activated" for it
+  // would be the same dishonesty the compare screen used to hide: telling the
+  // patient they were fitted today when they were not. So it stops at
+  // "Fitting due", one step short of complete.
+  const done = inCase ? orderStates.length : orderStates.indexOf("Fitting due") + 1;
   return <Shell>
-    <PageHeader title="Fitted and active" subtitle="You left your visit hearing." onBack={back} eyebrow="Your device"/>
+    <PageHeader
+      title={inCase ? "Fitted and active" : "On its way"}
+      subtitle={inCase ? "You left your visit hearing." : "Ships to you, fitted at a follow-up visit."}
+      onBack={back} eyebrow="Your device"/>
     <Card className="p-5">
       <div className="space-y-0">
         {orderStates.map((s,i)=><div key={s} className="flex gap-3">
@@ -74,7 +103,7 @@ export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             {i<orderStates.length-1&&<span className={`w-0.5 flex-1 ${i<done-1?"bg-brand-teal":"bg-[#eef4f5]"}`}/>}
           </div>
           <div className="pb-5"><b className="text-sm">{s}</b>
-            {s==="Activated"&&<p className="mt-1 text-xs text-slate-500">Serial HF-2284-L / HF-2284-R</p>}</div>
+            {s==="Activated"&&i<done&&<p className="mt-1 text-xs text-slate-500">Serial HF-2284-L / HF-2284-R</p>}</div>
         </div>)}
       </div>
     </Card>

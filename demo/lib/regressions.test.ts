@@ -175,6 +175,40 @@ describe("who decides what", () => {
   });
 });
 
+describe("patient device choice", () => {
+  const commerce = sourceOf("components/screens/patient/commerce.tsx");
+
+  // Compare showed three devices across six categories, then a single button
+  // reading "Continue with the Phonak Audéo L50" regardless of which column
+  // the patient actually preferred — the comparison was theatre. The CTA must
+  // read the patient's own selection, not a literal devices[0].
+  it("does not hardcode Compare's call-to-action to a literal devices[0]", () => {
+    const compareBlock = commerce.split("export function Checkout")[0];
+    expect(compareBlock).not.toMatch(/Continue with the \{devices\[0\]/);
+  });
+
+  // Checkout unconditionally read devices[0], so whatever the patient
+  // pointed at on Compare, they were billed for the Phonak regardless.
+  it("does not have Checkout unconditionally read devices[0]", () => {
+    const checkoutBlock = commerce.split("export function Checkout")[1]?.split("export function Order")[0] ?? "";
+    expect(checkoutBlock).not.toMatch(/=\s*devices\[0\]/);
+  });
+
+  // Compare and Checkout are separate screens rendered inside
+  // <motion.div key={current}>, so the whole component tree unmounts and
+  // remounts between them (see components/patient-app-2.tsx). A selection
+  // held only in useState would be lost on that remount — same failure mode
+  // latch.ts and text-size.tsx were built to avoid. The selection must come
+  // from a module-scope store reached through useSyncExternalStore (directly
+  // or, as here, through a hook that wraps it) — not plain component state —
+  // so it survives the remount.
+  it("holds the device selection in a module-scope store, not useState, so it survives the remount between Compare and Checkout", () => {
+    expect(commerce).not.toMatch(/useState<?\(?.*[Dd]evice/);
+    const selectionSrc = sourceOf("lib/selection.ts");
+    expect(selectionSrc).toMatch(/useSyncExternalStore/);
+  });
+});
+
 describe("shell controls", () => {
   // The shell offered Next and no way back, though the context exposed back().
   it("wires every navigation the story context exposes", () => {

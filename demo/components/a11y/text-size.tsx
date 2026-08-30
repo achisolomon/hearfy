@@ -35,9 +35,29 @@ function setIndex(i: number) {
   emit();
 }
 
-/** Reset to the standard size, for the start of a fresh walkthrough. */
+/** The root font-size (relative to the 16px browser default) for a given
+ * SIZES scale. `html`'s base rule in globals.css sets the low-vision 18px
+ * baseline as 112.5%; writing this same 112.5%-scaled value inline keeps the
+ * inline style composing with that baseline instead of replacing it with a
+ * plain 16px-relative percentage. */
+const rootFontSize = (scale: number) => `${scale * 112.5}%`;
+
+/**
+ * Reset to the standard size, for the start of a fresh walkthrough.
+ *
+ * Writes `document.documentElement.style.fontSize` directly rather than only
+ * resetting the stored index. `Cover` calls this without rendering `Shell`,
+ * so no `TextSize` instance is mounted to react to the index change and
+ * rewrite the DOM — without this direct write, a root font size set by a
+ * previous walkthrough (e.g. 130%) would persist onto whatever unrelated
+ * screen renders next. Guarded for SSR / pre-hydration, where `document`
+ * does not exist.
+ */
 export function resetTextSize() {
   setIndex(0);
+  if (typeof document !== "undefined") {
+    document.documentElement.style.fontSize = rootFontSize(SIZES[0].scale);
+  }
 }
 
 /**
@@ -60,7 +80,7 @@ export function TextSize() {
 
   useEffect(() => {
     if (hidden) return;
-    document.documentElement.style.fontSize = `${SIZES[i].scale * 100}%`;
+    document.documentElement.style.fontSize = rootFontSize(SIZES[i].scale);
     // No cleanup that resets fontSize here: this component remounts as the
     // presenter moves between beats, and a reset-on-unmount would silently
     // discard the chosen size. The stored index (and `resetTextSize`) is what

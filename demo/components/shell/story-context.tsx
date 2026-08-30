@@ -33,6 +33,11 @@ interface StoryValue {
   mode: Mode;
   /** Set when guided mode just switched roles, so the interstitial can announce it. */
   handoff: Role | null;
+  /**
+   * Solo mode only: this persona has no further beats. Their story is over,
+   * but the demo is not — the viewer can still switch role or jump stages.
+   */
+  atWalkEnd: boolean;
   screen: AnyScreenId;
   stage: StageNumber;
   setRole: (r: Role) => void;
@@ -59,8 +64,15 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<Mode>("guided");
   const [handoff, setHandoff] = useState<Role | null>(null);
 
+  /**
+   * Picking a role by hand leaves solo mode. Someone who entered as one
+   * persona and then deliberately switched is browsing, not walking that
+   * persona's story — staying in solo would strand them in a mode whose
+   * Next walks a different role's beats than the one on screen.
+   */
   const setRole = useCallback((r: Role) => {
     setRoleState(r);
+    setMode("guided");
     setHandoff(null);
   }, []);
 
@@ -68,9 +80,10 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     const i = firstBeatOfStage(s);
     setBeat(i);
     setPhase("journey");
-    // Follow the stage's lead role so the chip lands on a meaningful view.
-    setRoleState(BEATS[i].lead);
-  }, []);
+    // In solo mode the viewer chose a persona: jumping stages moves time, not
+    // identity. Only guided mode follows the stage's lead role.
+    if (mode !== "solo") setRoleState(BEATS[i].lead);
+  }, [mode]);
 
   /**
    * Every branch computes the target beat first, then dispatches. Calling a
@@ -79,11 +92,12 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
    * happens to be idempotent, which is not a property worth depending on.
    */
   const next = useCallback(() => {
-    // Solo: walk only this role's own beats; never switch role.
+    // Solo: walk only this role's own beats; never switch role. Reaching the
+    // end of one persona's walk is NOT the end of the demo — the operator's
+    // dashboard is ambient, so their walk is a single beat, and ending the
+    // whole demo on one click would read as broken.
     if (mode === "solo") {
-      const i = nextBeatForRole(beat, role);
-      if (i === beat) setPhase("endcap");
-      else setBeat(i);
+      setBeat(nextBeatForRole(beat, role));
       return;
     }
     if (isLastBeat(beat)) {
@@ -141,6 +155,7 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     phase,
     mode,
     handoff,
+    atWalkEnd: mode === "solo" && nextBeatForRole(beat, role) === beat,
     screen: screenFor(beat, role),
     stage: BEATS[beat].stage,
     setRole,

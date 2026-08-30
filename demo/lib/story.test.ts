@@ -126,3 +126,30 @@ describe("solo mode (per-persona entry)", () => {
     expect(prevBeatForRole(beats[2], "cma")).toBe(beats[1]);
   });
 });
+
+describe("solo walk boundaries", () => {
+  it("a role whose screen never changes has a one-beat walk", () => {
+    // The operator's dashboard is ambient at every beat. Pressing Next must
+    // not advance — and the shell must not read that as the demo ending.
+    const beats = beatsForRole("operator");
+    expect(beats).toEqual([0]);
+    expect(nextBeatForRole(0, "operator")).toBe(0);
+  });
+
+  it("every role's walk starts at or before its first appearance", () => {
+    for (const role of ROLES) {
+      const beats = beatsForRole(role);
+      expect(beats.length).toBeGreaterThan(0);
+      expect(beats[0]).toBe(0);
+    }
+  });
+
+  it("walking a role end to end visits every one of its screens", () => {
+    for (const role of ROLES) {
+      const walk = beatsForRole(role);
+      const seen = new Set(walk.map(i => BEATS[i].screens[role]));
+      const all = new Set(BEATS.map(b => b.screens[role]));
+      expect(seen, `${role} walk misses a screen`).toEqual(all);
+    }
+  });
+});

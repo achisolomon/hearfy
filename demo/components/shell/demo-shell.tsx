@@ -11,7 +11,7 @@ import { Timeline } from "./timeline";
 import { useStory } from "./story-context";
 
 export function DemoShell() {
-  const { phase, next } = useStory();
+  const { phase, next, atWalkEnd } = useStory();
   const [sheet, setSheet] = useState(false);
 
   if (phase === "cover") return <Cover />;
@@ -26,11 +26,14 @@ export function DemoShell() {
           <RoleTabs />
           <div className="flex-1" />
           <Timeline />
+          {/* A finished solo walk is not the end of the demo — say so, and
+              leave the role tabs and timeline live. */}
           <button
             onClick={next}
-            className="flex items-center gap-1.5 rounded-full bg-brand-navy px-4 py-2 text-xs font-bold text-white"
+            disabled={atWalkEnd}
+            className="flex items-center gap-1.5 rounded-full bg-brand-navy px-4 py-2 text-xs font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
           >
-            Next <ArrowRight size={14} />
+            {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={14} /></>}
           </button>
         </div>
       </div>
@@ -48,9 +51,10 @@ export function DemoShell() {
         </button>
         <button
           onClick={next}
-          className="flex h-12 flex-1 max-w-[220px] items-center justify-center gap-2 rounded-full bg-brand-navy font-bold text-white shadow-card"
+          disabled={atWalkEnd}
+          className="flex h-12 flex-1 max-w-[240px] items-center justify-center gap-2 rounded-full bg-brand-navy px-4 text-sm font-bold text-white shadow-card disabled:bg-white disabled:text-slate-400"
         >
-          Next <ArrowRight size={17} />
+          {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={17} /></>}
         </button>
       </div>
 

@@ -1,9 +1,11 @@
 "use client";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { BrandLogo, PrimaryButton, SecondaryButton } from "../ui";
 import { BRAND_NAME } from "@/lib/mock-data";
 import { BEATS, STAGES, ROLES } from "@/lib/story";
 import { personaFor } from "@/lib/personas";
+import { resetAllLatches } from "@/lib/latch";
 import { PersonaAvatar } from "../persona-avatar";
 import { useStory } from "./story-context";
 
@@ -12,6 +14,10 @@ const DISCLAIMER =
 
 export function Cover() {
   const { start, startAs } = useStory();
+  // The clinical gates latch for the length of a walkthrough, not the page.
+  // Every fresh run begins here, so a second demo starts unsigned rather than
+  // skipping the signing beat outright.
+  useEffect(() => { resetAllLatches(); }, []);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full max-w-md text-center">

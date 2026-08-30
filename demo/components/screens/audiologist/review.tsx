@@ -1,28 +1,12 @@
 "use client";
-import { useSyncExternalStore } from "react";
 import { Lock, PenLine } from "lucide-react";
 import { Card, PrimaryButton, StatusPill } from "../../ui";
 import { Audiogram } from "../../charts/audiogram";
+import { createLatch } from "@/lib/latch";
 import { clinician, speech, otoscopy, patient } from "@/lib/mock-data";
 
-/**
- * Signing is irreversible, so the flag outlives the component. The story shell
- * remounts screens as the viewer moves between beats, and a remounted report
- * that had un-signed itself would contradict the immutability this screen asserts.
- */
-let reportSigned = false;
-const signedListeners = new Set<() => void>();
-function signReport() {
-  reportSigned = true;
-  signedListeners.forEach(l => l());
-}
-function useReportSigned() {
-  return useSyncExternalStore(
-    (l) => { signedListeners.add(l); return () => { signedListeners.delete(l); }; },
-    () => reportSigned,
-    () => false,
-  );
-}
+/** Signing is irreversible, so the flag outlives the component. See lib/latch. */
+const signedLatch = createLatch();
 
 export function AudReview({ next }: { next: () => void }) {
   return (
@@ -76,7 +60,7 @@ export function AudReview({ next }: { next: () => void }) {
 }
 
 export function AudSign({ next }: { next: () => void }) {
-  const signed = useReportSigned();
+  const signed = signedLatch.use();
   return (
     <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 text-brand-navy">
       <Card className="w-full max-w-lg p-7">
@@ -104,7 +88,7 @@ export function AudSign({ next }: { next: () => void }) {
         <div className="mt-6">
           {signed
             ? <PrimaryButton onClick={next}>Start the consult</PrimaryButton>
-            : <PrimaryButton onClick={signReport}>Sign &amp; release results</PrimaryButton>}
+            : <PrimaryButton onClick={signedLatch.set}>Sign &amp; release results</PrimaryButton>}
         </div>
       </Card>
     </div>

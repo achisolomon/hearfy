@@ -1,29 +1,16 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Ban, Lock, Video } from "lucide-react";
 import { Card, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
+import { createLatch } from "@/lib/latch";
 import { devices, tiers, clinician, patient } from "@/lib/mock-data";
 
 /**
  * Locking the prescription is a separate, irreversible commitment from signing
- * the report (a different latch, on purpose). The story shell remounts screens
- * as the viewer moves between beats, and a remounted prescription that had
- * unlocked itself would contradict the immutability this screen asserts.
+ * the report — a different latch, on purpose.
  */
-let prescriptionLocked = false;
-const lockedListeners = new Set<() => void>();
-function lockPrescription() {
-  prescriptionLocked = true;
-  lockedListeners.forEach(l => l());
-}
-function usePrescriptionLocked() {
-  return useSyncExternalStore(
-    (l) => { lockedListeners.add(l); return () => { lockedListeners.delete(l); }; },
-    () => prescriptionLocked,
-    () => false,
-  );
-}
+const lockedLatch = createLatch();
 
 export function AudConsult({ next }: { next: () => void }) {
   // The audiologist recommends 2–3 and excludes at least one with a rationale.
@@ -106,7 +93,7 @@ export function AudConsult({ next }: { next: () => void }) {
 }
 
 export function AudPrescription() {
-  const locked = usePrescriptionLocked();
+  const locked = lockedLatch.use();
   return (
     <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 text-brand-navy">
       <Card className="w-full max-w-lg p-7">
@@ -127,7 +114,7 @@ export function AudPrescription() {
         </div>
         {locked && <div className="mt-4"><StatusPill tone="green">Locked &amp; immutable</StatusPill></div>}
         {!locked && (
-          <div className="mt-6"><PrimaryButton onClick={lockPrescription}>Sign &amp; lock</PrimaryButton></div>
+          <div className="mt-6"><PrimaryButton onClick={lockedLatch.set}>Sign &amp; lock</PrimaryButton></div>
         )}
       </Card>
     </div>

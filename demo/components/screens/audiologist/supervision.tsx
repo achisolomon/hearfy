@@ -14,28 +14,48 @@ function prioritised() {
 }
 
 function Tile({ e, onOpen }: { e: (typeof supervisionQueue)[number]; onOpen?: () => void }) {
-  return (
-    <button
-      onClick={e.hero ? onOpen : undefined}
-      className={cn(
-        "rounded-2xl border bg-white p-4 text-left transition",
-        e.redFlag ? "border-red-300 animate-pulse" : "border-[#e4eef0]",
-        e.hero ? "ring-2 ring-brand-teal" : "cursor-default opacity-90"
-      )}
-    >
-      <div className="flex items-start justify-between">
+  const className = cn(
+    "rounded-2xl border bg-white p-4 text-left transition",
+    e.redFlag ? "border-red-300 animate-pulse motion-reduce:animate-none" : "border-[#e4eef0]",
+    e.hero ? "ring-2 ring-brand-teal" : "cursor-default opacity-90"
+  );
+
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-1">
         <div>
           <b className="text-sm">{e.name}</b>
           <p className="mt-0.5 text-xs text-slate-500">{e.step}</p>
         </div>
-        {e.redFlag && <AlertTriangle size={16} className="text-red-500" />}
-        {e.connection === "weak" && <WifiOff size={15} className="text-amber-500" />}
+        {/* Icons carry state, so each pairs with text for anyone not seeing the glyph. */}
+        {e.redFlag && (
+          <span className="flex items-center text-red-500">
+            <AlertTriangle size={16} aria-hidden />
+            <span className="sr-only">Needs attention</span>
+          </span>
+        )}
+        {e.connection === "weak" && (
+          <span className="flex items-center text-amber-500">
+            <WifiOff size={15} aria-hidden />
+            <span className="sr-only">Weak connection</span>
+          </span>
+        )}
       </div>
       <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
         <span>CMA {e.cma}</span>
         <span>{e.waitMins === 0 ? "live" : `${e.waitMins}m wait`}</span>
       </div>
       {e.hero && <p className="mt-3 text-[11px] font-bold text-brand-teal">Open monitoring →</p>}
+    </>
+  );
+
+  // Only the hero's exam opens; the rest are read-only, so they are not controls.
+  // Rendering them as buttons would put five inert tab stops before the one action.
+  if (!e.hero) return <div className={className}>{body}</div>;
+
+  return (
+    <button onClick={onOpen} className={className}>
+      {body}
     </button>
   );
 }

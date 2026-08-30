@@ -457,4 +457,34 @@ describe("text-size clipping", () => {
     expect(compareBlock).toMatch(/hidden lg:(?:block|flex|grid)/);
     expect(compareBlock).toMatch(/\blg:hidden\b/);
   });
+
+  // The header row was a bare `{shortlist.map(...)}` with no leading cell,
+  // while every `grid-cols-[9rem_repeat(3,1fr)]` row below it opens with a
+  // label cell before the same `shortlist.map`. A four-column grid fed only
+  // three children packs each device header one column left of its own
+  // values — the label slot swallows the first header, and the row grows an
+  // empty column on the right. Every row on this grid template must place
+  // something in the leading (label) slot before it maps the three devices,
+  // so the declared column count always matches the rendered cell count.
+  it("gives every grid-cols-[9rem_repeat(3,1fr)] row in Compare a leading cell before it maps the three devices", () => {
+    const commerce = sourceOf("components/screens/patient/commerce.tsx");
+    const compareBlock = commerce.split("export function Checkout")[0];
+    const GRID_ROW_OPEN = /grid-cols-\[9rem_repeat\(3,1fr\)\][^>]*>/g;
+    const bareRows: string[] = [];
+    let match: RegExpExecArray | null;
+    let rowCount = 0;
+    while ((match = GRID_ROW_OPEN.exec(compareBlock))) {
+      rowCount++;
+      const afterOpenTag = compareBlock.slice(match.index + match[0].length);
+      const mapIdx = afterOpenTag.indexOf("shortlist.map(");
+      const beforeMap = mapIdx === -1 ? afterOpenTag : afterOpenTag.slice(0, mapIdx);
+      // A real leading cell is a JSX element, not just the `{` that opens
+      // the map expression — so require an opening tag before shortlist.map.
+      if (!/<\w/.test(beforeMap)) {
+        bareRows.push(`row ${rowCount}: nothing before shortlist.map() — "${beforeMap.trim()}"`);
+      }
+    }
+    expect(rowCount, "expected to find at least one grid-cols-[9rem_repeat(3,1fr)] row").toBeGreaterThan(0);
+    expect(bareRows).toEqual([]);
+  });
 });

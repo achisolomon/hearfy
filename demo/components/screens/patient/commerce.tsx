@@ -11,36 +11,11 @@ import { Shell } from "../shared";
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
   const selected = useSelectedDevice();
-  // Root cause of the last three attempts: Shell caps ALL patient content at
-  // max-w-md (28rem = phone width), even on a 1200px+ desktop, so a 4-column
-  // table (label + 3 devices) of sentence-length values could never fit —
-  // not because a table is wrong, but because it never had room. The two
-  // earlier fixes (a 560-pixel floor, then a 28-rem floor, both via an
-  // arbitrary min-width utility) tried to force the table to fit a
-  // phone-width box and either clipped the last column or produced the
-  // horizontal scrollbar the owner rejected outright ("It looks bad. Lose
-  // this. Lose the scroll."). Shell now takes an opt-in
-  // `wide` prop (default false, so every other screen is untouched) that
-  // widens the container from `lg` (1024px) up. So: a real side-by-side
-  // table from `lg` up, where there is room, and the stacked cards below it
-  // where there is not. Both trees render into the DOM together, gated by
-  // Tailwind's `hidden lg:*` / `lg:hidden` visibility idiom (see BottomNav's
-  // sibling screens for the same pattern) rather than a JS width check, so
-  // nothing depends on JS running before first paint.
-  //
-  // Breakpoint arithmetic (lib/regressions.test.ts pins this): Tailwind's
-  // `lg` media query is a fixed 1024px — CSS media features resolve against
-  // the browser's default 16px rem, not `document.documentElement.style
-  // .fontSize`, which is how TextSize (components/a11y/text-size.tsx) scales
-  // text — so the breakpoint itself does not move as text grows. What does
-  // grow is the rem-sized chrome around the table (Shell's px-5 padding, the
-  // 9rem label column), and the table's device columns are
-  // `fr` units, not a px/rem floor, so they simply take whatever space is
-  // left — never less, never forcing a scrollbar. At the 1024px threshold,
-  // each device column still gets roughly 271px (standard, 18px root), 260px
-  // (large, 20.7px root), 250px (larger, 23.4px root) — comfortably readable
-  // at all three settings, and the *actual* available width only grows from
-  // there as the viewport grows past 1024px.
+  // Shell's `wide` prop is opt-in and only widens this screen from `lg` up;
+  // every other screen stays phone-width. Below `lg`, stacked cards; from
+  // `lg`, the side-by-side table — both trees are in the DOM, toggled by
+  // Tailwind visibility. Device columns are `fr` units on purpose (no
+  // px/rem floor), so the table can never overflow or need a scrollbar.
   return <Shell wide>
     <PageHeader title="Compare devices" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
 
@@ -51,6 +26,7 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     <div className="hidden lg:block">
       <Card className="overflow-hidden p-0">
         <div className="grid grid-cols-[9rem_repeat(3,1fr)]">
+          <div/>
           {shortlist.map(d=>{
             const isSel = d.name===selected.name;
             const detail = deviceDetail[d.name];

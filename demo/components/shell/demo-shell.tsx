@@ -52,27 +52,34 @@ export function DemoShell() {
 
       <RoleView />
 
-      {/* Phone: floating Next pill + sheet trigger. */}
-      <div className="fixed inset-x-0 bottom-24 z-40 flex justify-center gap-3 px-5 md:hidden">
-        <button
-          onClick={() => setSheet(true)}
-          aria-label="Demo controls"
-          className="grid h-12 w-12 place-items-center rounded-full bg-white text-brand-navy shadow-card"
-        >
-          <LayoutGrid size={19} />
-        </button>
-        <button
-          onClick={back}
-          disabled={atStart}
-          aria-label="Previous beat"
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-brand-navy shadow-card disabled:text-slate-300"
-        >
-          <ArrowLeft size={19} />
-        </button>
+      {/* Phone: one docked bar flush to the viewport bottom (Option C) — Back
+          and the sheet/grid trigger sit at the left edge, Next owns the right
+          edge. This replaces the old floating row that hovered above a
+          separate BottomNav; BottomNav (patient role only) now stacks
+          directly on top of this bar instead of sharing bottom-0 with it —
+          see its `bottom-14 md:bottom-0` offset in shared.tsx. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-between gap-2 border-t border-[#dce7e9] bg-white/95 px-3 backdrop-blur md:hidden">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={back}
+            disabled={atStart}
+            aria-label="Previous beat"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-brand-navy disabled:text-slate-300"
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <button
+            onClick={() => setSheet(true)}
+            aria-label="Demo controls"
+            className="grid h-10 w-10 place-items-center rounded-full text-brand-navy"
+          >
+            <LayoutGrid size={19} />
+          </button>
+        </div>
         <button
           onClick={next}
           disabled={atWalkEnd}
-          className="flex h-12 flex-1 max-w-[240px] items-center justify-center gap-2 rounded-full bg-brand-navy px-4 text-sm font-bold text-white shadow-card disabled:bg-white disabled:text-slate-400"
+          className="flex h-10 items-center justify-center gap-2 rounded-full bg-brand-navy px-4 text-sm font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
         >
           {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={17} /></>}
         </button>

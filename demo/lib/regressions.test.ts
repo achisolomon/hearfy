@@ -489,21 +489,29 @@ describe("text-size clipping", () => {
   });
 });
 
-describe("floating controls clearance", () => {
-  // On a real phone the owner found the floating mobile controls (grid/sheet
-  // button, Back circle, Next pill) sitting on top of the screen's last
-  // content — a teal "Maya has arrived at your home." card cut in half
-  // behind them and behind BottomNav. Everything here is rem-based, and rem
-  // sizes scale together: the root is 112.5% (18px) at "standard" per
-  // globals.css and TextSize (components/a11y/text-size.tsx) only scales
-  // upward from there (×1.15, ×1.3), so whatever gap exists in rem is the
-  // same gap at every text size — but Shell's bottom padding (pb-28 = 7rem)
-  // was smaller than the controls' top edge (bottom-24 + h-12 = 9rem), so
-  // content ran two rem short of clearing them, at every size.
+describe("docked controls clearance", () => {
+  // On a real phone the owner rejected the floating controls (grid/sheet
+  // button, Back circle, Next pill) hovering above a separate BottomNav —
+  // "it doesn't look good" — and chose Option C: one bar docked flush to the
+  // viewport bottom (demo-shell.tsx's Back/Next/sheet row at bottom-0)
+  // with the patient app's BottomNav stacked directly above it, flush, no
+  // gap, on phone. Everything here is still rem-based, and rem sizes scale
+  // together: the root is 112.5% (18px) at "standard" per globals.css and
+  // TextSize (components/a11y/text-size.tsx) only scales upward from there
+  // (×1.15, ×1.3), so whatever clearance exists in rem is the same
+  // clearance at every text size.
   //
-  // Tailwind's spacing scale is 0.25rem per step (pb-28 = 28 * 0.25 = 7rem),
-  // which is how every value below is converted from the class name rather
-  // than hand-copied as a number that could drift from the source.
+  // The guarantee this test encodes did not change: Shell's content must
+  // never sit behind the tallest fixed bottom element on phone. What changed
+  // is the shape of that element from "a floating row with a gap beneath
+  // it" to "a docked stack with zero gap" — so the source markers this test
+  // parses changed (bottom-24 -> bottom-0, a floating md:hidden row -> a
+  // docked one, plus BottomNav's own stacked offset), but the assertion is
+  // the same relationship: Shell's bottom padding > the stack's top edge.
+  //
+  // Tailwind's spacing scale is 0.25rem per step, which is how every value
+  // below is converted from the class name rather than hand-copied as a
+  // number that could drift from the source.
   const SPACING_UNIT_REM = 0.25;
   const classValueRem = (src: string, pattern: RegExp): number => {
     const m = pattern.exec(src);
@@ -516,35 +524,71 @@ describe("floating controls clearance", () => {
   if (!shellLine) throw new Error("could not locate Shell's definition in shared.tsx");
 
   const demoShell = sourceOf("components/shell/demo-shell.tsx");
-  // The phone control row: `fixed inset-x-0 bottom-24 z-40 ... md:hidden`.
-  const controlRowMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
-  if (!controlRowMatch) throw new Error("could not locate the fixed phone control row in demo-shell.tsx");
-  const controlRowBlock = demoShell.slice(controlRowMatch.index, demoShell.indexOf("</div>", controlRowMatch.index));
+  // The docked phone control bar: `fixed inset-x-0 bottom-0 z-40 ... md:hidden`.
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const controlBarBlock = demoShell.slice(controlBarMatch.index, demoShell.indexOf("</div>", controlBarMatch.index));
 
   const shellPaddingRem = classValueRem(shellLine, /\bpb-(\d+)\b/);
-  const controlsBottomRem = classValueRem(demoShell, /fixed inset-x-0 bottom-(\d+) z-40/);
-  // Every button in the floating row shares the same h-12 height; take the
-  // tallest h-* found in the row so the assertion holds even if one button
-  // is changed to be taller than its siblings.
-  const controlHeightsRem = [...controlRowBlock.matchAll(/\bh-(\d+)\b/g)].map(m => Number(m[1]) * SPACING_UNIT_REM);
-  if (controlHeightsRem.length === 0) throw new Error("found no h-* button height inside the phone control row");
-  const controlsTopEdgeRem = controlsBottomRem + Math.max(...controlHeightsRem);
+  const controlBarBottomRem = classValueRem(demoShell, /fixed inset-x-0 bottom-(\d+) z-40/);
+  // The docked bar must actually sit flush at the viewport bottom now, not
+  // floating above it — Option C's entire premise.
+  it("docks the phone control bar flush to the viewport bottom", () => {
+    expect(controlBarBottomRem, "the phone control bar's bottom-* offset should be 0 (flush), not floating above the viewport bottom").toBe(0);
+  });
+
+  // Every button in the docked bar shares a height; take the tallest h-*
+  // found in the bar so the assertion holds even if one button is changed
+  // to be taller than its siblings.
+  const controlHeightsRem = [...controlBarBlock.matchAll(/\bh-(\d+)\b/g)].map(m => Number(m[1]) * SPACING_UNIT_REM);
+  if (controlHeightsRem.length === 0) throw new Error("found no h-* button height inside the docked phone control bar");
+  const controlBarHeightRem = Math.max(...controlHeightsRem);
+  const controlBarTopEdgeRem = controlBarBottomRem + controlBarHeightRem;
+
+  // BottomNav (components/screens/shared.tsx) stacks directly above the
+  // docked control bar on phone when a story is present (patient role,
+  // Demo 2) — its phone bottom-* offset (`bottom-N md:bottom-0`, reverting
+  // to flush on desktop where the demo control bar is md:hidden) must equal
+  // the control bar's height so the two sit flush with no gap and no overlap.
+  const sharedSrc = sourceOf("components/screens/shared.tsx");
+  if (!sharedSrc.includes("export function BottomNav")) throw new Error("could not locate BottomNav's definition in shared.tsx");
+  const bottomNavStackedOffsetRem = classValueRem(sharedSrc, /bottom-(\d+) md:bottom-0/);
+  const bottomNavHeightRem = classValueRem(sharedSrc, /BottomNav[\s\S]{0,600}?\bh-(\d+)\b/);
+
+  it("stacks BottomNav flush above the docked control bar on phone, with no gap", () => {
+    expect(
+      bottomNavStackedOffsetRem,
+      `BottomNav's phone-stacked bottom-* offset is ${bottomNavStackedOffsetRem}rem, but the docked ` +
+      `control bar (demo-shell.tsx) is ${controlBarHeightRem}rem tall. For the two to read as one ` +
+      `continuous docked stack with no gap and no overlap, BottomNav's offset must equal the control ` +
+      `bar's height.`,
+    ).toBe(controlBarHeightRem);
+  });
+
+  const stackTopEdgeRem = controlBarBottomRem + controlBarHeightRem + bottomNavHeightRem;
 
   // The relationship, not the instance: Shell's bottom padding must clear
-  // the controls' top edge with room to spare, whatever the exact numbers
-  // are on either side. A future change to either value (a taller button, a
-  // shell padding "cleanup") that closes this gap should fail here rather
-  // than surface on a phone again.
-  it("gives Shell enough bottom padding to clear the floating mobile controls' top edge", () => {
+  // the tallest stack's top edge (patient role: control bar + BottomNav) with
+  // room to spare, whatever the exact numbers are on either side. A future
+  // change to any value (a taller button, a shell padding "cleanup") that
+  // closes this gap should fail here rather than surface on a phone again.
+  it("gives Shell enough bottom padding to clear the docked stack's top edge on phone", () => {
     expect(
       shellPaddingRem,
-      `Shell's bottom padding is ${shellPaddingRem}rem, but the floating phone ` +
-      `controls (demo-shell.tsx) sit from bottom-${controlsBottomRem / SPACING_UNIT_REM} ` +
-      `to bottom-${controlsBottomRem / SPACING_UNIT_REM} + h-${Math.max(...controlHeightsRem) / SPACING_UNIT_REM} ` +
-      `= ${controlsTopEdgeRem}rem above the viewport bottom. Because both values are ` +
-      `rem-based they scale together at every TextSize step, so if padding does not ` +
-      `clear the controls' top edge here, it never does — content sits behind the ` +
-      `grid button, Back circle, and Next pill at every text size, not just one.`,
-    ).toBeGreaterThan(controlsTopEdgeRem);
+      `Shell's bottom padding is ${shellPaddingRem}rem, but the docked phone stack (control bar ` +
+      `bottom-${controlBarBottomRem / SPACING_UNIT_REM} to ${controlBarTopEdgeRem}rem, plus BottomNav ` +
+      `stacked on top up to ${stackTopEdgeRem}rem) reaches ${stackTopEdgeRem}rem above the viewport ` +
+      `bottom in the worst case (patient role, where both bars stack). Because all values are rem-based ` +
+      `they scale together at every TextSize step, so if padding does not clear the stack's top edge ` +
+      `here, it never does — content sits behind the docked bar at every text size, not just one.`,
+    ).toBeGreaterThan(stackTopEdgeRem);
+  });
+
+  // A role with no BottomNav (CMA, audiologist, operator) only has the
+  // control bar itself reaching up from the viewport bottom — confirm that
+  // shorter case is also covered by the same padding value, so the shared
+  // Shell padding is proven safe for every role, not just the patient's.
+  it("also clears the control bar alone, for roles that render no BottomNav", () => {
+    expect(shellPaddingRem).toBeGreaterThan(controlBarTopEdgeRem);
   });
 });

@@ -1,9 +1,9 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ScreenId, order } from "./screens/registry";
 import { BottomNav } from "./screens/shared";
-import { beatForScreen, nextBeat } from "@/lib/story";
+import { beatForScreen, type AnyScreenId } from "@/lib/story";
 import { useStory } from "./shell/story-context";
 import { Welcome, SignIn, HomeScreen } from "./screens/patient/welcome";
 import { IntakeFor, IntakeNeeds, IntakeMedical, IntakeCoverage, IntakePlan } from "./screens/patient/intake";
@@ -14,6 +14,11 @@ import { Review, Results, Recommendation } from "./screens/patient/results";
 import { Compare, Checkout, Order } from "./screens/patient/commerce";
 import { Support } from "./screens/patient/support";
 
+/** Whether the guided script has a beat that shows this patient screen. */
+function onScript(s: ScreenId) {
+  return beatForScreen("patient", s) !== -1;
+}
+
 /**
  * Demo 2's patient view. Same screens as Demo 1, different state source: the
  * shared beat pointer instead of local useState, and no navigator aside — the
@@ -21,27 +26,44 @@ import { Support } from "./screens/patient/support";
  */
 export function PatientApp2() {
   const { screen, beat, mode, goToScreen, next } = useStory();
-  const current = screen as ScreenId;
+  /**
+   * The guided script narrates four of stage 2's nine screens, so the other
+   * five — the rest of intake, and both booking steps — have no beat of their
+   * own. The shared pointer cannot address them, so the patient app remembers
+   * an off-script detour itself and hands control back the moment the viewer
+   * rejoins the script.
+   */
+  const [detour, setDetour] = useState<{ screen: ScreenId; from: AnyScreenId } | null>(null);
+  // The shell can move the story itself (Next, the timeline, a role switch).
+  // That always wins: a detour only holds while the pointer sits where it was.
+  const active = detour && detour.from === screen ? detour.screen : null;
+  const current = (active ?? screen) as ScreenId;
 
   /**
    * A screen's own forward button is the patient taking the story's next step,
-   * so it has to behave like the shell's Next: when the following beat is led
-   * by someone else, the demo hands over to them. `goToScreen` deliberately
-   * stays inside the current role, so using it for a forward move pinned the
-   * viewer to the patient and the handoffs never fired.
-   *
-   * Anything that is not that step — the bottom nav, a jump backwards — is free
-   * navigation and stays in role.
+   * so it behaves like the shell's Next: when the following beat is led by
+   * someone else, the demo hands over to them. `goToScreen` deliberately stays
+   * inside the current role, so using it for a forward move pinned the viewer
+   * to the patient and no handoff ever fired.
    */
   const go = (s: ScreenId) => {
-    const isStoryStep = mode !== "solo" && beatForScreen("patient", s) === nextBeat(beat);
-    if (isStoryStep) next();
+    // A screen the script never narrates can only be shown as a detour.
+    if (!onScript(s)) return setDetour({ screen: s, from: screen });
+    setDetour(null);
+    if (mode === "solo") return goToScreen(s);
+    // Taking the next step advances the story, so a handoff to another role
+    // fires as it does from the shell's own Next. Anything else just browses.
+    const isNextStep = order.indexOf(s) === order.indexOf(current) + 1;
+    if (isNextStep) next();
     else goToScreen(s);
   };
 
   const back = () => {
     const i = order.indexOf(current);
-    goToScreen(order[Math.max(0, i - 1)]);
+    const target = order[Math.max(0, i - 1)];
+    if (!onScript(target)) return setDetour({ screen: target, from: screen });
+    setDetour(null);
+    goToScreen(target);
   };
 
   const screens = useMemo(() => ({
@@ -74,7 +96,7 @@ export function PatientApp2() {
     support: <Support go={go} back={back}/>,
     // `go` closes over the beat and the mode, so the cached elements must be
     // rebuilt when either moves — not only when the screen id changes.
-  } as Record<ScreenId, React.ReactNode>), [current, beat, mode]);
+  } as Record<ScreenId, React.ReactNode>), [current, beat, mode, screen]);
 
   return (
     <main>

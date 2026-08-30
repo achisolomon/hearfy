@@ -86,6 +86,29 @@ describe("patient navigation wiring", () => {
   });
 });
 
+describe("progress counters", () => {
+  const patient = componentFiles("components/screens/patient")
+    .map(f => sourceOf(f))
+    .join("\n");
+
+  // Home showed a hardcoded "2 of 5 steps complete" for booking progress while
+  // the intake wizard counts its own five steps, so pressing Continue read as
+  // going from step 2 back to step 1.
+  it("counts 'of 5' in only one place, so two counters cannot disagree", () => {
+    const counters = [...patient.matchAll(/(\d+) of 5\b/g)].map(m => m[0]);
+    expect(counters).toEqual([]);
+  });
+
+  // The wizard's own progress must stay 1..total with no gaps or repeats.
+  it("numbers the intake wizard steps consecutively from one", () => {
+    const intake = sourceOf("components/screens/patient/intake.tsx");
+    const steps = [...intake.matchAll(/step=\{(\d+)\}/g)].map(m => Number(m[1]));
+    expect(steps).toEqual([...steps].sort((a, b) => a - b));
+    expect(new Set(steps).size).toBe(steps.length);
+    expect(Math.min(...steps)).toBe(1);
+  });
+});
+
 describe("shell controls", () => {
   // The shell offered Next and no way back, though the context exposed back().
   it("wires every navigation the story context exposes", () => {

@@ -1,6 +1,5 @@
 "use client";
 import { Card, StatusPill } from "../ui";
-import { otoscopy } from "@/lib/mock-data";
 
 export type Framing = "patient" | "cma";
 
@@ -15,7 +14,7 @@ export function OtoscopyStep({ framing }: { framing: Framing }) {
         </div>
         <div className="flex items-center justify-between p-5">
           <div>
-            <span className="text-xs text-slate-500">Left ear</span>
+            <span className="text-xs text-slate-500">Both ears</span>
             <h3 className="font-extrabold">Image captured</h3>
           </div>
           {/* Procedural quality, not a clinical finding — safe for both roles. */}
@@ -26,7 +25,7 @@ export function OtoscopyStep({ framing }: { framing: Framing }) {
         <p className="text-sm leading-6 text-slate-500">
           {framing === "cma"
             ? "Angle the scope slightly up and back. Capture both ears; retake if the view is obscured."
-            : otoscopy.right.finding + ". Your audiologist reviews both images."}
+            : "Both ears captured clearly. Your audiologist reviews the images and explains what they show."}
         </p>
       </Card>
     </>

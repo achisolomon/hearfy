@@ -1,0 +1,31 @@
+# ── Internal / confidential ──────────────────────────────────────────
+# Source material, specs, and business docs live in the PRIVATE repo:
+#   https://github.com/achisolomon/hearfy-internal
+# This repo is public: demo application code only.
+
+docs/
+internal/
+
+# Belt-and-braces: block these by type/pattern anywhere in the tree,
+# so a stray copy outside docs/ still can't be committed.
+*.docx
+*.pptx
+*.pdf
+*SOURCES*
+*persona*
+*pitch*deck*
+*Pitch*Deck*
+*MRD*
+*Product?Bible*
+
+# ── OS / editor ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

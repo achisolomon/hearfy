@@ -513,10 +513,39 @@ describe("docked controls clearance", () => {
   // below is converted from the class name rather than hand-copied as a
   // number that could drift from the source.
   const SPACING_UNIT_REM = 0.25;
+  // Tailwind's default theme.spacing keys (the *bare* numeric utilities —
+  // pb-38, bottom-38, h-38, etc.). A bare number NOT in this set compiles to
+  // NOTHING: Tailwind's JIT only emits CSS for class names it recognizes, so
+  // an off-scale utility like `pb-38` (there is no 38 — the scale jumps 36
+  // -> 40) is silently dropped, the element gets zero padding, and nothing
+  // in the DOM or a screenshot-free test run tells you the rule never
+  // existed. This is exactly the bug that shipped: the old version of this
+  // test parsed the integer out of `pb-38` and did correct arithmetic on
+  // it, which made the class *look* covered while the browser applied none
+  // of it. See tailwind.config.ts — theme.extend only adds colors and
+  // boxShadow, no custom spacing step, so this set is the complete scale.
+  const TAILWIND_SPACING_SCALE = new Set([
+    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
+    24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+  ]);
+  const assertOnScale = (raw: number, context: string) => {
+    expect(
+      TAILWIND_SPACING_SCALE.has(raw),
+      `"${raw}" is not on Tailwind's default spacing scale (${context}). ` +
+      `Tailwind's JIT compiler only emits CSS for class names on its ` +
+      `recognized scale (…, 36, 40, 44, …) or using arbitrary-value syntax ` +
+      `(e.g. pb-[9.5rem]); a bare off-scale number like this generates NO ` +
+      `CSS AT ALL — the utility is silently dropped, so the element falls ` +
+      `back to zero for that property. Fix: use a real scale step, or wrap ` +
+      `the value in square brackets for an arbitrary value.`,
+    ).toBe(true);
+  };
   const classValueRem = (src: string, pattern: RegExp): number => {
     const m = pattern.exec(src);
     if (!m) throw new Error(`could not find a class matching ${pattern} in source`);
-    return Number(m[1]) * SPACING_UNIT_REM;
+    const raw = Number(m[1]);
+    assertOnScale(raw, `parsed from ${pattern}`);
+    return raw * SPACING_UNIT_REM;
   };
 
   const shared = sourceOf("components/screens/shared.tsx");

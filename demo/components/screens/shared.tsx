@@ -20,15 +20,17 @@ export { Audiogram } from "../charts/audiogram";
 // controls (demo-shell.tsx) flush at bottom-0, h-14 (3.5rem) tall; the
 // patient app's BottomNav (below) stacks directly on top of that bar —
 // bottom-14, h-20 (5rem) — so the worst case (patient role, both bars
-// stacked) reaches 3.5 + 5 = 8.5rem above the viewport bottom. pb-38 (9.5rem)
-// leaves 1rem of breathing room past that top edge. A role with no
-// BottomNav (CMA, audiologist, operator) only has the 3.5rem control bar, so
-// the same pb-38 clears it with room to spare. On desktop (md:) the phone
-// control bar is md:hidden and BottomNav reverts to bottom-0 (`h-20` =
-// 5rem); pb-24 (6rem) gives it the same 1rem margin, unchanged from before.
-// See lib/regressions.test.ts's "docked controls clearance" tests for the
-// arithmetic this pins.
-export function Shell({children,dark=false,wide=false}:{children:React.ReactNode;dark?:boolean;wide?:boolean}){return <div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className={cn("mx-auto px-5 pb-38 pt-6 md:pb-24",wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div>}
+// stacked) reaches 3.5 + 5 = 8.5rem above the viewport bottom. pb-40 (10rem)
+// is the smallest step on Tailwind's default spacing scale above that edge
+// (pb-36 is 9rem, which is under it) and leaves 1.5rem of breathing room
+// past that top edge. A role with no BottomNav (CMA, audiologist, operator)
+// only has the 3.5rem control bar, so the same pb-40 clears it with room to
+// spare. On desktop (md:) the phone control bar is md:hidden and BottomNav
+// reverts to bottom-0 (`h-20` = 5rem); pb-24 (6rem) gives it the same 1rem
+// margin, unchanged from before. See lib/regressions.test.ts's "docked
+// controls clearance" tests for the arithmetic this pins, including the
+// scale-validity check that catches any bare number Tailwind can't compile.
+export function Shell({children,dark=false,wide=false}:{children:React.ReactNode;dark?:boolean;wide?:boolean}){return <div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className={cn("mx-auto px-5 pb-40 pt-6 md:pb-24",wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div>}
 export function Avatar({large=false}:{large?:boolean}){return <div className={`${large?"h-20 w-20 text-xl":"h-12 w-12 text-sm"} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-[#c7eeec] to-[#edf8f8] font-extrabold text-brand-navy shadow-soft`}>ML</div>}
 export function Option({title,sub,active,onClick,icon:Icon}:{title:string;sub?:string;active?:boolean;onClick?:()=>void;icon?:any}){return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-[20px] border p-4 text-left transition ${active?"border-brand-teal bg-[#edfbfa]":"border-[#dfeaec] bg-white"}`}>{Icon&&<span className={`grid h-11 w-11 place-items-center rounded-2xl ${active?"bg-brand-teal text-white":"bg-[#f0f6f6] text-brand-teal"}`}><Icon size={21}/></span>}<span className="flex-1"><b className="block text-[15px]">{title}</b>{sub&&<span className="mt-1 block text-xs leading-5 text-slate-500">{sub}</span>}</span><span className={`grid h-5 w-5 place-items-center rounded-full border ${active?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>{active&&<Check size={13}/>}</span></button>}
 export function StepPage({title,subtitle,step,children,onBack,onNext,next="Continue"}:{title:string;subtitle:string;step:number;children:React.ReactNode;onBack:()=>void;onNext:()=>void;next?:string}){return <Shell><PageHeader title={title} subtitle={subtitle} onBack={onBack} eyebrow="Smart matching"/><Progress step={step} total={5}/><div className="space-y-3">{children}</div><div className="mt-7"><PrimaryButton onClick={onNext}>{next}</PrimaryButton></div></Shell>}

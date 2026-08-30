@@ -1,18 +1,22 @@
 "use client";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, LayoutGrid, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, LayoutGrid, X } from "lucide-react";
 import { BrandLogo } from "../ui";
 import { Cover, EndCap } from "./cover";
 import { Interstitial } from "./interstitial";
 import { RoleTabs } from "./role-tabs";
 import { RoleView } from "./role-view";
 import { Timeline } from "./timeline";
+import { prevBeatForRole } from "@/lib/story";
 import { useStory } from "./story-context";
 
 export function DemoShell() {
-  const { phase, next, atWalkEnd } = useStory();
+  const { phase, next, back, beat, mode, role, atWalkEnd } = useStory();
   const [sheet, setSheet] = useState(false);
+  // Both walks clamp at their first beat, so Back is dead there rather than
+  // wrong. Say so with the control instead of letting it look broken.
+  const atStart = mode === "solo" ? prevBeatForRole(beat, role) === beat : beat === 0;
 
   if (phase === "cover") return <Cover />;
   if (phase === "endcap") return <EndCap />;
@@ -26,6 +30,14 @@ export function DemoShell() {
           <RoleTabs />
           <div className="flex-1" />
           <Timeline />
+          <button
+            onClick={back}
+            disabled={atStart}
+            aria-label="Previous beat"
+            className="flex items-center gap-1.5 rounded-full border border-[#dce7e9] px-3 py-2 text-xs font-bold text-brand-navy disabled:border-transparent disabled:text-slate-300"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
           {/* A finished solo walk is not the end of the demo — say so, and
               leave the role tabs and timeline live. */}
           <button
@@ -48,6 +60,14 @@ export function DemoShell() {
           className="grid h-12 w-12 place-items-center rounded-full bg-white text-brand-navy shadow-card"
         >
           <LayoutGrid size={19} />
+        </button>
+        <button
+          onClick={back}
+          disabled={atStart}
+          aria-label="Previous beat"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-brand-navy shadow-card disabled:text-slate-300"
+        >
+          <ArrowLeft size={19} />
         </button>
         <button
           onClick={next}

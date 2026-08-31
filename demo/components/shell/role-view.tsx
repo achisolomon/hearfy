@@ -53,7 +53,7 @@ export function RoleView() {
       case "cma-tryon": return <CmaTryOn next={next} />;
       case "cma-signing": return <CmaSigning next={next} />;
       case "cma-activate": return <CmaActivate next={next} />;
-      case "cma-closeout": return <CmaCloseout next={next} />;
+      case "cma-closeout": return <CmaCloseout />;
       default: return <Stub screen={id} />;
     }
   }

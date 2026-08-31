@@ -23,6 +23,11 @@ internal/
 *MRD*
 *Product?Bible*
 
+# ── Build artefacts ──────────────────────────────────────────────────
+# The demo app has its own .gitignore for node_modules/.next/out; this
+# catches a stray install at the repo root, which nothing else covers.
+node_modules/
+
 # ── OS / editor ──────────────────────────────────────────────────────
 .DS_Store
 .DS_Store?

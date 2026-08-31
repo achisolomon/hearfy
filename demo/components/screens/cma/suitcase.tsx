@@ -10,6 +10,7 @@ import { devices, deviceDetail, identity, patient, serials, compareRecommendatio
 import { CompareTable } from "../compare-table";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { SIGNING_ITEMS, useSigning } from "@/lib/signing";
+import { useStory } from "../../shell/story-context";
 
 /**
  * The story shell remounts this screen on back-navigation, which would clear
@@ -230,8 +231,16 @@ export function CmaActivate({ next }: { next: () => void }) {
   );
 }
 
-export function CmaCloseout({ next }: { next: () => void }) {
+export function CmaCloseout() {
   const chosen = devices[0];
+  /**
+   * "Back to today's visits" is navigation inside Maya's own shift, not a step
+   * of the pitch. `next()` would advance the beat and adopt the following
+   * beat's lead — patient — handing the viewer Alex's order screen under a
+   * button promising the CMA's queue. `goToScreen` moves the pointer without
+   * touching the role, so she lands on her day list still as the CMA.
+   */
+  const { goToScreen } = useStory();
   return (
     <Shell tablet>
       <PageHeader title="Visit complete" subtitle={`${patient.name} left the visit hearing.`} eyebrow="Close-out" />
@@ -246,7 +255,9 @@ export function CmaCloseout({ next }: { next: () => void }) {
         <b className="text-sm">Next visit</b>
         <p className="mt-1 text-sm text-slate-500">11:30 — Doris P., Coconut Grove</p>
       </Card>
-      <div className="mt-6"><PrimaryButton onClick={next}>Back to today&rsquo;s visits</PrimaryButton></div>
+      <div className="mt-6">
+        <PrimaryButton onClick={() => goToScreen("cma-day")}>Back to today&rsquo;s visits</PrimaryButton>
+      </div>
     </Shell>
   );
 }

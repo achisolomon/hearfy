@@ -2030,4 +2030,37 @@ describe("the sale runs on the right screen", () => {
       expect(tryOnTalk[d.name].clinician).toBeTruthy();
     }
   });
+  // "Back to today's visits" on the CMA close-out was wired to the generic
+  // `next()`. In guided mode that advances one beat and adopts the new beat's
+  // lead — the beat after `closeout` is patient-led — so a button promising
+  // Maya's queue delivered Alex's "Fitted and active" screen and flipped the
+  // role tab under the viewer. Intra-role navigation must move the pointer
+  // without changing persona.
+  it("returns the CMA to her own day list from close-out", () => {
+    const from = beatIndexById("closeout");
+    const to = beatForScreenNear("cma", "cma-day", from);
+    expect(to, "the day list must be addressable from close-out").not.toBe(-1);
+    // The destination genuinely shows her day list...
+    expect(BEATS[to].screens.cma).toBe("cma-day");
+    // ...and the role is untouched, so `screenFor` still renders the CMA's
+    // screen rather than the beat lead's. This is the assertion that fails if
+    // the button ever goes back to advancing the script.
+    expect(screenFor(to, "cma")).toBe("cma-day");
+    // Same stage: closing a visit out returns her to the queue, it does not
+    // rewind the demo to an earlier act.
+    expect(BEATS[to].stage).toBe(BEATS[from].stage);
+  });
+
+  // The wiring itself, so the invariant above cannot pass while the button
+  // still calls `next()`.
+  it("navigates from close-out by screen, not by beat", () => {
+    const closeout = sourceOf("components/screens/cma/suitcase.tsx")
+      .split(/(?=export function )/)
+      .find(s => s.startsWith("export function CmaCloseout"));
+    expect(closeout, "CmaCloseout not found").toBeTruthy();
+    expect(closeout, "close-out must target the day list explicitly")
+      .toMatch(/goToScreen\(["']cma-day["']\)/);
+    expect(closeout, "`next()` here switches role out from under the viewer")
+      .not.toMatch(/onClick=\{next\}/);
+  });
 });

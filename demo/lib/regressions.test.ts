@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatIndexById, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
+import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 
 const order = screenOrder();
 
@@ -535,12 +536,12 @@ describe("full-height screen wrapper clearance", () => {
   // same "full-height root that isn't Shell" shape is checked, not just the
   // four files known today — so a new screen added later with the same
   // pattern fails here too instead of shipping the same bug again.
-  const SPACING_UNIT_REM = 0.25;
-  const TAILWIND_SPACING_SCALE = new Set([
-    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
-    24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
-  ]);
-
+  //
+  // SPACING_UNIT_REM and TAILWIND_SPACING_SCALE come from ./tailwind-scale —
+  // the one place that scale is defined, so this test and "docked controls
+  // clearance" below can never disagree about what's on it. See that
+  // module's own "tailwind spacing scale" describe block for coverage of
+  // the scale/validator itself.
   const demoShell = sourceOf("components/shell/demo-shell.tsx");
   const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
   if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
@@ -914,25 +915,23 @@ describe("docked controls clearance", () => {
   // Tailwind's spacing scale is 0.25rem per step, which is how every value
   // below is converted from the class name rather than hand-copied as a
   // number that could drift from the source.
-  const SPACING_UNIT_REM = 0.25;
-  // Tailwind's default theme.spacing keys (the *bare* numeric utilities —
-  // pb-38, bottom-38, h-38, etc.). A bare number NOT in this set compiles to
-  // NOTHING: Tailwind's JIT only emits CSS for class names it recognizes, so
-  // an off-scale utility like `pb-38` (there is no 38 — the scale jumps 36
-  // -> 40) is silently dropped, the element gets zero padding, and nothing
-  // in the DOM or a screenshot-free test run tells you the rule never
-  // existed. This is exactly the bug that shipped: the old version of this
-  // test parsed the integer out of `pb-38` and did correct arithmetic on
-  // it, which made the class *look* covered while the browser applied none
-  // of it. See tailwind.config.ts — theme.extend only adds colors and
-  // boxShadow, no custom spacing step, so this set is the complete scale.
-  const TAILWIND_SPACING_SCALE = new Set([
-    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
-    24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
-  ]);
+  //
+  // SPACING_UNIT_REM and TAILWIND_SPACING_SCALE come from ./tailwind-scale —
+  // the one place that scale is defined, so this test and "full-height
+  // screen wrapper clearance" above can never disagree about what's on it.
+  // A bare number NOT in this set compiles to NOTHING: Tailwind's JIT only
+  // emits CSS for class names it recognizes, so an off-scale utility like
+  // `pb-38` (there is no 38 — the scale jumps 36 -> 40) is silently dropped,
+  // the element gets zero padding, and nothing in the DOM or a
+  // screenshot-free test run tells you the rule never existed. This is
+  // exactly the bug that shipped: the old version of this test parsed the
+  // integer out of `pb-38` and did correct arithmetic on it, which made the
+  // class *look* covered while the browser applied none of it. See the
+  // "tailwind spacing scale" describe block below for coverage of
+  // isOnSpacingScale itself.
   const assertOnScale = (raw: number, context: string) => {
     expect(
-      TAILWIND_SPACING_SCALE.has(raw),
+      isOnSpacingScale(raw),
       `"${raw}" is not on Tailwind's default spacing scale (${context}). ` +
       `Tailwind's JIT compiler only emits CSS for class names on its ` +
       `recognized scale (…, 36, 40, 44, …) or using arbitrary-value syntax ` +
@@ -1247,5 +1246,248 @@ describe("phone bar Next control at largest text size", () => {
       "of overflowing the row on a narrower phone (360px/320px) where the measured 375px budget " +
       "no longer holds",
     ).toMatch(/\btruncate\b/);
+  });
+});
+
+describe("tailwind spacing scale", () => {
+  // "docked controls clearance" and "full-height screen wrapper clearance"
+  // (above) both depend on ./tailwind-scale to catch an off-scale class like
+  // `pb-38` before it ships as silently-zero padding. Neither of those tests
+  // actually proves the scale itself is right, though — they only prove
+  // Shell's own numbers happen to be on it. A wrong or incomplete scale
+  // (missing a real step, or wrongly admitting a fake one) would make both
+  // tests pass or fail for the wrong reason. This proves the scale and its
+  // validator directly, independent of any one component.
+
+  // Tailwind's default scale is not consecutive integers — it has a run of
+  // half-steps at the bottom (0.5, 1.5, 2.5, 3.5) and then starts skipping
+  // whole integers once it passes 12 (13 is missing, then 15, 17..19, 21..23,
+  // ...). A validator built from `Number.isInteger` or `raw <= 96` would
+  // wrongly accept a fair number of these gaps, which is exactly how `pb-38`
+  // could have looked plausible if nobody had enumerated the real scale.
+  it("rejects a sample of the actual gaps in Tailwind's scale, not just implausibly large numbers", () => {
+    // 38 is the bug that shipped; 13, 15, and 21 are unrelated gaps nearby
+    // that a naive "must be a multiple of 4" or "must be even" rule would
+    // handle differently — picked to stress different wrong heuristics.
+    for (const gap of [13, 15, 17, 21, 38, 45, 100]) {
+      expect(isOnSpacingScale(gap), `${gap} should not be on the scale`).toBe(false);
+    }
+  });
+
+  it("accepts every real step on Tailwind's default scale, including the sub-1 half-steps", () => {
+    // The half-steps are the easiest real values for an integer-only
+    // validator to wrongly reject — pin them by name, not just via the
+    // shared set, so a validator rewrite that drops half-step support fails
+    // here even if someone also "fixes" TAILWIND_SPACING_SCALE to match.
+    for (const step of [0.5, 1.5, 2.5, 3.5]) {
+      expect(isOnSpacingScale(step), `${step} is a real Tailwind half-step and should be on the scale`).toBe(true);
+    }
+    // And the full published scale, so a future edit that drops or
+    // mistypes any step (e.g. 44 -> 45) is caught here rather than only in
+    // whichever component test happens to use that particular step.
+    const published = [
+      0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
+      24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+    ];
+    for (const step of published) {
+      expect(isOnSpacingScale(step), `${step} is on Tailwind's published default scale`).toBe(true);
+    }
+    expect(TAILWIND_SPACING_SCALE.size).toBe(published.length);
+  });
+
+  // spacingUtilitiesIn is the scanner the codebase-wide check below relies
+  // on to even find candidate classes. Arbitrary-value syntax (`pb-[9.5rem]`)
+  // is Tailwind's real escape hatch for an off-scale value — it always
+  // compiles to real CSS — so the scanner must treat it as a different kind
+  // of thing entirely, not as a spacing utility to validate against the
+  // scale. If the scanner mis-parsed it as a bare step, a legitimate
+  // `pb-[9.5rem]` would be flagged as a false positive.
+  it("does not treat arbitrary-value syntax as a bare scale step", () => {
+    const found = spacingUtilitiesIn('<div className="pb-[9.5rem] w-[560px]">');
+    expect(found).toEqual([]);
+  });
+
+  // Fraction utilities (`w-1/2`) and bare keywords (`w-full`, `h-screen`,
+  // `inset-0` aside — that IS numeric and valid) use the same `prop-value`
+  // shape as a real spacing step but are a different Tailwind feature
+  // entirely and must not false-positive.
+  it("does not mistake fraction or keyword width/height utilities for spacing steps", () => {
+    const found = spacingUtilitiesIn('<div className="w-1/2 w-full h-screen h-auto h-fit">');
+    expect(found).toEqual([]);
+  });
+
+  // The scanner must still find a real bare step sitting right next to the
+  // syntax it's supposed to ignore, including through a responsive prefix
+  // (md:pb-24) — a scanner that over-corrected to avoid false positives
+  // above could just as easily start missing real classes too.
+  it("still finds a real bare spacing step next to arbitrary-value and fraction utilities", () => {
+    const found = spacingUtilitiesIn('<div className="w-1/2 pb-[9.5rem] md:pb-24 gap-2.5">');
+    const classNames = found.map(f => f.className).sort();
+    expect(classNames).toEqual(["gap-2.5", "pb-24"]);
+  });
+
+  // The actual proof this whole describe block exists for: feed the
+  // scanner the exact class the owner's bug shipped with, and confirm the
+  // combination — found by the scanner, then rejected by the validator —
+  // is what would have failed the "docked controls clearance" test, instead
+  // of the old version that quietly parsed `38` out of `pb-38` and did
+  // arithmetic as if it meant something.
+  it("catches the exact pb-38 class the original bug shipped, end to end", () => {
+    const found = spacingUtilitiesIn('<div className="fixed inset-x-0 bottom-0 z-40 pb-38 md:hidden">');
+    const pb = found.find(f => f.className.startsWith("pb-"));
+    expect(pb, "scanner should have found the pb-38 utility").toBeTruthy();
+    expect(isOnSpacingScale(pb!.raw)).toBe(false);
+  });
+});
+
+describe("codebase-wide tailwind spacing scale scan", () => {
+  // The one instance (docked controls clearance, full-height wrapper
+  // clearance) and the validator itself (tailwind spacing scale, above) are
+  // both covered, but neither scans the rest of the app. A second off-scale
+  // class of the exact same shape (silently-zero CSS, a test that "passes"
+  // because nothing renders to disagree with it) could ship anywhere else
+  // in components/ or app/ and nothing here would notice. This scans every
+  // .tsx file under both directories for every spacing utility this
+  // codebase uses and fails naming any class whose numeric step isn't on
+  // Tailwind's real scale — not just the corner this session already found.
+  const files = [...componentFiles("components"), ...componentFiles("app")];
+
+  it("scans more than a handful of files, so this check is not accidentally vacuous", () => {
+    expect(files.length).toBeGreaterThan(20);
+  });
+
+  it("keeps every spacing utility class in components/ and app/ on Tailwind's real scale", () => {
+    const offenders: string[] = [];
+    for (const file of files) {
+      const src = sourceOf(file);
+      for (const { className, raw } of spacingUtilitiesIn(src)) {
+        if (!isOnSpacingScale(raw)) {
+          offenders.push(
+            `${file}: \`${className}\` (${raw}) is not on Tailwind's default spacing scale — it ` +
+            `compiles to NO CSS at all, silently leaving the property unset. This is the exact ` +
+            `failure mode of the pb-38 bug: nothing in the DOM or a screenshot-free test tells you ` +
+            `the class never applied.`,
+          );
+        }
+      }
+    }
+    expect(
+      offenders,
+      `found ${offenders.length} off-scale Tailwind spacing utilit${offenders.length === 1 ? "y" : "ies"} ` +
+      `in components/ or app/:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+});
+
+describe("operator MRR reconciliation", () => {
+  // The plan originally specified mrr: 148_916 while metrics.mix (702×$99 +
+  // 431×$149 + 151×$299) sums to $178,866. Both render on the same
+  // dashboard panel (components/screens/operator/metrics.tsx) — the top MRR
+  // stat card, and the mix breakdown directly beneath it — so an investor
+  // doing the arithmetic the mix table invites would see the two disagree.
+  // This is a data assertion against the real fixture, not source analysis:
+  // it fails again if anyone edits mrr or the mix independently in the
+  // future, whichever one drifts.
+  it("keeps metrics.mrr equal to the sum of metrics.mix's own count × monthly", async () => {
+    const { metrics } = await import("./mock-data");
+    const reconciled = metrics.mix.reduce((sum, m) => sum + m.count * m.monthly, 0);
+    expect(
+      metrics.mrr,
+      `metrics.mrr (${metrics.mrr}) does not match metrics.mix's own count × monthly (${reconciled}). ` +
+      `Both numbers render on the same operator dashboard panel, so a mismatch reads as a ` +
+      `contradiction to anyone who does the mix table's own arithmetic.`,
+    ).toBe(reconciled);
+  });
+
+  it("keeps metrics.activeMemberships equal to the sum of metrics.mix's own counts", async () => {
+    const { metrics } = await import("./mock-data");
+    const reconciled = metrics.mix.reduce((sum, m) => sum + m.count, 0);
+    expect(
+      metrics.activeMemberships,
+      `metrics.activeMemberships (${metrics.activeMemberships}) does not match the sum of ` +
+      `metrics.mix's own tier counts (${reconciled}) — the same dashboard shows both the total and ` +
+      `the per-tier breakdown that should add up to it.`,
+    ).toBe(reconciled);
+  });
+});
+
+describe("unsourced operator figures stay visibly marked", () => {
+  // metrics.conversion, metrics.deviceGrossProfit, metrics.cmaShare and
+  // metrics.supervisionRatio appear in neither the deck nor the MRD — the
+  // product owner flagged them as demo placeholders only (spec §14,
+  // mock-data.ts's own comment above `metrics`). They render in the funnel
+  // row of components/screens/operator/metrics.tsx alongside the genuinely
+  // sourced "Visit fee $99" card. Nothing about the rendered card
+  // distinguishes a placeholder from a real figure except the "Illustrative"
+  // tag — if that tag is ever removed, these numbers read to an investor as
+  // sourced company metrics, which they are not.
+  const metricsSrc = sourceOf("components/screens/operator/metrics.tsx");
+
+  // Isolate the funnel row specifically — the same "Or enter as one
+  // persona"-style isolation the cover/mobile-indicator tests use above —
+  // so this doesn't accidentally match an unrelated "Illustrative"-shaped
+  // string elsewhere on the dashboard.
+  const funnelStart = metricsSrc.indexOf("Conversion, Device GP and Supervision");
+  if (funnelStart === -1) throw new Error("could not locate the funnel row's placeholder-figures comment in metrics.tsx");
+  const funnelBlock = metricsSrc.slice(funnelStart);
+
+  it("still renders a visible 'Illustrative' marker in the funnel row", () => {
+    expect(
+      funnelBlock,
+      "the funnel row (components/screens/operator/metrics.tsx) must render a visible 'Illustrative' " +
+      "marker — these four figures (conversion, device gross profit, cma share, supervision ratio) " +
+      "are demo placeholders per spec §14, unsourced from either the deck or the MRD, and must never " +
+      "read to an investor as sourced company metrics.",
+    ).toContain("Illustrative");
+  });
+
+  // The marker must be driven from each card's own data (a per-card
+  // `illustrative` boolean fed into a shared `.map`), not hand-authored once
+  // per card — a hardcoded per-card marker is exactly the shape of edit
+  // that silently drops the tag from one card (e.g. copy-pasting a new card
+  // without its flag) while every existing test that only checks "the text
+  // 'Illustrative' appears somewhere" keeps passing.
+  it("drives the Illustrative marker from card data rather than one hardcoded per-card element", () => {
+    // The funnel's four cards are declared as an array of tuples fed
+    // through one `.map` — the fourth element of each tuple is the
+    // per-card illustrative flag, and the JSX must branch on that flag
+    // (`{illustrative && ...}`) rather than repeating a literal
+    // "Illustrative" span once per card.
+    expect(
+      funnelBlock,
+      "expected the funnel row to map over an array of per-card data (so the four funnel cards share " +
+      "one render path) rather than hand-authoring four separate cards",
+    ).toMatch(/\]\)\.map\(/);
+    expect(
+      funnelBlock,
+      "expected the 'Illustrative' tag to be gated by a per-card boolean (e.g. `{illustrative && ...}`) " +
+      "read from that card's own data, not rendered unconditionally or duplicated by hand per card",
+    ).toMatch(/\{illustrative\s*&&/);
+    // Exactly one occurrence of the literal tag text: if a future edit
+    // hardcoded a second "Illustrative" span per card instead of reusing
+    // the data-driven one, or duplicated the whole card block, this would
+    // catch the drift even though "still renders a visible marker" above
+    // would keep passing on the surviving copy.
+    const literalOccurrences = (funnelBlock.match(/Illustrative/g) ?? []).length;
+    expect(
+      literalOccurrences,
+      `found the literal text "Illustrative" ${literalOccurrences} times in the funnel row — expected ` +
+      "exactly one, from the single data-driven render path",
+    ).toBe(1);
+  });
+
+  // The one genuinely sourced figure in the same row — Visit fee, spec §9a
+  // — must stay unmarked, so the tag keeps meaning something. If every card
+  // carried the tag, "Illustrative" would stop communicating "unsourced"
+  // and just read as decoration.
+  it("leaves the genuinely sourced Visit fee card unmarked", () => {
+    const visitFeeIdx = funnelBlock.indexOf('"Visit fee"');
+    expect(visitFeeIdx, "could not find the Visit fee card's data in the funnel row").toBeGreaterThan(-1);
+    // The Visit fee tuple's own trailing boolean (its `illustrative` flag)
+    // must be false — check the tuple line itself rather than the whole
+    // block, since the whole block legitimately contains "false" for the
+    // one card that should have it.
+    const tupleLine = funnelBlock.slice(visitFeeIdx, funnelBlock.indexOf("\n", visitFeeIdx));
+    expect(tupleLine, `Visit fee's card data must end with \`false\` (not illustrative): "${tupleLine}"`).toMatch(/false\]/);
   });
 });

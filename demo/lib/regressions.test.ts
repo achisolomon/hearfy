@@ -282,6 +282,58 @@ describe("mobile persona indicator", () => {
     ).not.toMatch(/SHORT_ROLE/);
   });
 
+  // Round two: the owner confirmed the name reads well, then asked for the
+  // role back too — "I would keep the circle of the avatar... and I will
+  // also bring back the role that you showed me before." Both, not one or
+  // the other. The full title (personaFor(role).title, e.g. "Certified
+  // Medical Assistant" or "Cloud Audiologist, Au.D.") does not fit the
+  // owner's measured text budget at any root size, so this must read from
+  // role-tabs.tsx's short label map (Patient/CMA/Audiologist/Operator), not
+  // the long title — and the long title must not appear in the bar at all,
+  // so a future edit can't silently swap in the title and blow the budget.
+  it("shows a short role label alongside the persona name, not the long title", async () => {
+    expect(
+      controlBarBlock,
+      "the phone bar must show a role label (e.g. the SHORT map from role-tabs.tsx) beside the persona name",
+    ).toMatch(/\{SHORT\[role\]\}/);
+    // Read the real long titles from personas.ts — the actual source of
+    // truth — rather than regex-scanning demoShell for a `title:` pattern,
+    // which would also match unrelated prose. Strip JSX comments first: the
+    // surrounding code legitimately quotes a title in prose as an example of
+    // what does NOT fit (documentation, not rendered output), so the check
+    // must only look at what actually renders.
+    const withoutComments = controlBarBlock.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    const { PERSONAS } = await import("./personas");
+    for (const { title } of Object.values(PERSONAS)) {
+      expect(
+        withoutComments,
+        `the phone bar must not render the long title "${title}" literally — it does not fit the measured width budget`,
+      ).not.toContain(title);
+    }
+    expect(
+      withoutComments,
+      "must not use personaFor(role).title — the full title is too wide for the phone bar's measured budget",
+    ).not.toMatch(/personaFor\(role\)\.title/);
+  });
+
+  // The role line sits directly beneath the name in the same fixed-width
+  // column; if either wraps or overflows it will push the Next pill or break
+  // the bar's single-row layout. Both lines truncate to a single line with
+  // an ellipsis instead.
+  it("truncates the role label instead of wrapping or overflowing", () => {
+    // The bar's aria-label also reads SHORT[role] (inside a `${...}`
+    // template-literal interpolation, e.g. `${SHORT[role]}`), which is not
+    // the rendered text this test cares about — the JSX-content usage is
+    // `{SHORT[role]}` with no leading `$`, so require that the char right
+    // before `{` isn't `$`.
+    const shortMatch = /(?<!\$)\{SHORT\[role\]\}/.exec(controlBarBlock);
+    expect(shortMatch, "no rendered {SHORT[role]} usage found to check for truncation").toBeTruthy();
+    const before = controlBarBlock.slice(0, shortMatch!.index);
+    const openTag = /<span\b[^>]*>\s*$/.exec(before);
+    expect(openTag, "expected {SHORT[role]} to be rendered as the direct content of a <span> whose opening tag immediately precedes it").toBeTruthy();
+    expect(openTag![0]).toMatch(/\btruncate\b/);
+  });
+
   it("opens the same sheet used for role switching when the indicator is tapped", () => {
     // Whatever element wraps the avatar, it must be a control (not inert
     // decoration) that calls setSheet(true) — the same call the grid button
@@ -323,16 +375,28 @@ describe("mobile persona indicator", () => {
 });
 
 describe("phone Back control visibility", () => {
-  // Owner: "there is no back button." The bar DOES contain a Back <button>
-  // with <ArrowLeft>, but its only styling was `text-brand-navy
+  // Owner, round one: "there is no back button." The bar DOES contain a Back
+  // <button> with <ArrowLeft>, but its only styling was `text-brand-navy
   // disabled:text-slate-300` — a bare icon with no border, fill, or outline
   // at all, enabled or disabled. Against the white/95 backdrop-blur bar that
-  // reads as decoration, not a control, even before disabling kicks in.
+  // read as decoration, not a control, even before disabling kicked in.
+  //
+  // Owner, round two, on a real phone after the outline-ring fix: "there's
+  // also something on the back button, which I'm not sure what it is." An
+  // unfilled ring floating on a near-white (white/95 backdrop-blur) bar
+  // photographs as an unexplained empty circle, not a control — the fix
+  // traded invisibility for ambiguity. `PageHeader` (components/ui.tsx)
+  // already establishes this codebase's treatment for a circular back
+  // control: a border PLUS a white background fill
+  // (`border border-[#e1ebed] bg-white`), which gives the circle a real
+  // surface distinct from the backdrop instead of just a hairline. This bar
+  // follows that precedent rather than inventing a third treatment.
+  //
   // `atStart` itself was checked separately (lib/story.test.ts — Back is
   // never falsely disabled mid-walk), so the fix here is purely visual: the
-  // control must carry a visible boundary (border/background/ring) so a
-  // disabled Back still reads as "present but unavailable" rather than
-  // absent, the same way the enabled Next pill is unmistakably a button.
+  // control must carry a filled, bounded surface so a disabled Back still
+  // reads as "present but unavailable" rather than absent, the same way the
+  // enabled Next pill is unmistakably a button.
   const demoShell = sourceOf("components/shell/demo-shell.tsx");
   const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
   if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
@@ -345,12 +409,12 @@ describe("phone Back control visibility", () => {
   // different, md:hidden-excluded block entirely, so controlBarBlock never
   // contains it).
   const backButtonMatch = /<button\b[^>]*aria-label="Previous beat"[^>]*>/.exec(controlBarBlock);
+  const classAttr = backButtonMatch && /className="([^"]*)"/.exec(backButtonMatch[0]);
+  const classes = classAttr?.[1] ?? "";
 
   it("gives the phone Back button a visible boundary, not just enabled/disabled text colour", () => {
     expect(backButtonMatch, "expected a Back button (aria-label=\"Previous beat\") inside the phone control bar").toBeTruthy();
-    const classAttr = /className="([^"]*)"/.exec(backButtonMatch![0]);
     expect(classAttr, "Back button has no className to inspect").toBeTruthy();
-    const classes = classAttr![1];
     // A visible boundary independent of the disabled text-colour swap: a
     // border, a background fill, or a ring — any one is enough to keep the
     // control's outline present when its icon colour goes pale.
@@ -359,6 +423,29 @@ describe("phone Back control visibility", () => {
       hasBoundary,
       `Back button className "${classes}" relies only on icon text colour (disabled:text-slate-300) with no border/background/ring — a disabled state this faint reads as absent, not present-but-unavailable`,
     ).toBe(true);
+  });
+
+  // The specific fix for round two: a bare `border` with no background reads
+  // as an empty ring on the near-white bar. Require an actual background
+  // fill (not an arbitrary transparent one) so the circle has a surface,
+  // matching PageHeader's `bg-white` precedent for the same control shape.
+  it("fills the Back button with a background, not just an outline ring", () => {
+    expect(backButtonMatch).toBeTruthy();
+    expect(
+      classes,
+      `Back button className "${classes}" has no plain bg- fill — an unfilled border alone is the exact "empty ring" the owner flagged as ambiguous on a real phone`,
+    ).toMatch(/\bbg-(?!\[)/);
+  });
+
+  // The fill must still be present (paled, not removed) once disabled, so
+  // the disabled state reads as "present but unavailable" rather than
+  // reverting to the original invisible-icon bug.
+  it("keeps a background fill on the Back button in its disabled state too", () => {
+    expect(backButtonMatch).toBeTruthy();
+    expect(
+      classes,
+      `Back button className "${classes}" must pair its disabled: text-colour swap with a disabled: background too, so the control keeps a visible surface once unavailable`,
+    ).toMatch(/disabled:bg-/);
   });
 });
 

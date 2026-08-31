@@ -5,8 +5,15 @@ import { cn } from "@/lib/cn";
 import { PersonaAvatar } from "../persona-avatar";
 import { useStory } from "./story-context";
 
-/** Short labels for the narrow desktop bar; the sheet uses names. */
-const SHORT: Record<string, string> = {
+/**
+ * Short labels for the narrow desktop bar; the sheet uses names.
+ *
+ * Also reused by the phone docked bar (demo-shell.tsx) for its role line —
+ * the full `personaFor(role).title` ("Certified Medical Assistant", "Cloud
+ * Audiologist, Au.D.") does not fit the phone bar's measured width budget at
+ * any text size, but this short set does.
+ */
+export const SHORT: Record<string, string> = {
   patient: "Patient",
   cma: "CMA",
   audiologist: "Audiologist",

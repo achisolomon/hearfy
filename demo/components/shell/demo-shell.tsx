@@ -6,7 +6,7 @@ import { BrandLogo } from "../ui";
 import { PersonaAvatar } from "../persona-avatar";
 import { Cover, EndCap } from "./cover";
 import { Interstitial } from "./interstitial";
-import { RoleTabs } from "./role-tabs";
+import { RoleTabs, SHORT } from "./role-tabs";
 import { RoleView } from "./role-view";
 import { Timeline } from "./timeline";
 import { personaFor } from "@/lib/personas";
@@ -75,47 +75,75 @@ export function DemoShell() {
           onClick={back}
           disabled={atStart}
           aria-label="Previous beat"
-          // The owner: "there is no back button." It was really there, but
-          // as a bare icon with no border/fill in either state — nothing
-          // told a viewer it was a control at all, so a disabled first beat
-          // and a merely-easy-to-miss enabled one read the same: absent.
-          // A visible ring now marks it as a control in the enabled state
-          // and stays (paled, not gone) when disabled — present but
-          // unavailable, the same contract Next's filled pill already gives
-          // for granted.
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#dce7e9] text-brand-navy disabled:border-[#eef3f4] disabled:text-slate-300"
+          // Round one, the owner: "there is no back button." It was really
+          // there, but as a bare icon with no border/fill in either state —
+          // nothing told a viewer it was a control at all.
+          //
+          // Round two, on a real phone after adding an outline ring: "there's
+          // also something on the back button, which I'm not sure what it
+          // is." An unfilled ring on the near-white (white/95 backdrop-blur)
+          // bar reads as an unexplained empty circle, not a control — that
+          // fix traded invisibility for ambiguity.
+          //
+          // This now matches PageHeader's own circular back button
+          // (components/ui.tsx: `border border-[#e1ebed] bg-white`) — the
+          // established treatment elsewhere in this codebase for exactly
+          // this control shape. A border alone is a hairline; pairing it
+          // with a white fill gives the circle a real surface distinct from
+          // the backdrop, so it reads as an ordinary button rather than
+          // decoration. The fill (paled, not removed) persists into the
+          // disabled state, keeping the same "present but unavailable"
+          // contract Next's filled pill already gives for granted.
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#dce7e9] bg-white text-brand-navy disabled:border-[#eef3f4] disabled:bg-[#f7fafa] disabled:text-slate-300"
         >
           <ArrowLeft size={19} />
         </button>
         <button
           onClick={() => setSheet(true)}
-          aria-label={`Viewing as ${personaFor(role).name} — change role`}
+          aria-label={`Viewing as ${personaFor(role).name}, ${SHORT[role]} — change role`}
           className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-2 text-brand-navy"
         >
           <span aria-hidden className="shrink-0"><PersonaAvatar role={role} size="md" /></span>
           {/*
-            The bar showed a static role-label lookup ("CMA", "Patient") —
-            a job title, not a person, which is what the owner asked for:
+            Round one, the owner asked for the person, not the job title:
             "which user am I, not just what is my role?" personas.ts names
-            the four people this demo follows, so the visible label reads
-            from personaFor(role).name (the accessible name above already
-            does).
+            the four people this demo follows, so the name reads from
+            personaFor(role).name (the accessible name above already does).
 
-            Full names don't fit this bar at 375px alongside Back (40px) and
-            Next (~92-114px across the three text sizes) — see the width
-            budget in the fix commit. First name alone ("Maya", "Alex",
-            "Jordan") is unambiguous among these four personas and fits with
-            room to spare. Dr. Susan Reed is the one exception: the "Dr."
-            honorific is clinically load-bearing (she signs the audiogram),
-            so dropping it to fit would misrepresent her credential the same
-            way a bare first name never does for the other three. "Dr. Reed"
-            — the surname, the way she'd actually be addressed clinically —
-            keeps the honorific at roughly the same width as a first name.
+            Round two, after confirming the name reads well: "I would keep
+            the circle of the avatar... and I will also bring back the role
+            that you showed me before." Both, not one or the other — so this
+            is now a two-line stack, matching PersonaChip's own name-over-
+            title grammar (components/persona-avatar.tsx): the name on top
+            (bold), the role beneath it (smaller, muted).
+
+            Full names, and full titles ("Certified Medical Assistant",
+            "Cloud Audiologist, Au.D."), do not fit this bar at 375px
+            alongside Back (40px) and Next (~92-114px across the three text
+            sizes) — see the width budget in the fix commit. First name
+            alone ("Maya", "Alex", "Jordan") is unambiguous among these four
+            personas and fits with room to spare. Dr. Susan Reed is the one
+            exception: the "Dr." honorific is clinically load-bearing (she
+            signs the audiogram), so dropping it to fit would misrepresent
+            her credential the same way a bare first name never does for the
+            other three. "Dr. Reed" — the surname, the way she'd actually be
+            addressed clinically — keeps the honorific at roughly the same
+            width as a first name.
+
+            The role line reuses role-tabs.tsx's SHORT map (not
+            personaFor(role).title) for the same reason: the short set
+            ("Patient"/"CMA"/"Audiologist"/"Operator") fits the measured
+            budget at every text size, the full titles do not.
           */}
-          <span className="truncate text-sm font-bold">
-            {personaFor(role).name.startsWith("Dr. ")
-              ? `Dr. ${personaFor(role).name.split(" ").at(-1)}`
-              : personaFor(role).name.split(" ")[0]}
+          <span className="min-w-0 text-left leading-tight">
+            <b className="block truncate text-sm font-bold leading-tight">
+              {personaFor(role).name.startsWith("Dr. ")
+                ? `Dr. ${personaFor(role).name.split(" ").at(-1)}`
+                : personaFor(role).name.split(" ")[0]}
+            </b>
+            <span className="block truncate text-xs font-normal leading-tight text-slate-500">
+              {SHORT[role]}
+            </span>
           </span>
         </button>
         <button

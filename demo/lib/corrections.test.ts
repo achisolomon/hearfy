@@ -43,6 +43,9 @@ describe("corrections sheet 2026-08-31", () => {
     }
     // The results screen charts each ear separately, not as one overlay.
     expect(sourceOf("components/screens/patient/results.tsx")).toMatch(/Audiogram ear=/);
+    // Refined 2026-08-31: the sweep animates through BOTH ears via the
+    // lib-tested advanceSweep state machine, not a frozen one-ear snapshot.
+    expect(sourceOf("components/exam/puretone-step.tsx")).toMatch(/advanceSweep/);
   });
 
   // Item 5 — tympanometry is a full step between the ear check and the
@@ -57,11 +60,16 @@ describe("corrections sheet 2026-08-31", () => {
   });
 
   // Item 6 — bone conduction is mandatory; nothing frames it as added on.
+  // Refined 2026-08-31: the audiologist MONITORS it like any other step —
+  // no "Intervene / Add bone conduction" call to action.
   it("treats bone conduction as a standard step, never an addition", () => {
     expect(EXAM_STEPS.find(s => s.id === "bone")?.conditional).toBe(false);
     const src = sourceOf("components/screens/cma/exam.tsx");
     expect(src).not.toMatch(/added this step/);
     expect(src).not.toMatch(/· added/);
+    const monitor = sourceOf("components/screens/audiologist/supervision.tsx");
+    expect(monitor).not.toMatch(/Add bone conduction/);
+    expect(monitor).not.toMatch(/>Intervene</);
   });
 
   // Item 9 — the step sells the service package, not the hardware.
@@ -101,6 +109,12 @@ describe("corrections sheet 2026-08-31", () => {
     for (const file of withoutTile) {
       expect(sourceOf(file), `${file} is pre-exam — no call tile`).not.toMatch(/AudiologistCallTile/);
     }
+    // And the video runs both ways (refined 2026-08-31): the audiologist's
+    // monitor shows the home feed with the patient's spoken feedback and a
+    // talk-back control.
+    const monitor = sourceOf("components/screens/audiologist/supervision.tsx");
+    expect(monitor).toMatch(/HomeFeed/);
+    expect(monitor).toMatch(/Talk to the room/);
   });
 
   // Items 5, 12 — every CMA screen a beat points at must be wired in the

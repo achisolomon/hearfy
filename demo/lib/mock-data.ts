@@ -36,7 +36,7 @@ export const audiogram = {
   frequencies: [250, 500, 1000, 2000, 4000, 8000],
   right: [20, 30, 40, 50, 55, 60],
   left: [25, 35, 45, 50, 60, 65],
-  /** Bone conduction runs only because these air thresholds are abnormal. */
+  /** Bone thresholds — bone conduction is standard on every exam (item 6). */
   boneRight: [15, 20, 25, 30, 30, 35],
   boneLeft: [15, 20, 25, 30, 35, 35],
 };

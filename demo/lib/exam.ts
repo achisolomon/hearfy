@@ -64,6 +64,26 @@ export function lossBand(db: number): string {
   return "Profound loss";
 }
 
+/**
+ * The pure-tone sweep tests BOTH ears, right first by convention, then left
+ * (corrections sheet 2026-08-31, item 4 refinement). One tick of the
+ * animation: progress advances within the current ear, rolls to the next
+ * ear at 100, and parks on "done" after the left.
+ */
+export interface SweepState {
+  phase: "right" | "left" | "done";
+  progress: number;
+}
+
+export function advanceSweep(s: SweepState, step: number): SweepState {
+  if (s.phase === "done") return s;
+  const progress = Math.min(100, s.progress + step);
+  if (progress < 100) return { phase: s.phase, progress };
+  return s.phase === "right"
+    ? { phase: "left", progress: 0 }
+    : { phase: "done", progress: 100 };
+}
+
 /** The step after `id`, or null when the exam is finished. */
 export function nextStep(id: string, outcome: PureToneOutcome): string | null {
   const steps = stepsFor(outcome);

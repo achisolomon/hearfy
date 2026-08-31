@@ -39,7 +39,27 @@ export function Shell({children,dark=false,wide=false,tablet=false}:{children:Re
 export function Avatar({large=false}:{large?:boolean}){return <div className={`${large?"h-20 w-20 text-xl":"h-12 w-12 text-sm"} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-[#c7eeec] to-[#edf8f8] font-extrabold text-brand-navy shadow-soft`}>ML</div>}
 export function Option({title,sub,active,onClick,icon:Icon}:{title:string;sub?:string;active?:boolean;onClick?:()=>void;icon?:any}){return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-[20px] border p-4 text-left transition ${active?"border-brand-teal bg-[#edfbfa]":"border-[#dfeaec] bg-white"}`}>{Icon&&<span className={`grid h-11 w-11 place-items-center rounded-2xl ${active?"bg-brand-teal text-white":"bg-[#f0f6f6] text-brand-teal"}`}><Icon size={21}/></span>}<span className="flex-1"><b className="block text-[15px]">{title}</b>{sub&&<span className="mt-1 block text-xs leading-5 text-slate-500">{sub}</span>}</span><span className={`grid h-5 w-5 place-items-center rounded-full border ${active?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>{active&&<Check size={13}/>}</span></button>}
 export function StepPage({title,subtitle,step,children,onBack,onNext,next="Continue"}:{title:string;subtitle:string;step:number;children:React.ReactNode;onBack:()=>void;onNext:()=>void;next?:string}){return <Shell><PageHeader title={title} subtitle={subtitle} onBack={onBack} eyebrow="Smart matching"/><Progress step={step} total={5}/><div className="space-y-3">{children}</div><div className="mt-7"><PrimaryButton onClick={onNext}>{next}</PrimaryButton></div></Shell>}
-export function RouteMap({moving=false}:{moving?:boolean}){return <div className="map-grid relative h-72 overflow-hidden rounded-[26px]"><svg className="absolute inset-0 h-full w-full" viewBox="0 0 360 280"><path d="M30 235 C80 200,110 182,155 156 S250 110,320 48" fill="none" stroke="#12aaa5" strokeWidth="7" strokeLinecap="round" strokeDasharray={moving?"12 10":"0"}/></svg><div className="absolute bottom-7 left-7 grid h-12 w-12 place-items-center rounded-full border-4 border-white bg-brand-navy text-white"><Home size={20}/></div><motion.div animate={moving?{x:[0,125],y:[0,-95]}:{}} transition={{duration:3,repeat:Infinity,repeatType:"reverse"}} className="absolute left-28 top-40 grid h-12 w-12 place-items-center rounded-full border-4 border-white bg-brand-teal text-white"><Navigation size={20}/></motion.div><div className="absolute right-7 top-7 grid h-12 w-12 place-items-center rounded-full border-4 border-white bg-white text-brand-navy"><MapPin size={20}/></div></div>}
+// Everything is in PERCENTAGES of the container: the original fixed 360×280
+// viewBox centered itself inside the CMA's tablet column while the markers
+// kept phone-pixel offsets, so the route floated detached from its own
+// endpoints (found 2026-08-31). `preserveAspectRatio="none"` stretches the
+// path with the box, `vector-effect` keeps the stroke width honest, and
+// `pathLength={100}` keeps the dashes uniform at any width. Markers sit on
+// path coordinates and self-center with translate.
+export function RouteMap({moving=false}:{moving?:boolean}){
+  const marker="absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white";
+  return <div className="map-grid relative h-72 overflow-hidden rounded-[26px]">
+    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path d="M8 84 C22 72,30 65,43 55 S70 30,92 14" fill="none" stroke="#12aaa5" strokeWidth="7"
+        vectorEffect="non-scaling-stroke" strokeLinecap="round" pathLength={100} strokeDasharray={moving?"2.6 2.2":"0"}/>
+    </svg>
+    <div className={`${marker} left-[8%] top-[84%] bg-brand-navy text-white`}><Home size={20}/></div>
+    <motion.div animate={moving?{left:["33%","72%"],top:["63%","32%"]}:{}}
+      transition={{duration:3,repeat:Infinity,repeatType:"reverse"}}
+      className={`${marker} left-[33%] top-[63%] bg-brand-teal text-white`}><Navigation size={20}/></motion.div>
+    <div className={`${marker} left-[92%] top-[14%] bg-white text-brand-navy`}><MapPin size={20}/></div>
+  </div>;
+}
 export function DeviceVisual(){return <div className="flex h-52 items-center justify-center gap-5 bg-gradient-to-br from-[#e8f8f6] via-white to-[#edf3f8]"><div className="h-28 w-16 -rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/><div className="h-28 w-16 rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/></div>}
 // `useStoryOptional` returns null on Demo 1's frozen, provider-less
 // patient-app.tsx (see text-size.tsx for the same pattern) — there BottomNav

@@ -1672,3 +1672,18 @@ describe("back from We're here after delivery", () => {
     expect(beatForScreenNear("patient", "intake-needs", 3)).toBe(-1);
   });
 });
+
+describe("route map scales to any column", () => {
+  // In the CMA's tablet column the map's fixed 360×280 viewBox centered
+  // itself while the markers kept phone-pixel offsets: the dashed route
+  // floated in the middle, detached from the home and destination pins
+  // (found 2026-08-31). The map must be drawn in container percentages.
+  it("draws the route and markers in percentages, not phone pixels", () => {
+    const src = sourceOf("components/screens/shared.tsx");
+    const map = src.split(/(?=export function RouteMap)/)[1]?.split(/(?=export function )/)[0] ?? "";
+    expect(map).toContain('preserveAspectRatio="none"');
+    expect(map, "dashes must be normalised so they stay uniform at any width").toContain("pathLength");
+    expect(map, "markers must sit at percentage coordinates").toMatch(/left-\[\d+%\]/);
+    expect(map, "no fixed-pixel marker offsets or x/y animation").not.toMatch(/left-\d|top-\d|\{x:/);
+  });
+});

@@ -82,8 +82,10 @@ describe("corrections sheet 2026-08-31", () => {
   });
 
   // Item 13 — the audiologist is on the CMA's screen for the whole visit,
-  // exam through sale: every stage 4–8 CMA screen renders the call tile.
-  it("keeps the audiologist live on every CMA screen from arrival to activation", () => {
+  // exam through sale. Refined 2026-08-31: she joins at consent, not at the
+  // doorstep — the identity check is the CMA's own task, so "Confirm the
+  // visit" stays uncluttered.
+  it("keeps the audiologist live on every CMA screen from consent to activation", () => {
     const cmaScreenFiles = [
       "components/screens/cma/arrival.tsx",
       "components/screens/cma/setup.tsx",
@@ -94,6 +96,10 @@ describe("corrections sheet 2026-08-31", () => {
     for (const file of cmaScreenFiles) {
       expect(sourceOf(file), `${file} must render AudiologistCallTile`).toMatch(/AudiologistCallTile/);
     }
+    // arrival.tsx holds two screens: CmaArrival (no tile) and CmaConsent (tile).
+    const [, cmaArrival] = sourceOf("components/screens/cma/arrival.tsx").split(/(?=export function )/);
+    expect(cmaArrival).toMatch(/^export function CmaArrival/);
+    expect(cmaArrival, "Confirm the visit must not render the call tile").not.toMatch(/AudiologistCallTile/);
   });
 
   // Items 5, 12 — every CMA screen a beat points at must be wired in the

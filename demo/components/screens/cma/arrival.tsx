@@ -19,8 +19,9 @@ export function CmaArrival({ next }: { next: () => void }) {
 
   return (
     <Shell>
+      {/* No call tile here: the identity check is the CMA's own doorstep task —
+         the audiologist joins from consent onward (refined 2026-08-31). */}
       <PageHeader title="Confirm the visit" subtitle="Verify who you are treating before anything begins." eyebrow="Identity" />
-      <AudiologistCallTile note="On the call from the doorstep — she sees the identity check pass before the exam can start." />
       <Card className="p-5">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">

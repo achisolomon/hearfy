@@ -65,9 +65,10 @@ function CalibrationCard() {
 function CareRecord({ go }: { go: (s: ScreenId) => void }) {
   const chosen = devices[0];
   const tier = tierFor(deviceDetail[chosen.name].tier);
+  // Left ear in the left column, right ear on the right (see OtoscopyStep).
   const ears = [
-    { label: "Right ear", avg: pta(audiogram.frequencies, audiogram.right) },
     { label: "Left ear", avg: pta(audiogram.frequencies, audiogram.left) },
+    { label: "Right ear", avg: pta(audiogram.frequencies, audiogram.right) },
   ];
   return (
     <>

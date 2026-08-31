@@ -97,8 +97,8 @@ export function Audiogram({ animate = false, showBone = false, ear = "both" }:
 
       {/* Legend: shape + label, so colour is never the only cue. */}
       <figcaption className="mt-2 flex flex-wrap gap-4 text-[11px] font-semibold text-slate-500">
-        {showRight && <span className="flex items-center gap-1.5"><span className="text-[#ef6b6b]">◯</span> Right ear (air)</span>}
         {showLeft && <span className="flex items-center gap-1.5"><span className="text-[#2788c8]">✕</span> Left ear (air)</span>}
+        {showRight && <span className="flex items-center gap-1.5"><span className="text-[#ef6b6b]">◯</span> Right ear (air)</span>}
         {showBone && <span className="flex items-center gap-1.5"><span>&lt; &gt;</span> Bone conduction</span>}
         <span className="text-slate-400">dB HL by frequency (Hz)</span>
       </figcaption>

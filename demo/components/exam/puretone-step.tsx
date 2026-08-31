@@ -85,10 +85,12 @@ export function PureToneStep({ framing }: { framing: Framing }) {
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <EarCard label="Right ear" avg={right} progress={sweep.progress}
-          state={sweep.phase === "right" ? "testing" : "done"} />
+        {/* Left ear in the left column, right on the right. The sweep still
+            runs right ear first, so the left card is the one that waits. */}
         <EarCard label="Left ear" avg={left} progress={sweep.progress}
           state={sweep.phase === "left" ? "testing" : done ? "done" : "pending"} />
+        <EarCard label="Right ear" avg={right} progress={sweep.progress}
+          state={sweep.phase === "right" ? "testing" : "done"} />
       </div>
 
       {framing === "patient" ? (

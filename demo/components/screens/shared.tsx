@@ -66,8 +66,13 @@ export function RouteMap({moving=false}:{moving?:boolean}){
         vectorEffect="non-scaling-stroke" strokeLinecap="round" pathLength={100} strokeDasharray={moving?"2.6 2.2":"0"}/>
     </svg>
     <div className={`${marker} left-[8%] top-[84%] bg-brand-navy text-white`}><Home size={20}/></div>
-    <motion.div animate={moving?{left:["33%","72%"],top:["63%","32%"]}:{}}
-      transition={{duration:3,repeat:Infinity,repeatType:"reverse"}}
+    {/* The courier only ever travels toward the patient. repeatType "reverse"
+        played the leg backwards on every other cycle, which read as the CMA
+        driving away from the visit; "loop" restarts at the origin instead, and
+        the opacity keyframes hide the instant snap-back at the wrap. */}
+    <motion.div animate={moving?{left:["33%","72%"],top:["63%","32%"],opacity:[0,1,1,0]}:{}}
+      transition={{duration:3,repeat:Infinity,repeatType:"loop",ease:"linear",
+        opacity:{duration:3,repeat:Infinity,repeatType:"loop",ease:"linear",times:[0,0.12,0.88,1]}}}
       className={`${marker} left-[33%] top-[63%] bg-brand-teal text-white`}><Navigation size={20}/></motion.div>
     <div className={`${marker} left-[92%] top-[14%] bg-white text-brand-navy`}><MapPin size={20}/></div>
   </div>;

@@ -2259,3 +2259,31 @@ describe("medical safety red flags", () => {
       .not.toMatch(/&&\s*!dismissed/);
   });
 });
+
+describe("route map direction", () => {
+  const shared = sourceOf("components/screens/shared.tsx");
+  const routeMap = shared
+    .split(/(?=export function )/)
+    .find(s => s.startsWith("export function RouteMap"));
+
+  // The courier marker animated with repeatType "reverse", so every other
+  // cycle drove it backwards down the route — the CMA appeared to be leaving
+  // the visit she was en route to. The trip is one-way by definition.
+  it("never plays the courier's leg in reverse", () => {
+    expect(routeMap, "RouteMap not found").toBeTruthy();
+    expect(routeMap, "reverse drives the courier away from the patient")
+      .not.toMatch(/repeatType\s*:\s*["']reverse["']/);
+  });
+
+  it("loops the courier forward from the start of the route", () => {
+    expect(routeMap).toMatch(/repeatType\s*:\s*["']loop["']/);
+  });
+
+  // Both the CMA's "En route" screen and the patient's live-tracking screen
+  // render the same moving map, so neither can regress independently.
+  it("shares one moving map between the CMA and patient screens", () => {
+    const movers = ["components/screens/cma/day.tsx", "components/screens/patient/dispatch.tsx"]
+      .filter(f => /<RouteMap\s+moving/.test(sourceOf(f)));
+    expect(movers.length).toBe(2);
+  });
+});

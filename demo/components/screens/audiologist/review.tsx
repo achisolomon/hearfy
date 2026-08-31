@@ -69,14 +69,20 @@ export function AudSign({ next }: { next: () => void }) {
   return (
     <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
+      {/* Same page header as every other audiologist screen (consistency,
+         Achi 2026-08-31) — the card below carries the state, not the title. */}
+      <header className="mb-5">
+        <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">Signature</span>
+        <h1 className="mt-1 text-[26px] font-extrabold tracking-[-.02em]">{patient.name} — sign the report</h1>
+      </header>
       <VideoSplit video={<HomeFeed />}>
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           {signed ? <Lock size={21} aria-hidden /> : <PenLine size={21} aria-hidden />}
         </span>
-        <h1 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">
-          {signed ? "Report signed and locked" : "Sign the report"}
-        </h1>
+        <h2 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">
+          {signed ? "Report signed and locked" : "Ready for your signature"}
+        </h2>
         <p className="mt-3 text-sm leading-6 text-slate-500">
           {signed
             ? "The report is now immutable and the results have been released to the patient."

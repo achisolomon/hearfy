@@ -150,6 +150,20 @@ describe("corrections sheet 2026-08-31", () => {
     }
   });
 
+  // Refined 2026-08-31: every audiologist screen opens with the same page
+  // header — eyebrow plus title — including the two sign-off screens,
+  // which used to start at a bare card.
+  it("gives every audiologist screen the standard page header", () => {
+    for (const file of [
+      "components/screens/audiologist/supervision.tsx",
+      "components/screens/audiologist/review.tsx",
+      "components/screens/audiologist/consult.tsx",
+    ]) {
+      const eyebrows = sourceOf(file).match(/tracking-\[\.2em\]/g) ?? [];
+      expect(eyebrows.length, `${file} holds two screens — each needs a header`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
   // Refined 2026-08-31: the patient's exam feels like a hearing lab with
   // the audiologist right next to them — her live strip is on every exam
   // step of the patient's phone.

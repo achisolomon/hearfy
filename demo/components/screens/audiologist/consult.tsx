@@ -111,14 +111,20 @@ export function AudPrescription() {
   return (
     <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
+      {/* Same page header as every other audiologist screen (consistency,
+         Achi 2026-08-31) — the card below carries the state, not the title. */}
+      <header className="mb-5">
+        <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">Prescription</span>
+        <h1 className="mt-1 text-[26px] font-extrabold tracking-[-.02em]">{patient.name} — sign &amp; lock</h1>
+      </header>
       <VideoSplit video={<HomeFeed />}>
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           <Lock size={21} aria-hidden />
         </span>
-        <h1 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">
-          {locked ? "Prescription locked" : "Sign & lock the prescription"}
-        </h1>
+        <h2 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">
+          {locked ? "Prescription locked" : "Ready to lock"}
+        </h2>
         <p className="mt-3 text-sm leading-6 text-slate-500">
           {locked
             ? "The digital prescription is locked and on the patient record. The CMA can now fulfil the shortlist."

@@ -1023,3 +1023,104 @@ describe("docked controls clearance", () => {
     expect(shellPaddingRem).toBeGreaterThan(controlBarTopEdgeRem);
   });
 });
+
+describe("flex row shrinkage at large text", () => {
+  // The owner, on a real phone at the largest TextSize step (root 112.5% *
+  // 1.3 = 23.4px): "Maya L." wrapped mid-name, "Certified Medical Assistant"
+  // stacked one word per line, and the green "Confirmed" StatusPill overflowed
+  // the card and was clipped by the viewport. Root cause, in dispatch.tsx's
+  // Assigned card:
+  //
+  //   <div className="flex items-center gap-3">
+  //     <Avatar/>                          (shrink-0 — fine)
+  //     <div className="flex-1">...name/title/rating...</div>   <-- no min-w-0
+  //     <StatusPill tone="green">Confirmed</StatusPill>          <-- no shrink guard
+  //   </div>
+  //
+  // A flex child with flex-1 (or any flex-grow) defaults to min-width:auto,
+  // NOT 0. That default means the browser will not let the flex-1 child
+  // shrink below its own content's intrinsic width to make room for a
+  // sibling — so as the root font grows and the pill's intrinsic width grows
+  // with it, the pill wins the fight for space and pushes past the card/
+  // viewport edge instead of the text column giving way. `min-w-0` overrides
+  // that default and lets the column actually shrink and wrap.
+  //
+  // Deliberately keyed on flex-1 (this codebase's only flex-grow idiom — no
+  // bare `grow`/`flex-grow` appears anywhere in components/), not on every
+  // `flex items-center`/`justify-between` row: a plain row of two
+  // auto-sized, non-growing children (e.g. consult.tsx's price row, or
+  // supervision.tsx's "Live" pill beside a heading) has no forced-shrink
+  // fight to lose — neither child is told to fill remaining space, so
+  // there's no `min-width:auto` collapse to guard against. Flagging those
+  // too would be a false positive that teaches contributors to ignore this
+  // test. The actual failure mode needs a growing child AND a sibling that
+  // must hold its own size (a StatusPill, or anything marked shrink-0)
+  // fighting it for the same row.
+  const allComponents = componentFiles("components").map(f => ({ file: f, src: sourceOf(f) }));
+
+  // A `<tag className="...flex-1...">` opening tag that lacks `min-w-0` in
+  // the same class string.
+  const FLEX_1_OPEN_TAG = /<\w+\s+className="([^"]*\bflex-1\b[^"]*)"[^>]*>/g;
+
+  // How far past the flexible child's own opening tag to look for the
+  // dangerous sibling (StatusPill, or an explicit shrink-0 element) sharing
+  // its row. Source analysis has no real DOM tree to walk, so this is a
+  // bounded window rather than an exact sibling lookup — the same trade-off
+  // the "accessible name" test above makes with its own ±400 char slice.
+  const SIBLING_WINDOW = 500;
+  // How far back to look for the row's own opening tag, to check whether the
+  // row already opts into `flex-wrap` — a row that wraps has already solved
+  // the crush-vs-overflow fight some other way, so it doesn't need min-w-0
+  // on top of that.
+  const ROW_LOOKBEHIND = 300;
+
+  type Offender = { file: string; snippet: string; reason: string };
+  const offenders: Offender[] = [];
+
+  for (const { file, src } of allComponents) {
+    for (const m of src.matchAll(FLEX_1_OPEN_TAG)) {
+      const classes = m[1];
+      if (/\bmin-w-0\b/.test(classes)) continue; // already guarded
+
+      const tagEnd = m.index! + m[0].length;
+      const after = src.slice(tagEnd, tagEnd + SIBLING_WINDOW);
+      const before = src.slice(Math.max(0, m.index! - ROW_LOOKBEHIND), m.index!);
+
+      // The nearest preceding row-opening tag that establishes the flex
+      // container this child sits in. If it already carries flex-wrap, the
+      // row degrades by wrapping instead of crushing this child, so skip it.
+      const rowOpen = /<\w+\s+className="([^"]*\bflex\b[^"]*)"[^>]*>(?![\s\S]*<\w+\s+className="[^"]*\bflex\b[^"]*>[\s\S]*$)/.exec(before);
+      if (rowOpen && /\bflex-wrap\b/.test(rowOpen[1])) continue;
+
+      const hasStatusPill = /<StatusPill\b/.test(after);
+      const hasShrink0Sibling = /<\w+\s+className="[^"]*\bshrink-0\b[^"]*"/.test(after);
+      if (!hasStatusPill && !hasShrink0Sibling) continue;
+
+      const reason = hasStatusPill
+        ? "a StatusPill sibling follows within the row"
+        : "a shrink-0 sibling follows within the row";
+      offenders.push({
+        file,
+        snippet: src.slice(m.index!, Math.min(src.length, tagEnd + 120)),
+        reason,
+      });
+    }
+  }
+
+  it("finds at least one flex-1 element to check (so this test is not vacuous)", () => {
+    const anyFlex1 = allComponents.some(({ src }) => /\bflex-1\b/.test(src));
+    expect(anyFlex1).toBe(true);
+  });
+
+  it("gives every flex-1 text column min-w-0 when a StatusPill or shrink-0 sibling shares its row", () => {
+    const report = offenders.map(o =>
+      `${o.file}: \`${o.snippet.replace(/\s+/g, " ").trim()}\` — ${o.reason} but the flex-1 element ` +
+      `has no min-w-0, so its min-width defaults to auto. At the largest TextSize step the sibling's ` +
+      `intrinsic width grows and this column cannot shrink to make room for it, so the sibling gets ` +
+      `pushed past the card/viewport edge and clipped instead. Add min-w-0 to the flex-1 element (and ` +
+      `shrink-0 to whichever sibling must hold its size) so the row degrades by shrinking/wrapping text ` +
+      `instead of overflowing.`
+    );
+    expect(offenders, `\n${report.join("\n")}`).toEqual([]);
+  });
+});

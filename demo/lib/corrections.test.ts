@@ -81,22 +81,26 @@ describe("corrections sheet 2026-08-31", () => {
     expect(src).toMatch(/contract:\s*false,\s*terms:\s*false,\s*card:\s*false/);
   });
 
-  // Item 13 — the audiologist is on the CMA's screen for the whole visit,
-  // exam through sale. Refined 2026-08-31: identity and consent are the
-  // CMA's own doorstep tasks, so those pages stay uncluttered — the video
-  // presence starts at kit setup and holds through activation.
-  it("keeps the audiologist live on every CMA screen from kit setup to activation", () => {
-    const cmaScreenFiles = [
-      "components/screens/cma/setup.tsx",
+  // Item 13 — the audiologist is on the CMA's screen from the moment the
+  // tests start through the sale. Refined 2026-08-31: identity, consent and
+  // the kit checklist are the CMA's own pre-exam tasks, so those pages stay
+  // uncluttered — the video presence starts with the first exam step.
+  it("keeps the audiologist live from the first exam step to activation", () => {
+    const withTile = [
       "components/screens/cma/exam.tsx",
       "components/screens/cma/handoff.tsx",
       "components/screens/cma/suitcase.tsx",
     ];
-    for (const file of cmaScreenFiles) {
+    for (const file of withTile) {
       expect(sourceOf(file), `${file} must render AudiologistCallTile`).toMatch(/AudiologistCallTile/);
     }
-    expect(sourceOf("components/screens/cma/arrival.tsx"),
-      "Confirm the visit and Capture consent must not render the call tile").not.toMatch(/AudiologistCallTile/);
+    const withoutTile = [
+      "components/screens/cma/arrival.tsx",
+      "components/screens/cma/setup.tsx",
+    ];
+    for (const file of withoutTile) {
+      expect(sourceOf(file), `${file} is pre-exam — no call tile`).not.toMatch(/AudiologistCallTile/);
+    }
   });
 
   // Items 5, 12 — every CMA screen a beat points at must be wired in the

@@ -251,6 +251,34 @@ export const opPanels = {
 };
 
 /** The six MRD comparison categories, in display order. */
+/**
+ * What Dr. Reed says while the three packages are on screen (2026-08-31).
+ *
+ * Only she recommends — the CMA facilitates and the patient decides — so the
+ * comparison is never presented without her clinical reason for the pick.
+ * Each line is derived from `deviceDetail[...].compare["Clinical fit"]`, so
+ * the caption and the table can never tell the patient different things.
+ */
+export const compareRecommendation = {
+  device: "Phonak Aud\u00e9o L50",
+  /** Her spoken line, as the call's live caption. */
+  note:
+    "The Phonak is my recommendation \u2014 it is the closest fit to your air\u2013bone gap. " +
+    "The Signia covers you well in quieter rooms; the Oticon I would rule out for your left ear.",
+  /**
+   * The rule the screen must state, not merely show (corrections sheet item
+   * 13): the CMA facilitates the conversation and can close nothing.
+   */
+  cmaNote:
+    "Presenting the shortlist over video \u2014 only Dr. Reed recommends and sells. You open the case.",
+  /** Why, per device, in her voice. Keyed by device name. */
+  reasons: {
+    "Phonak Aud\u00e9o L50": "Recommended \u2014 closest fit to your air\u2013bone gap",
+    "Signia Pure Charge&Go": "Also suitable \u2014 best in quieter rooms",
+    "Oticon Intent 2": "Not advised \u2014 open fitting leaves your left-ear gap uncovered",
+  } as Record<string, string>,
+};
+
 export const compareCategories = [
   "Clinical fit", "Use & lifestyle", "Usability", "Commercial", "Terms", "Fulfilment",
 ];

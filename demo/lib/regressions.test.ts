@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
+import { compareRecommendation, devices } from "./mock-data";
 
 const order = screenOrder();
 
@@ -216,9 +217,11 @@ describe("patient device choice", () => {
   // and Checkout still derives its device from that store rather than
   // regressing to a literal devices[0].
   it("keeps Compare and Checkout wired to the shared selection store after the layout rewrite", () => {
+    // Compare hands `selectDevice` to the shared table; the table reads the
+    // store. Both halves of that wiring must survive a layout change.
     const compareBlock = commerce.split("export function Checkout")[0];
-    expect(compareBlock).toContain("selectDevice(");
-    expect(compareBlock).toContain("useSelectedDevice(");
+    expect(compareBlock).toContain("selectDevice");
+    expect(sourceOf("components/screens/compare-table.tsx")).toContain("useSelectedDevice(");
 
     const checkoutBlock = commerce.split("export function Checkout")[1]?.split("export function Order")[0] ?? "";
     expect(checkoutBlock).toContain("useSelectedDevice(");
@@ -780,8 +783,7 @@ describe("text-size clipping", () => {
   // Compare no longer renders a wide table at all, so there is nothing left
   // to scroll or to floor with a min-width.
   it("gives Compare no horizontally-scrolling region — the owner rejected the scrollbar, so the layout must stack instead", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
     expect(compareBlock).not.toMatch(/overflow-x-auto|overflow-auto/);
     expect(compareBlock).not.toMatch(/\bmin-w-\[/);
   });
@@ -823,8 +825,7 @@ describe("text-size clipping", () => {
   // independently to the same source of truth (`compareCategories`, three
   // devices) rather than trusting that fixing one fixed both.
   it("shows all six categories and all three devices in both the desktop table and the stacked cards", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
 
     // The two branches are visibility-gated with Tailwind's `hidden lg:*` /
     // `lg:hidden` idiom (see the "shows a wide table only from `lg`..." test
@@ -855,8 +856,7 @@ describe("text-size clipping", () => {
   // sibling screens) rather than a media query or JS width check, so both
   // trees are always in the DOM and nothing depends on JS running first.
   it("gives Compare a wide table shown only from `lg` and stacked cards hidden from `lg`", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
     expect(compareBlock).toMatch(/hidden lg:(?:block|flex|grid)/);
     expect(compareBlock).toMatch(/\blg:hidden\b/);
   });
@@ -870,8 +870,7 @@ describe("text-size clipping", () => {
   // something in the leading (label) slot before it maps the three devices,
   // so the declared column count always matches the rendered cell count.
   it("gives every grid-cols-[9rem_repeat(3,1fr)] row in Compare a leading cell before it maps the three devices", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
     const GRID_ROW_OPEN = /grid-cols-\[9rem_repeat\(3,1fr\)\][^>]*>/g;
     const bareRows: string[] = [];
     let match: RegExpExecArray | null;
@@ -1811,5 +1810,52 @@ describe("Dr. Reed's camera feed", () => {
   it("keeps the call chrome in the DOM, over the feed", () => {
     expect(tile).toContain("Live");
     expect(tile).toContain("Speaking");
+  });
+});
+
+describe("the audiologist presents the comparison", () => {
+  const table = sourceOf("components/screens/compare-table.tsx");
+  const commerce = sourceOf("components/screens/patient/commerce.tsx");
+  const suitcase = sourceOf("components/screens/cma/suitcase.tsx");
+
+  // The packages were compared with no clinician on screen, though the app's
+  // own rule is that only the audiologist recommends. The comparison must
+  // never appear without her reason for the pick.
+  it("puts her on the call on the patient's compare screen", () => {
+    expect(commerce).toContain("AudiologistStrip");
+    expect(commerce).toContain("compareRecommendation.note");
+  });
+
+  // Two surfaces rendering their own copy of the same table is how they
+  // drift; one component, two modes.
+  it("renders one table on both the patient phone and the CMA tablet", () => {
+    expect(commerce).toContain("<CompareTable");
+    expect(suitcase).toContain("<CompareTable");
+  });
+
+  // The patient decides and the CMA cannot sell, so only the patient's copy
+  // carries live Select controls.
+  it("gives the CMA a read-only copy — they cannot choose for the patient", () => {
+    expect(suitcase).toMatch(/<CompareTable\s+selectable=\{false\}/);
+    expect(table).toContain("selectable");
+    // The read-only branch must not wire a click handler at all.
+    expect(table).toMatch(/Patient’s choice/);
+  });
+
+  // Her recommendation has to be derived from the same clinical data the
+  // table shows, or the caption and the columns can tell the patient
+  // different things.
+  it("names a device that is actually on the shortlist", () => {
+    const names = devices.slice(0, 3).map(d => d.name);
+    expect(names).toContain(compareRecommendation.device);
+    for (const n of names) {
+      expect(compareRecommendation.reasons[n], `no reason for ${n}`).toBeTruthy();
+    }
+  });
+
+  // Teal marks live/positive state (The Vital Signal Rule) — a "not advised"
+  // device must not be painted with it.
+  it("marks only the recommended device in teal", () => {
+    expect(table).toMatch(/compareRecommendation\.device \? "text-teal-ink" : "text-slate-500"/);
   });
 });

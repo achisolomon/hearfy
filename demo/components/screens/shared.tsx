@@ -36,13 +36,18 @@ export { Audiogram } from "../charts/audiogram";
 // tablet). It widens from `md` (768px, iPad portrait) so the Zoom-like exam
 // layout has room, while phones still get the max-w-md column. `wide` keeps
 // Compare's existing lg-up behavior untouched.
+//
+// From `xl` the tablet column widens again (2026-08-31): once the shortlist
+// screen carried the full comparison table beside the 380px call column, a
+// 4xl cap left the table's four columns about 490px to share, wrapping every
+// cell to three lines. Only the xl step is new; md and lg are unchanged.
 // `dark` is published through SurfaceProvider (components/surface.tsx) rather
 // than only setting classes here: PageHeader's title and PrimaryButton's fill
 // are both navy, so on the four navy screens (assigned, driving, arrived,
 // live) the heading rendered navy-on-navy — invisible — and the primary
 // action was a navy button on a navy ground. Those components now read the
 // surface instead of each dark screen having to override them by hand.
-export function Shell({children,dark=false,wide=false,tablet=false}:{children:React.ReactNode;dark?:boolean;wide?:boolean;tablet?:boolean}){return <SurfaceProvider value={dark?"dark":"light"}><div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className={cn("mx-auto px-5 pb-40 pt-6 md:pb-24",tablet?"max-w-md md:max-w-3xl lg:max-w-4xl":wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div></SurfaceProvider>}
+export function Shell({children,dark=false,wide=false,tablet=false}:{children:React.ReactNode;dark?:boolean;wide?:boolean;tablet?:boolean}){return <SurfaceProvider value={dark?"dark":"light"}><div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className={cn("mx-auto px-5 pb-40 pt-6 md:pb-24",tablet?"max-w-md md:max-w-3xl lg:max-w-4xl xl:max-w-6xl":wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div></SurfaceProvider>}
 export function Avatar({large=false}:{large?:boolean}){return <div className={`${large?"h-20 w-20 text-xl":"h-12 w-12 text-sm"} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-[#c7eeec] to-[#edf8f8] font-extrabold text-brand-navy shadow-soft`}>ML</div>}
 export function Option({title,sub,active,onClick,icon:Icon}:{title:string;sub?:string;active?:boolean;onClick?:()=>void;icon?:any}){return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-[20px] border p-4 text-left transition ${active?"border-brand-teal bg-[#edfbfa]":"border-[#dfeaec] bg-white"}`}>{Icon&&<span className={`grid h-11 w-11 place-items-center rounded-2xl ${active?"bg-brand-teal text-white":"bg-[#f0f6f6] text-brand-teal"}`}><Icon size={21}/></span>}<span className="flex-1"><b className="block text-[15px]">{title}</b>{sub&&<span className="mt-1 block text-xs leading-5 text-slate-500">{sub}</span>}</span><span className={`grid h-5 w-5 place-items-center rounded-full border ${active?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>{active&&<Check size={13}/>}</span></button>}
 export function StepPage({title,subtitle,step,children,onBack,onNext,next="Continue"}:{title:string;subtitle:string;step:number;children:React.ReactNode;onBack:()=>void;onNext:()=>void;next?:string}){return <Shell><PageHeader title={title} subtitle={subtitle} onBack={onBack} eyebrow="Smart matching"/><Progress step={step} total={5}/><div className="space-y-3">{children}</div><div className="mt-7"><PrimaryButton onClick={onNext}>{next}</PrimaryButton></div></Shell>}

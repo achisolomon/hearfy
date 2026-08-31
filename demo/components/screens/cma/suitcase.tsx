@@ -6,7 +6,8 @@ import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { Shell } from "../shared";
 import { CallSplit } from "./call-tile";
-import { devices, deviceDetail, identity, patient, serials } from "@/lib/mock-data";
+import { devices, deviceDetail, identity, patient, serials, compareRecommendation } from "@/lib/mock-data";
+import { CompareTable } from "../compare-table";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { SIGNING_ITEMS, useSigning } from "@/lib/signing";
 
@@ -24,7 +25,18 @@ export function CmaStock({ next }: { next: () => void }) {
   return (
     <Shell tablet>
       <PageHeader title="Signed shortlist" subtitle="Open the case. The patient tries what is here." eyebrow="Prescription locked" />
-      <CallSplit active note="Presenting the shortlist over video — only Dr. Reed recommends and sells. You open the case.">
+      <CallSplit active note={compareRecommendation.note}>
+        {/* The same comparison the patient is reading, read-only: the CMA
+           follows the conversation without being able to choose or sell. */}
+        <Card className="mb-4 flex gap-3 p-4">
+          <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
+          <p className="text-sm leading-6 text-slate-500">{compareRecommendation.cmaNote}</p>
+        </Card>
+        <CompareTable selectable={false} />
+
+        <p className="mb-2 mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+          In the case
+        </p>
         <div className="space-y-3">
           {shortlist.map(d => {
             const detail = deviceDetail[d.name];

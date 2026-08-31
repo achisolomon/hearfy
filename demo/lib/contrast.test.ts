@@ -288,7 +288,9 @@ describe("the desktop bar fits the viewport it turns on at", () => {
 describe("Compare's device selector is a real touch target", () => {
   // The desktop table's select control measured 30px tall.
   it("gives the select control a 44px minimum height", () => {
-    const compare = codeOf("components/screens/patient/commerce.tsx").split("export function Checkout")[0];
+    // The table moved into its own component when the CMA's tablet started
+    // rendering the same comparison; the control's floor moved with it.
+    const compare = codeOf("components/screens/compare-table.tsx");
     expect(compare).toContain("min-h-11");
   });
 });

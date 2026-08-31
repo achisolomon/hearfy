@@ -84,7 +84,9 @@ describe("corrections sheet 2026-08-31", () => {
   // Refined 2026-08-31: the compare screen shows a picture of each device,
   // in both the desktop table and the phone cards.
   it("shows a device picture on the compare screen", () => {
-    const src = sourceOf("components/screens/patient/commerce.tsx");
+    // The comparison moved into its own component when the CMA's tablet
+    // started rendering it too; the thumbs moved with it.
+    const src = sourceOf("components/screens/compare-table.tsx");
     expect((src.match(/DeviceThumb/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
@@ -181,7 +183,12 @@ describe("corrections sheet 2026-08-31", () => {
     expect(closeout, "CmaCloseout is after the call ends").not.toMatch(/CallSplit/);
     // Only the audiologist sells (sheet item 13's core rule) — the sale
     // screens must say so, not merely show her.
-    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/only Dr\. Reed recommends and sells/);
+    // The sentence now reaches the screen from mock-data (`cmaNote`), which
+    // the suitcase renders — assert on what the two files carry together, so
+    // the rule stays stated wherever the copy happens to live.
+    const saleCopy = sourceOf("components/screens/cma/suitcase.tsx") + sourceOf("lib/mock-data.ts");
+    expect(saleCopy).toMatch(/only Dr\. Reed recommends and sells/);
+    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/compareRecommendation\.cmaNote/);
   });
 
   // Refined 2026-08-31: exam step numbering is DERIVED from the step lists —

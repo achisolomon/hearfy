@@ -1124,3 +1124,128 @@ describe("flex row shrinkage at large text", () => {
     expect(offenders, `\n${report.join("\n")}`).toEqual([]);
   });
 });
+
+describe("phone bar Next control at largest text size", () => {
+  // Measured at 375px: the phone bar (Back circle + persona text column +
+  // Next pill) fits the persona name/role at "standard" and "large" text,
+  // but at "larger" (root 112.5% * 1.3 = 23.4px) the text column shrinks to
+  // ~56.9px while the longest name+role needs ~102.6px — the pill clips.
+  // TextSize (components/a11y/text-size.tsx) holds the chosen step in a
+  // module-scope store read via useSyncExternalStore, not a CSS breakpoint,
+  // so the bar cannot express "only at the largest step" with a Tailwind
+  // responsive prefix — it has to branch on that store's live value. The
+  // owner's fix: render Next as an icon-only circle (matching Back's shape)
+  // only at that step, which recovers ~72px and lets the text column fit at
+  // all three text sizes without ever dropping the name or role.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const barStart = controlBarMatch.index;
+  const barEnd = demoShell.indexOf("<AnimatePresence>", barStart);
+  const controlBarBlock = demoShell.slice(barStart, barEnd);
+
+  // The bar must read the live text-size step from a11y/text-size.tsx's
+  // module-scope store (directly or through a hook wrapping it), not just
+  // reference the module by name — otherwise a decoy import that never
+  // actually branches rendering would still pass a looser check.
+  it("imports the text-size step from the a11y text-size store", () => {
+    expect(
+      demoShell,
+      "demo-shell.tsx must import something from a11y/text-size.tsx (e.g. a hook exposing the " +
+      "current index or an `isLargestText` boolean) to know when to collapse Next to an icon",
+    ).toMatch(/from ["']\.\.\/a11y\/text-size["']/);
+  });
+
+  // The Next control inside the phone bar specifically (not the desktop
+  // bar's separate Next, which must keep its label at every size per the
+  // "do not change the desktop top bar" constraint). A conditional render
+  // (icon-only at the largest step, labelled pill otherwise) produces TWO
+  // `onClick={next}` buttons in the JSX source, both inside whatever wraps
+  // them (e.g. `{isLargestText ? (...) : (...)}`) — so capture from the
+  // FIRST `onClick={next}` through the LAST matching `</button>` among a run
+  // of consecutive onClick={next} buttons, which spans both branches plus
+  // the condition wrapping them, rather than stopping at the first `</button>`
+  // (which would only ever see one branch and miss the gate around them).
+  const NEXT_BUTTON_OPEN = /<button\b[^>]*onClick=\{next\}/g;
+  const nextButtonOpens = [...controlBarBlock.matchAll(NEXT_BUTTON_OPEN)];
+
+  it("finds the phone bar's Next button to check", () => {
+    expect(nextButtonOpens.length, "expected at least one onClick={next} button inside the docked phone control bar").toBeGreaterThan(0);
+  });
+
+  // From the first onClick={next} button's start, extend through however
+  // many consecutive `<button ... onClick={next} ...>...</button>` runs
+  // follow with only whitespace/JSX-conditional glue between them (a `? (`
+  // / `) : (` / `)}` from the ternary), so both branches of a conditional
+  // render are included as one block.
+  const firstOpenIdx = nextButtonOpens[0]?.index ?? -1;
+  let nextBlock = "";
+  if (firstOpenIdx > -1) {
+    // Walk forward from the first opening tag, matching complete
+    // `<button ...>...</button>` runs (via a lazy .*? on <button ... > up to
+    // its own </button>) plus JSX glue between them, until no further
+    // onClick={next} button follows immediately after.
+    let cursor = firstOpenIdx;
+    let end = firstOpenIdx;
+    const BUTTON_RUN = /<button\b[^>]*onClick=\{next\}[\s\S]*?<\/button>/g;
+    BUTTON_RUN.lastIndex = cursor;
+    let m: RegExpExecArray | null;
+    while ((m = BUTTON_RUN.exec(controlBarBlock))) {
+      if (m.index !== cursor && controlBarBlock.slice(cursor, m.index).replace(/[\s)}:?(]|isLargestText/g, "") !== "") break;
+      end = m.index + m[0].length;
+      cursor = end;
+      BUTTON_RUN.lastIndex = cursor;
+    }
+    nextBlock = controlBarBlock.slice(Math.max(0, firstOpenIdx - 40), end);
+  }
+
+  it("branches the phone Next control on the text-size store rather than always rendering the labelled pill", () => {
+    // The labelled form ("Next" + arrow) must not be unconditional — some
+    // conditional keyed on the text-size step must gate it, so at the
+    // largest step something other than the px-4 labelled pill renders.
+    expect(
+      nextBlock,
+      `the phone bar's Next button must conditionally render an icon-only form at the largest text ` +
+      `step instead of always showing the labelled "Next" pill:\n${nextBlock}`,
+    ).toMatch(/isLargestText|textSizeIndex|SIZES\.length\s*-\s*1/);
+  });
+
+  it("keeps an accessible name on the phone Next control in its icon-only form", () => {
+    // Whether rendered as a labelled pill (accessible name from its text
+    // content) or collapsed to an icon-only circle, the control must carry
+    // an explicit aria-label somewhere so an icon-only render is never
+    // silently unlabelled.
+    expect(
+      nextBlock,
+      `icon-only Next must carry an aria-label (e.g. "Next beat") so collapsing away the visible ` +
+      `"Next" text does not also remove its accessible name:\n${nextBlock}`,
+    ).toMatch(/aria-label=(?:"[^"]+"|\{[^}]+\})/);
+  });
+
+  it("still conveys the atWalkEnd state when Next is collapsed to an icon", () => {
+    // atWalkEnd already disables the button (disabled={atWalkEnd}); the
+    // icon-only form must not silently drop that, since it can no longer
+    // rely on the "End of this persona's day" text label to convey it.
+    expect(nextBlock).toContain("disabled={atWalkEnd}");
+  });
+
+  // The persona text column (name over role) must not be able to overflow
+  // the row even if the 375px budget above is wrong for a narrower phone
+  // (360px, 320px devices exist) — it must degrade by truncating instead.
+  it("keeps the persona text column shrinkable and truncating, so it cannot overflow the row on narrower phones", () => {
+    const personaButtonMatch = /<button\b[^>]*onClick=\{\(\) => setSheet\(true\)\}[\s\S]*?<\/button>/.exec(controlBarBlock);
+    expect(personaButtonMatch, "could not find the persona indicator button in the phone control bar").toBeTruthy();
+    const personaBlock = personaButtonMatch![0];
+    expect(
+      personaBlock,
+      "the persona button's flex-1 text column must carry min-w-0, or a flex-1 sibling's default " +
+      "min-width:auto stops it from shrinking to make room for Next",
+    ).toMatch(/\bmin-w-0\b/);
+    expect(
+      personaBlock,
+      "the persona name and role lines must keep `truncate` so they clip with an ellipsis instead " +
+      "of overflowing the row on a narrower phone (360px/320px) where the measured 375px budget " +
+      "no longer holds",
+    ).toMatch(/\btruncate\b/);
+  });
+});

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { BrandLogo } from "../ui";
 import { PersonaAvatar } from "../persona-avatar";
+import { useIsLargestTextSize } from "../a11y/text-size";
 import { Cover, EndCap } from "./cover";
 import { Interstitial } from "./interstitial";
 import { RoleTabs, SHORT } from "./role-tabs";
@@ -16,6 +17,7 @@ import { useStory } from "./story-context";
 export function DemoShell() {
   const { phase, next, back, beat, mode, role, atWalkEnd } = useStory();
   const [sheet, setSheet] = useState(false);
+  const isLargestText = useIsLargestTextSize();
   // Both walks clamp at their first beat, so Back is dead there rather than
   // wrong. Say so with the control instead of letting it look broken.
   const atStart = mode === "solo" ? prevBeatForRole(beat, role) === beat : beat === 0;
@@ -146,13 +148,35 @@ export function DemoShell() {
             </span>
           </span>
         </button>
-        <button
-          onClick={next}
-          disabled={atWalkEnd}
-          className="flex h-10 items-center justify-center gap-2 rounded-full bg-brand-navy px-4 text-sm font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
-        >
-          {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={17} /></>}
-        </button>
+        {/* At the largest text step the rem-scaled chrome outgrows the
+            375px viewport before the persona name/role column does — the
+            labelled pill alone needs ~114px, leaving too little for "Dr.
+            Reed" / "Audiologist". `TextSize`'s chosen step lives in a
+            runtime store (a11y/text-size.tsx), not a CSS breakpoint, so
+            this can't be a `md:`/`lg:` prefix — it has to branch on
+            `isLargestText`, that store's own live value. Collapsing Next to
+            an icon-only circle here (matching Back's own w-10 shape, so the
+            two read as a pair) recovers ~72px, which is enough for the
+            persona text to fit at every text-size step without dropping
+            anything — see the width budget in the fix commit. */}
+        {isLargestText ? (
+          <button
+            onClick={next}
+            disabled={atWalkEnd}
+            aria-label={atWalkEnd ? "End of this persona's day" : "Next beat"}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-navy text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
+          >
+            <ArrowRight size={19} />
+          </button>
+        ) : (
+          <button
+            onClick={next}
+            disabled={atWalkEnd}
+            className="flex h-10 items-center justify-center gap-2 rounded-full bg-brand-navy px-4 text-sm font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
+          >
+            {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={17} /></>}
+          </button>
+        )}
       </div>
 
       <AnimatePresence>

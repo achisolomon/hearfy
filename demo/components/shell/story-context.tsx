@@ -112,8 +112,29 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     setBeat(i);
   }, [beat, mode, role]);
 
+  /**
+   * The mirror of `next`. The screen is `screenFor(beat, role)`, so moving the
+   * pointer alone does not undo a step that also switched role: the earlier
+   * beat would render through the persona adopted at the handoff, showing a
+   * screen the viewer was never on. Guided Back therefore restores the landing
+   * beat's lead, exactly as Next adopts the departing beat's.
+   *
+   * Solo mode keeps the chosen persona on purpose — there the role is the
+   * viewer's identity, not the script's, and `prevBeatForRole` already walks
+   * only that role's own beats.
+   */
   const back = useCallback(() => {
-    setBeat(mode === "solo" ? prevBeatForRole(beat, role) : prevBeat(beat));
+    if (mode === "solo") {
+      setBeat(prevBeatForRole(beat, role));
+      return;
+    }
+    const i = prevBeat(beat);
+    const lead = BEATS[i].lead;
+    // Stepping back into another persona's stretch is a handoff too; announcing
+    // it keeps the role change from happening silently under the viewer.
+    if (role !== lead) setHandoff(lead);
+    setRoleState(lead);
+    setBeat(i);
   }, [beat, mode, role]);
 
   const goToScreen = useCallback((screen: AnyScreenId) => {

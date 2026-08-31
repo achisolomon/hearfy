@@ -59,7 +59,10 @@ export function CmaStock({ next }: { next: () => void }) {
 export function CmaTryOn({ next }: { next: () => void }) {
   const inCase = devices.filter(d => deviceDetail[d.name].inCase);
   const [tried, setTried] = useState<string[]>([]);
-  const gateOpen = tried.length > 0 || triedLatch.use();
+  // Read the latch unconditionally: it is a hook, and `||` would skip it on
+  // the render right after the first try-on, changing the hook count.
+  const everTried = triedLatch.use();
+  const gateOpen = tried.length > 0 || everTried;
   return (
     <Shell>
       <PageHeader title="Try-on" subtitle="Fit each device. Record which ones were tried." eyebrow="In the home" />

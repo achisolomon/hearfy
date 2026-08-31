@@ -21,7 +21,10 @@ export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   // Tracks an explicit "go back" on this mount, so the still-set latch (which
   // survives a remount on purpose) doesn't override a deliberate dismissal.
   const [dismissed,setDismissed] = useState(false);
-  const showDiversion = (flagged || redFlagLatch.use()) && !dismissed;
+  // Hook first, then combine — inside `||` it would be skipped once
+  // `flagged` turns true, and React would see the hook count change.
+  const everFlagged = redFlagLatch.use();
+  const showDiversion = (flagged || everFlagged) && !dismissed;
   const symptoms = [
     "Sudden hearing loss in the last 72 hours",
     "Pain, drainage or bleeding from an ear",

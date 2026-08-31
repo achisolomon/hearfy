@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForScreen, beatIndexById, type Role } from "./story";
+import { BEATS, ROLES, beatForScreen, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 
@@ -1489,5 +1489,149 @@ describe("unsourced operator figures stay visibly marked", () => {
     // one card that should have it.
     const tupleLine = funnelBlock.slice(visitFeeIdx, funnelBlock.indexOf("\n", visitFeeIdx));
     expect(tupleLine, `Visit fee's card data must end with \`false\` (not illustrative): "${tupleLine}"`).toMatch(/false\]/);
+  });
+});
+
+/**
+ * React hooks must run in the same order on every render of a component.
+ * `latch.use()` is `useSyncExternalStore` in disguise, so putting it on the
+ * right-hand side of `||` or `&&` makes it a conditional hook: the operator
+ * short-circuits once the left side settles the answer, the hook silently
+ * disappears from that render, and React throws "Rendered fewer hooks than
+ * expected" — which the demo surfaces as a blank "Application error: a
+ * client-side exception has occurred".
+ *
+ * The bug that reached a viewer: on CMA Try-on, `tried.length > 0 ||
+ * triedLatch.use()` called the hook on first paint (empty list) and skipped
+ * it on the very next render (non-empty list), so tapping any device card
+ * crashed the whole demo. The same shape was live in patient Intake.
+ *
+ * Asserted as an invariant over every call site rather than against the two
+ * instances, so the next screen that reaches for a latch is covered too.
+ */
+describe("latch hooks are called unconditionally", () => {
+  // `use()` is the React binding; `get()` is the plain read that is safe
+  // anywhere. Only the hook is order-sensitive.
+  const callSites = componentFiles()
+    .flatMap(file => {
+      const src = sourceOf(file);
+      return src
+        .split("\n")
+        .map((line, i) => ({ file, line: line.trim(), number: i + 1 }))
+        .filter(l => /\w+Latch\.use\(\)/.test(l.line));
+    });
+
+  it("finds the latch call sites it is meant to guard", () => {
+    // If a refactor renames the binding, this test would otherwise pass by
+    // vacuously checking nothing.
+    expect(callSites.length, "expected at least one `someLatch.use()` call site").toBeGreaterThan(0);
+  });
+
+  it("never guards a latch hook behind || or &&", () => {
+    const shortCircuited = callSites.filter(l => /(\|\||&&)[^\n]*\w+Latch\.use\(\)/.test(l.line));
+    expect(
+      shortCircuited.map(l => `${l.file}:${l.number}  ${l.line}`),
+      "a latch hook sits to the right of a short-circuiting operator, so it is " +
+      "skipped once the left operand decides the result — React then sees the " +
+      "hook count change between renders and throws",
+    ).toEqual([]);
+  });
+
+  it("never guards a latch hook behind a ternary branch", () => {
+    const ternary = callSites.filter(l => /\?[^\n]*\w+Latch\.use\(\)|\w+Latch\.use\(\)[^\n]*:/.test(l.line));
+    expect(
+      ternary.map(l => `${l.file}:${l.number}  ${l.line}`),
+      "a latch hook sits inside a ternary branch, so it only runs for one of " +
+      "the two outcomes — the hook order changes when the condition flips",
+    ).toEqual([]);
+  });
+
+  it("assigns each latch hook straight into a binding, so it cannot be skipped", () => {
+    const notPlainBinding = callSites.filter(l => !/^const\s+\w+\s*=\s*\w+Latch\.use\(\);$/.test(l.line));
+    expect(
+      notPlainBinding.map(l => `${l.file}:${l.number}  ${l.line}`),
+      "every latch hook must be read as its own `const x = someLatch.use();` " +
+      "statement — combine it with other state on the line below, where " +
+      "short-circuiting cannot reach the hook",
+    ).toEqual([]);
+  });
+});
+
+/**
+ * Back must land on the screen the viewer actually came from.
+ *
+ * The screen shown is a function of BOTH the beat pointer and the current
+ * role — `screenFor(beat, role)`. Guided `next` moves both: it advances the
+ * beat and adopts the new beat's lead role at a handoff. `back` moved only
+ * the beat, leaving the role stuck on whoever led the beat being left.
+ *
+ * So stepping forward across a handoff and immediately pressing Back did not
+ * undo the step: it returned to the previous beat but rendered it through the
+ * NEW role's eyes, showing a screen the viewer had never been on. Thirteen of
+ * the script's beats sat on such a handoff — e.g. Next from "assigned"
+ * (patient) to "cma-enroute" (cma), then Back showed the CMA's "cma-day"
+ * instead of the patient's "assigned".
+ *
+ * The invariant is round-tripping, asserted over the whole script rather than
+ * the thirteen instances, so a handoff added later is covered too.
+ */
+describe("back returns to the screen the viewer came from", () => {
+  // Mirrors the guided reducer in story-context.tsx: `next` takes the new
+  // beat's lead, `back` steps the pointer and takes that beat's lead too.
+  const guidedNext = (beat: number, role: Role) => {
+    const i = nextBeat(beat);
+    return { beat: i, role: BEATS[i].lead };
+  };
+  // Read the real reducer out of the source rather than restating it, so this
+  // test tracks story-context.tsx instead of a copy that can drift out of sync
+  // with it (and silently keep passing after a regression).
+  const storySource = sourceOf("components/shell/story-context.tsx");
+  const backBody = /const back = useCallback\(\(\) => \{([\s\S]*?)\}, \[/.exec(storySource)?.[1] ?? "";
+  const backRestoresRole = /setRoleState|setRole\(/.test(backBody);
+
+  const guidedBack = (beat: number, role: Role) => {
+    const i = prevBeat(beat);
+    // Only a `back` that also restores the landing beat's lead role changes
+    // which persona the screen renders through.
+    return { beat: i, role: backRestoresRole ? BEATS[i].lead : role };
+  };
+
+  it("has handoffs in the script, so this is not vacuous", () => {
+    const handoffs = BEATS.filter((b, i) => i > 0 && b.lead !== BEATS[i - 1].lead);
+    expect(handoffs.length, "expected the script to switch lead role somewhere").toBeGreaterThan(0);
+  });
+
+  it("undoes a guided Next, at every beat including every handoff", () => {
+    const broken: string[] = [];
+    for (let i = 0; i < BEATS.length - 1; i++) {
+      const role = BEATS[i].lead;
+      const before = screenFor(i, role);
+      const fwd = guidedNext(i, role);
+      const back = guidedBack(fwd.beat, fwd.role);
+      const after = screenFor(back.beat, back.role);
+      if (after !== before) {
+        broken.push(
+          `beat ${i} "${BEATS[i].id}" (${role}) → "${BEATS[fwd.beat].id}" (${fwd.role}): ` +
+          `was showing "${before}", Back showed "${after}"`,
+        );
+      }
+    }
+    expect(
+      broken,
+      "Back must return to the screen Next left. When it only moves the beat " +
+      "pointer and keeps the role adopted at a handoff, it renders the earlier " +
+      "beat through the wrong persona's eyes — a screen the viewer was never on",
+    ).toEqual([]);
+  });
+
+  it("keeps the role consistent with the beat after going back", () => {
+    // A role that never leads its own beat means the shell's persona chip and
+    // the screen disagree, which is how the wrong-screen bug shows up visually.
+    const mismatched: string[] = [];
+    for (let i = 1; i < BEATS.length; i++) {
+      const { beat, role } = guidedBack(i, BEATS[i].lead);
+      if (BEATS[beat].lead !== role) mismatched.push(`${BEATS[i].id} → ${BEATS[beat].id}`);
+    }
+    expect(mismatched, "after Back the active role must be the landing beat's lead").toEqual([]);
   });
 });

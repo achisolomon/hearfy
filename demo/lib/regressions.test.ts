@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForScreen, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
+import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 
@@ -1633,5 +1633,42 @@ describe("back returns to the screen the viewer came from", () => {
       if (BEATS[beat].lead !== role) mismatched.push(`${BEATS[i].id} → ${BEATS[beat].id}`);
     }
     expect(mismatched, "after Back the active role must be the landing beat's lead").toEqual([]);
+  });
+});
+
+describe("back from We're here after delivery", () => {
+  // The patient's back arrow on Support navigates to "order". Two beats show
+  // that screen — the CMA-led close-out first, then the patient-led order
+  // beat — and goToScreen's first-match lookup parked the pointer on
+  // close-out. The next forward press advanced close-out → order and
+  // repainted the SAME screen: a dead click a viewer hit (2026-08-31).
+  it("lands the patient on the order beat, not the CMA close-out", () => {
+    const from = beatIndexById("support");
+    const target = beatForScreenNear("patient", "order", from);
+    expect(BEATS[target].id).toBe("order");
+    expect(BEATS[target].lead).toBe("patient");
+  });
+
+  it("advances to Support on the first forward press after that back", () => {
+    const target = beatForScreenNear("patient", "order", beatIndexById("support"));
+    expect(nextBeat(target)).toBe(beatIndexById("support"));
+  });
+
+  it("prefers a beat this role leads whenever several show the same screen", () => {
+    // Every patient screen with multiple beats must resolve to a patient-led
+    // one from anywhere in the script, so no other screen hides this bug.
+    const patientScreens = new Set(BEATS.map(b => b.screens.patient));
+    for (const s of patientScreens) {
+      const hasLed = BEATS.some(b => b.screens.patient === s && b.lead === "patient");
+      if (!hasLed) continue; // ambient screens (e.g. during CMA-only stretches)
+      for (let from = 0; from < BEATS.length; from++) {
+        const i = beatForScreenNear("patient", s, from);
+        expect(BEATS[i].lead, `navigating to "${s}" from beat ${from}`).toBe("patient");
+      }
+    }
+  });
+
+  it("still reports -1 for a screen outside the script", () => {
+    expect(beatForScreenNear("patient", "intake-needs", 3)).toBe(-1);
   });
 });

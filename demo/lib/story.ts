@@ -205,6 +205,24 @@ export function beatForScreen(role: Role, screen: AnyScreenId): number {
 }
 
 /**
+ * The beat to LAND on when a role navigates to a screen: prefer beats this
+ * role leads, then the one nearest `from` (ties to the earlier beat).
+ *
+ * First-match was not enough: Back on the patient's "We're here after
+ * delivery" targets "order", whose first beat is the CMA-led close-out. The
+ * pointer parked a beat early, so the next forward press advanced close-out
+ * → order and repainted the SAME screen — a dead click a viewer hit
+ * (2026-08-31).
+ */
+export function beatForScreenNear(role: Role, screen: AnyScreenId, from: number): number {
+  const matches = BEATS.map((b, i) => ({ b, i })).filter(x => x.b.screens[role] === screen);
+  if (matches.length === 0) return -1;
+  const led = matches.filter(x => x.b.lead === role);
+  const pool = led.length ? led : matches;
+  return pool.reduce((best, x) => Math.abs(x.i - from) < Math.abs(best.i - from) ? x : best).i;
+}
+
+/**
  * SOLO MODE — per-persona entry.
  *
  * Beats where this role's screen actually changes. Walking these lets a viewer

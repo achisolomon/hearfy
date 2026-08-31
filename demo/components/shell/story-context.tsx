@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import {
   BEATS,
-  beatForScreen,
+  beatForScreenNear,
   beatsForRole,
   firstBeatOfStage,
   isLastBeat,
@@ -138,10 +138,13 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
   }, [beat, mode, role]);
 
   const goToScreen = useCallback((screen: AnyScreenId) => {
-    const i = beatForScreen(role, screen);
+    // Nearest role-led occurrence, not first-in-script: Back from the
+    // patient's Support screen must land on the order beat, not the CMA-led
+    // close-out that happens to show the same screen (see lib/story.ts).
+    const i = beatForScreenNear(role, screen, beat);
     // A screen outside the script leaves the pointer where it is.
     if (i !== -1) setBeat(i);
-  }, [role]);
+  }, [role, beat]);
 
   const start = useCallback(() => {
     setBeat(0);

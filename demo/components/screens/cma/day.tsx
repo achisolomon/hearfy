@@ -6,7 +6,7 @@ import { cmaDay, kit, visit } from "@/lib/mock-data";
 
 export function CmaDay({ next }: { next: () => void }) {
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Today's visits" subtitle="Three appointments. Kit checked out and calibrated." eyebrow="CMA — Maya L." />
       <div className="space-y-3">
         {cmaDay.map(v => (
@@ -38,7 +38,7 @@ export function CmaDay({ next }: { next: () => void }) {
 
 export function CmaEnroute({ next }: { next: () => void }) {
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="En route" subtitle={visit.address} eyebrow="Visit " />
       <RouteMap moving />
       <div className="mt-4 grid grid-cols-2 gap-3">

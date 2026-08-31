@@ -5,7 +5,7 @@ import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { Shell } from "../shared";
-import { AudiologistCallTile } from "./call-tile";
+import { CallSplit } from "./call-tile";
 import { devices, deviceDetail, identity, patient, serials } from "@/lib/mock-data";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 
@@ -21,39 +21,40 @@ const triedLatch = createLatch();
 export function CmaStock({ next }: { next: () => void }) {
   const shortlist = devices.slice(0, 3);
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Signed shortlist" subtitle="Open the case. The patient tries what is here." eyebrow="Prescription locked" />
-      <AudiologistCallTile active note="Presenting the shortlist over video — only Dr. Reed recommends and sells. You open the case." />
-      <div className="space-y-3">
-        {shortlist.map(d => {
-          const detail = deviceDetail[d.name];
-          return (
-            <Card key={d.name} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <b className="text-[15px]">{d.name}</b>
-                  <p className="mt-1 text-xs text-slate-500">{tierFor(detail.tier).name} tier</p>
+      <CallSplit active note="Presenting the shortlist over video — only Dr. Reed recommends and sells. You open the case.">
+        <div className="space-y-3">
+          {shortlist.map(d => {
+            const detail = deviceDetail[d.name];
+            return (
+              <Card key={d.name} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <b className="text-[15px]">{d.name}</b>
+                    <p className="mt-1 text-xs text-slate-500">{tierFor(detail.tier).name} tier</p>
+                  </div>
+                  {detail.inCase
+                    ? <StatusPill tone="green">In your case</StatusPill>
+                    // Bespoke pill: StatusPill always renders a leading Check, which would
+                    // wrongly imply "done" for a device that hasn't arrived yet.
+                    : <span className="flex items-center gap-1.5 rounded-full bg-[#edf4fb] px-3 py-1 text-xs font-bold text-[#235f98]">
+                        <Truck size={12} /> Ships
+                      </span>}
                 </div>
-                {detail.inCase
-                  ? <StatusPill tone="green">In your case</StatusPill>
-                  // Bespoke pill: StatusPill always renders a leading Check, which would
-                  // wrongly imply "done" for a device that hasn't arrived yet.
-                  : <span className="flex items-center gap-1.5 rounded-full bg-[#edf4fb] px-3 py-1 text-xs font-bold text-[#235f98]">
-                      <Truck size={12} /> Ships
-                    </span>}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-      <Card className="mt-4 flex gap-3 p-4">
-        <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
-        <p className="text-sm leading-6 text-slate-500">
-          Availability is logistics, not a recommendation. A device that ships is equally
-          available to the patient — the clinical choice was made before the case opened.
-        </p>
-      </Card>
-      <div className="mt-6"><PrimaryButton onClick={next}>Start try-on</PrimaryButton></div>
+              </Card>
+            );
+          })}
+        </div>
+        <Card className="mt-4 flex gap-3 p-4">
+          <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
+          <p className="text-sm leading-6 text-slate-500">
+            Availability is logistics, not a recommendation. A device that ships is equally
+            available to the patient — the clinical choice was made before the case opened.
+          </p>
+        </Card>
+        <div className="mt-6"><PrimaryButton onClick={next}>Start try-on</PrimaryButton></div>
+      </CallSplit>
     </Shell>
   );
 }
@@ -66,40 +67,41 @@ export function CmaTryOn({ next }: { next: () => void }) {
   const everTried = triedLatch.use();
   const gateOpen = tried.length > 0 || everTried;
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Try-on" subtitle="Fit each device. Record which ones were tried." eyebrow="In the home" />
-      <AudiologistCallTile note="Watching each fit on the call — comfort and retention are hers to judge with the patient." />
-      <div className="space-y-3">
-        {inCase.map(d => {
-          const on = tried.includes(d.name);
-          return (
-            <button key={d.name}
-              aria-pressed={on}
-              onClick={() => { setTried(t => on ? t.filter(n => n !== d.name) : [...t, d.name]); triedLatch.set(); }}
-              className={cn("flex w-full items-center gap-3 rounded-2xl border p-4 text-left",
-                on ? "border-brand-teal bg-[#edfbfa]" : "border-[#dfeaec] bg-white")}>
-              <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full",
-                on ? "bg-brand-teal text-white" : "bg-[#f1f5f6] text-slate-300")}>
-                <Check size={15} />
-              </span>
-              <span className="flex-1">
-                <b className="block text-sm">{d.name}</b>
-                <span className="text-xs text-slate-500">Dome size M · left and right</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <Card className="mt-4 p-4">
-        <p className="text-sm leading-6 text-slate-500">
-          Check comfort and retention on both ears. Swap dome size if the fit is loose.
-        </p>
-      </Card>
-      <div className="mt-6">
-        <PrimaryButton disabled={!gateOpen} onClick={next}>
-          {gateOpen ? "Patient has chosen" : "Record a try-on to continue"}
-        </PrimaryButton>
-      </div>
+      <CallSplit note="Watching each fit on the call — comfort and retention are hers to judge with the patient.">
+        <div className="space-y-3">
+          {inCase.map(d => {
+            const on = tried.includes(d.name);
+            return (
+              <button key={d.name}
+                aria-pressed={on}
+                onClick={() => { setTried(t => on ? t.filter(n => n !== d.name) : [...t, d.name]); triedLatch.set(); }}
+                className={cn("flex w-full items-center gap-3 rounded-2xl border p-4 text-left",
+                  on ? "border-brand-teal bg-[#edfbfa]" : "border-[#dfeaec] bg-white")}>
+                <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full",
+                  on ? "bg-brand-teal text-white" : "bg-[#f1f5f6] text-slate-300")}>
+                  <Check size={15} />
+                </span>
+                <span className="flex-1">
+                  <b className="block text-sm">{d.name}</b>
+                  <span className="text-xs text-slate-500">Dome size M · left and right</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Card className="mt-4 p-4">
+          <p className="text-sm leading-6 text-slate-500">
+            Check comfort and retention on both ears. Swap dome size if the fit is loose.
+          </p>
+        </Card>
+        <div className="mt-6">
+          <PrimaryButton disabled={!gateOpen} onClick={next}>
+            {gateOpen ? "Patient has chosen" : "Record a try-on to continue"}
+          </PrimaryButton>
+        </div>
+      </CallSplit>
     </Shell>
   );
 }
@@ -125,56 +127,57 @@ export function CmaSigning({ next }: { next: () => void }) {
   ];
 
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Sign &amp; authorize" subtitle={`${chosen.name} · ${tier.name} membership`} eyebrow="Contract" />
-      <AudiologistCallTile active note="Walking the patient through the contract on the call — the sale is hers to close." />
-      <Card className="p-5">
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
-          <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
-          <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
-            <b>Due today</b><b className="text-lg">${dueNow}</b>
+      <CallSplit active note="Walking the patient through the contract on the call — the sale is hers to close.">
+        <Card className="p-5">
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
+            <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
+            <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
+              <b>Due today</b><b className="text-lg">${dueNow}</b>
+            </div>
           </div>
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.
+          </p>
+        </Card>
+        {/* Every box starts unchecked — same rule as consent (item 2). */}
+        <div className="mt-4 space-y-3">
+          {items.map(([k, label]) => (
+            <button key={k} onClick={() => setAgreed(a => ({ ...a, [k]: !a[k] }))}
+              className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
+              <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
+                agreed[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+                {agreed[k] && <Check size={15} />}
+              </span>
+              <span className="text-sm leading-6 text-slate-600">
+                {label}
+                {k === "card" && <span className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                  <CreditCard size={13} /> Visa •••• 4242 · on file from booking
+                </span>}
+              </span>
+            </button>
+          ))}
         </div>
-        <p className="mt-3 text-xs leading-5 text-slate-500">
-          Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.
-        </p>
-      </Card>
-      {/* Every box starts unchecked — same rule as consent (item 2). */}
-      <div className="mt-4 space-y-3">
-        {items.map(([k, label]) => (
-          <button key={k} onClick={() => setAgreed(a => ({ ...a, [k]: !a[k] }))}
-            className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
-            <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-              agreed[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
-              {agreed[k] && <Check size={15} />}
-            </span>
-            <span className="text-sm leading-6 text-slate-600">
-              {label}
-              {k === "card" && <span className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-                <CreditCard size={13} /> Visa •••• 4242 · on file from booking
+        <button onClick={() => canSign && setSigned(true)}
+          className={cn("mt-4 grid min-h-24 w-full place-items-center rounded-2xl border-2 border-dashed p-4 text-center",
+            signed ? "border-brand-teal bg-[#edfbfa]" : "border-[#c9dadd] bg-white")}>
+          {signed
+            ? <span>
+                <span className="font-serif text-2xl italic text-brand-navy">{identity.legalName}</span>
+                <span className="mt-1 block text-[11px] text-slate-500">Signed on the CMA&rsquo;s device · May 21, 2025</span>
+              </span>
+            : <span className="flex items-center gap-2 text-sm font-semibold text-slate-400">
+                <PenLine size={16} /> {canSign ? "Tap here for the patient to sign" : "Complete the three items above to sign"}
               </span>}
-            </span>
-          </button>
-        ))}
-      </div>
-      <button onClick={() => canSign && setSigned(true)}
-        className={cn("mt-4 grid min-h-24 w-full place-items-center rounded-2xl border-2 border-dashed p-4 text-center",
-          signed ? "border-brand-teal bg-[#edfbfa]" : "border-[#c9dadd] bg-white")}>
-        {signed
-          ? <span>
-              <span className="font-serif text-2xl italic text-brand-navy">{identity.legalName}</span>
-              <span className="mt-1 block text-[11px] text-slate-500">Signed on the CMA&rsquo;s device · May 21, 2025</span>
-            </span>
-          : <span className="flex items-center gap-2 text-sm font-semibold text-slate-400">
-              <PenLine size={16} /> {canSign ? "Tap here for the patient to sign" : "Complete the three items above to sign"}
-            </span>}
-      </button>
-      <div className="mt-6">
-        <PrimaryButton disabled={!signed} onClick={next}>
-          {signed ? "Contract signed — start the fit" : "Signature required"}
-        </PrimaryButton>
-      </div>
+        </button>
+        <div className="mt-6">
+          <PrimaryButton disabled={!signed} onClick={next}>
+            {signed ? "Contract signed — start the fit" : "Signature required"}
+          </PrimaryButton>
+        </div>
+      </CallSplit>
     </Shell>
   );
 }
@@ -185,27 +188,30 @@ export function CmaActivate({ next }: { next: () => void }) {
   const tier = deviceDetail[chosen.name].tier;
   const { monthly, credit, dueNow } = creditedFirstMonth(tier);
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Fit &amp; activate" subtitle={`${chosen.name} · ${tierFor(tier).name} membership`} eyebrow="Same day" />
-      <AudiologistCallTile note="Sale closed on the call — the fit, pairing and activation are yours." />
-      <Card className="p-5">
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">First month</span><b>${monthly}</b></div>
-          <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
-          <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
-            <b>Due today</b><b className="text-lg">${dueNow}</b>
+      {/* She stays on the call until the patient is fitted and happy — this
+         is the last screen of the session she is part of. */}
+      <CallSplit note="Still on with you both — she confirms the fit sounds right before the call ends.">
+        <Card className="p-5">
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-slate-500">First month</span><b>${monthly}</b></div>
+            <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
+            <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
+              <b>Due today</b><b className="text-lg">${dueNow}</b>
+            </div>
           </div>
+        </Card>
+        <div className="mt-4 space-y-3">
+          {["Devices paired and programmed", "Fit checked, both ears", "Patient shown charging and cleaning"].map(x => (
+            <div key={x} className="flex items-center gap-3 rounded-2xl bg-white p-4">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16} /></span>
+              <b className="text-sm">{x}</b>
+            </div>
+          ))}
         </div>
-      </Card>
-      <div className="mt-4 space-y-3">
-        {["Devices paired and programmed", "Fit checked, both ears", "Patient shown charging and cleaning"].map(x => (
-          <div key={x} className="flex items-center gap-3 rounded-2xl bg-white p-4">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16} /></span>
-            <b className="text-sm">{x}</b>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6"><PrimaryButton onClick={next}>Activated</PrimaryButton></div>
+        <div className="mt-6"><PrimaryButton onClick={next}>Activated</PrimaryButton></div>
+      </CallSplit>
     </Shell>
   );
 }
@@ -213,7 +219,7 @@ export function CmaActivate({ next }: { next: () => void }) {
 export function CmaCloseout({ next }: { next: () => void }) {
   const chosen = devices[0];
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Visit complete" subtitle={`${patient.name} left the visit hearing.`} eyebrow="Close-out" />
       <Card className="grid place-items-center p-8 text-center">
         <span className="grid h-16 w-16 place-items-center rounded-full bg-[#edf8f7] text-brand-teal">

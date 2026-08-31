@@ -17,7 +17,7 @@ export function CmaArrival({ next }: { next: () => void }) {
   const verified = scan === "matched" && ssnOk;
 
   return (
-    <Shell>
+    <Shell tablet>
       {/* No call tile here: the identity check is the CMA's own doorstep task —
          the audiologist joins from consent onward (refined 2026-08-31). */}
       <PageHeader title="Confirm the visit" subtitle="Verify who you are treating before anything begins." eyebrow="Identity" />
@@ -115,7 +115,7 @@ export function CmaConsent({ next }: { next: () => void }) {
   const canProceed = granted.care && granted.telehealth;
 
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Capture consent" subtitle="Walk the patient through each item. Consent is a gate." eyebrow="Consent" />
       <div className="space-y-3">
         {items.map(([k, label]) => (

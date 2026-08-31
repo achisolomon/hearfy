@@ -4,6 +4,7 @@ import { Card, PrimaryButton, StatusPill } from "../../ui";
 import { Audiogram } from "../../charts/audiogram";
 import { createLatch } from "@/lib/latch";
 import { clinician, speech, otoscopy, patient } from "@/lib/mock-data";
+import { HomeFeed } from "./home-feed";
 
 /** Signing is irreversible, so the flag outlives the component. See lib/latch. */
 const signedLatch = createLatch();
@@ -24,6 +25,9 @@ export function AudReview({ next }: { next: () => void }) {
           </Card>
 
           <div className="space-y-3">
+            {/* The room stays on screen until the patient is fitted and happy
+               (refined 2026-08-31) — she reviews while still on the call. */}
+            <HomeFeed />
             <Card className="p-4">
               <b className="text-sm">Speech recognition</b>
               <div className="mt-3 flex gap-6">
@@ -63,7 +67,9 @@ export function AudSign({ next }: { next: () => void }) {
   const signed = signedLatch.use();
   return (
     <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
-      <Card className="w-full max-w-lg p-7">
+      <div className="w-full max-w-lg space-y-4">
+      <HomeFeed />
+      <Card className="w-full p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           {signed ? <Lock size={21} aria-hidden /> : <PenLine size={21} aria-hidden />}
         </span>
@@ -91,6 +97,7 @@ export function AudSign({ next }: { next: () => void }) {
             : <PrimaryButton onClick={signedLatch.set}>Sign &amp; release results</PrimaryButton>}
         </div>
       </Card>
+      </div>
     </div>
   );
 }

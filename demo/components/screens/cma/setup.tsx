@@ -11,7 +11,7 @@ export function CmaCalibration({ next }: { next: () => void }) {
   const allDone = done.every(Boolean);
 
   return (
-    <Shell>
+    <Shell tablet>
       <PageHeader title="Kit checklist" subtitle="Every item must pass before the exam can start." eyebrow={`Kit ${kit.id}`} />
       <div className="space-y-3">
         {kit.checklist.map((item, i) => (

@@ -91,32 +91,51 @@ describe("corrections sheet 2026-08-31", () => {
     expect(src).toMatch(/contract:\s*false,\s*terms:\s*false,\s*card:\s*false/);
   });
 
-  // Item 13 — the audiologist is on the CMA's screen from the moment the
-  // tests start through the sale. Refined 2026-08-31: identity, consent and
-  // the kit checklist are the CMA's own pre-exam tasks, so those pages stay
-  // uncluttered — the video presence starts with the first exam step.
-  it("keeps the audiologist live from the first exam step to activation", () => {
-    const withTile = [
+  // Item 13 — the call runs from the first exam step until the patient is
+  // fitted and happy, on BOTH sides. Refined 2026-08-31: identity, consent
+  // and the kit checklist are the CMA's own pre-exam tasks (no call there),
+  // and on a tablet the call is a Zoom-like half of the screen.
+  it("keeps the call live from the first exam step until the fit, both sides", () => {
+    const withCall = [
       "components/screens/cma/exam.tsx",
       "components/screens/cma/handoff.tsx",
       "components/screens/cma/suitcase.tsx",
     ];
-    for (const file of withTile) {
-      expect(sourceOf(file), `${file} must render AudiologistCallTile`).toMatch(/AudiologistCallTile/);
+    for (const file of withCall) {
+      expect(sourceOf(file), `${file} must render the call split`).toMatch(/CallSplit/);
     }
-    const withoutTile = [
+    const withoutCall = [
       "components/screens/cma/arrival.tsx",
       "components/screens/cma/setup.tsx",
     ];
-    for (const file of withoutTile) {
-      expect(sourceOf(file), `${file} is pre-exam — no call tile`).not.toMatch(/AudiologistCallTile/);
+    for (const file of withoutCall) {
+      expect(sourceOf(file), `${file} is pre-exam — no call`).not.toMatch(/CallSplit|AudiologistCallTile/);
     }
-    // And the video runs both ways (refined 2026-08-31): the audiologist's
-    // monitor shows the home feed with the patient's spoken feedback and a
-    // talk-back control.
-    const monitor = sourceOf("components/screens/audiologist/supervision.tsx");
-    expect(monitor).toMatch(/HomeFeed/);
-    expect(monitor).toMatch(/Talk to the room/);
+    // The audiologist sees the room on every screen of hers until the
+    // prescription is locked — monitoring, review, signature, consult.
+    for (const file of [
+      "components/screens/audiologist/supervision.tsx",
+      "components/screens/audiologist/review.tsx",
+      "components/screens/audiologist/consult.tsx",
+    ]) {
+      expect(sourceOf(file), `${file} must render the home feed`).toMatch(/HomeFeed/);
+    }
+    expect(sourceOf("components/screens/audiologist/home-feed.tsx")).toMatch(/Talk to the room/);
+  });
+
+  // Only the patient is on a phone (refined 2026-08-31): every CMA screen
+  // uses the tablet column, not the phone-width strip.
+  it("lays out every CMA screen for a tablet", () => {
+    for (const file of [
+      "components/screens/cma/day.tsx",
+      "components/screens/cma/arrival.tsx",
+      "components/screens/cma/setup.tsx",
+      "components/screens/cma/exam.tsx",
+      "components/screens/cma/handoff.tsx",
+      "components/screens/cma/suitcase.tsx",
+    ]) {
+      expect(sourceOf(file), `${file} must use the tablet Shell`).toMatch(/<Shell tablet>/);
+    }
   });
 
   // Items 5, 12 — every CMA screen a beat points at must be wired in the

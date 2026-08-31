@@ -1,15 +1,25 @@
 "use client";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, LayoutGrid, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { BrandLogo } from "../ui";
+import { PersonaAvatar } from "../persona-avatar";
 import { Cover, EndCap } from "./cover";
 import { Interstitial } from "./interstitial";
 import { RoleTabs } from "./role-tabs";
 import { RoleView } from "./role-view";
 import { Timeline } from "./timeline";
+import { personaFor } from "@/lib/personas";
 import { prevBeatForRole } from "@/lib/story";
 import { useStory } from "./story-context";
+
+/** Short role labels for the narrow phone bar — mirrors RoleTabs' desktop set. */
+const SHORT_ROLE: Record<string, string> = {
+  patient: "Patient",
+  cma: "CMA",
+  audiologist: "Audiologist",
+  operator: "Operator",
+};
 
 export function DemoShell() {
   const { phase, next, back, beat, mode, role, atWalkEnd } = useStory();
@@ -53,29 +63,38 @@ export function DemoShell() {
       <RoleView />
 
       {/* Phone: one docked bar flush to the viewport bottom (Option C) — Back
-          and the sheet/grid trigger sit at the left edge, Next owns the right
-          edge. This replaces the old floating row that hovered above a
-          separate BottomNav; BottomNav (patient role only) now stacks
-          directly on top of this bar instead of sharing bottom-0 with it —
-          see its `bottom-14 md:bottom-0` offset in shared.tsx. */}
+          sits at the left edge, Next owns the right edge. This replaces the
+          old floating row that hovered above a separate BottomNav; BottomNav
+          (patient role only) now stacks directly on top of this bar instead
+          of sharing bottom-0 with it — see its `bottom-14 md:bottom-0` offset
+          in shared.tsx.
+
+          The middle used to be empty. On a phone, the desktop top bar (which
+          carries RoleTabs) is md:hidden, so nothing on screen said which of
+          the four personas was active — "I can select persona, but I don't
+          see which one I'm on right now." The persona indicator fills that
+          space and replaces the old grid button as the sheet's opener: the
+          sheet already offers both role-switching and stage-jumping, so one
+          labelled trigger that also shows the current role covers what two
+          separate buttons did, and leaves more width for the label at
+          375px. */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-between gap-2 border-t border-[#dce7e9] bg-white/95 px-3 backdrop-blur md:hidden">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={back}
-            disabled={atStart}
-            aria-label="Previous beat"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-brand-navy disabled:text-slate-300"
-          >
-            <ArrowLeft size={19} />
-          </button>
-          <button
-            onClick={() => setSheet(true)}
-            aria-label="Demo controls"
-            className="grid h-10 w-10 place-items-center rounded-full text-brand-navy"
-          >
-            <LayoutGrid size={19} />
-          </button>
-        </div>
+        <button
+          onClick={back}
+          disabled={atStart}
+          aria-label="Previous beat"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-brand-navy disabled:text-slate-300"
+        >
+          <ArrowLeft size={19} />
+        </button>
+        <button
+          onClick={() => setSheet(true)}
+          aria-label={`Viewing as ${personaFor(role).name} — change role`}
+          className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-2 text-brand-navy"
+        >
+          <span aria-hidden className="shrink-0"><PersonaAvatar role={role} size="sm" /></span>
+          <span className="truncate text-sm font-bold">{SHORT_ROLE[role]}</span>
+        </button>
         <button
           onClick={next}
           disabled={atWalkEnd}

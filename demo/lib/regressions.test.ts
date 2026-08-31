@@ -234,6 +234,75 @@ describe("shell controls", () => {
   });
 });
 
+describe("mobile persona indicator", () => {
+  // On a real phone the desktop top bar (which carries RoleTabs) is
+  // `md:hidden`, so RoleTabs only ever renders inside the slide-up sheet.
+  // Nothing on screen said which of the four personas was active — the
+  // owner's own words: "I don't see which one I'm on right now." The docked
+  // phone bar (bottom-0, md:hidden) is the only persistent phone chrome, so
+  // the indicator has to live there. Isolate that bar's block the same way
+  // the "docked controls clearance" tests do, then assert it shows a
+  // role-driven persona avatar and that tapping it opens the role switcher.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  // The clearance tests' `indexOf("</div>", ...)` stops at the FIRST closing
+  // div, which only spans the bar's first child — fine for finding a max
+  // button height, but it would silently drop a middle child (the persona
+  // indicator) from this block. Slice up to the next top-level section
+  // (the sheet's AnimatePresence) instead, so the whole bar is covered.
+  const barStart = controlBarMatch.index;
+  const barEnd = demoShell.indexOf("<AnimatePresence>", barStart);
+  const controlBarBlock = demoShell.slice(barStart, barEnd);
+
+  // A future rewrite could still show *a* role affordance without showing
+  // *which* role is current — e.g. a plain, unlabelled grid icon. Require
+  // the bar to actually reference the live `role` from useStory, not just
+  // some avatar component name, so a hardcoded/static avatar doesn't pass.
+  it("renders a persona avatar driven by the current role inside the phone bar", () => {
+    expect(controlBarBlock).toMatch(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
+  });
+
+  it("opens the same sheet used for role switching when the indicator is tapped", () => {
+    // Whatever element wraps the avatar, it must be a control (not inert
+    // decoration) that calls setSheet(true) — the same call the grid button
+    // already uses, so it lands on the sheet that renders <RoleTabs full />.
+    const avatarIdx = controlBarBlock.search(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
+    expect(avatarIdx, "no role-driven PersonaAvatar found to check for a tap handler").toBeGreaterThan(-1);
+    const nearby = controlBarBlock.slice(Math.max(0, avatarIdx - 400), avatarIdx + 100);
+    expect(nearby).toMatch(/onClick=\{[^}]*setSheet\(true\)[^}]*\}/);
+  });
+
+  // PersonaAvatar already renders role="img" + its own aria-label, so a
+  // labelled wrapper button must silence the inner SVG rather than doubling
+  // the announcement — the sheet trigger still needs an accessible name.
+  it("gives the indicator button its own accessible name without a doubled announcement", () => {
+    const avatarIdx = controlBarBlock.search(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
+    expect(avatarIdx).toBeGreaterThan(-1);
+    // An aria-labelled <button> must open somewhere before the avatar, with
+    // no OTHER <button> opening in between (i.e. this is the avatar's own
+    // enclosing button, not an unrelated one earlier in the bar).
+    // Arrow-function attributes (onClick={() => ...}) contain a literal `>`,
+    // which would make a naive tag-matching regex stop early. This codebase
+    // consistently closes a multi-line opening tag with `>` immediately
+    // followed by a newline (see every button above), which `=>` never is —
+    // so drop arrows first and the remaining `>` is always a real tag close.
+    const before = controlBarBlock.slice(0, avatarIdx).replace(/=>/g, "==");
+    const buttonOpens = [...before.matchAll(/<button\b([^>]*)>/g)];
+    const last = buttonOpens.at(-1);
+    expect(last, "expected a <button> to open somewhere before the role-driven PersonaAvatar").toBeTruthy();
+    // aria-label may be a plain string ("Demo controls") or, since the
+    // active role's name belongs in it, a JS expression such as a template
+    // literal ({`Viewing as ${name} — change role`}) — accept either.
+    expect(last![1], "the button wrapping the persona indicator must carry its own aria-label").toMatch(/aria-label=(?:"[^"]+"|\{[^}]+\})/);
+    // Something between that button opening and the avatar tag must mark the
+    // inner SVG decorative, so its own role="img"/aria-label doesn't also
+    // get announced — doubling the label.
+    const between = controlBarBlock.slice(before.lastIndexOf(last![0]), avatarIdx + 40);
+    expect(between).toMatch(/aria-hidden/);
+  });
+});
+
 describe("clinical screens", () => {
   const cma = componentFiles("components/screens/cma").map(f => sourceOf(f)).join("\n");
   const aud = componentFiles("components/screens/audiologist").map(f => sourceOf(f)).join("\n");

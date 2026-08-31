@@ -63,7 +63,7 @@ function Tile({ e, onOpen }: { e: (typeof supervisionQueue)[number]; onOpen?: ()
 export function AudPanel({ next }: { next: () => void }) {
   const list = prioritised();
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 text-brand-navy">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
         <header className="mb-6">
           <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">Live supervision</span>
@@ -97,7 +97,7 @@ export function AudPanel({ next }: { next: () => void }) {
 export function AudMonitor({ next }: { next: () => void }) {
   const hero = supervisionQueue.find(e => e.hero)!;
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 text-brand-navy">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
         <header className="mb-5 flex items-center justify-between">
           <div>

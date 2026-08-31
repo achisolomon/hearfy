@@ -514,6 +514,128 @@ describe("phone Back control visibility", () => {
   });
 });
 
+describe("full-height screen wrapper clearance", () => {
+  // Shell (components/screens/shared.tsx) gives its callers pb-40/md:pb-24,
+  // proven safe by "docked controls clearance" above. But four screens never
+  // call Shell at all — they roll their own full-height root
+  // (`min-h-[100dvh] ... p-6 ...`) with only p-6 (1.5rem) of bottom padding
+  // at every breakpoint, including phone, where the docked demo control bar
+  // (demo-shell.tsx, `fixed inset-x-0 bottom-0 z-40 ... h-14 ... md:hidden`)
+  // reaches 3.5rem up from the viewport bottom. The owner hit this on the
+  // audiologist consult screen — "Continue to prescription" was cut in half
+  // — but the same wrapper string appears verbatim in review.tsx,
+  // supervision.tsx, and operator/dashboard.tsx, so all four are affected.
+  //
+  // These roles (CMA/audiologist/operator) render no BottomNav (that is
+  // patient-only, see shared.tsx), so they only need to clear the control
+  // bar itself, not the taller patient stack "docked controls clearance"
+  // proves Shell clears.
+  //
+  // This scans every screen component generically — any file matching the
+  // same "full-height root that isn't Shell" shape is checked, not just the
+  // four files known today — so a new screen added later with the same
+  // pattern fails here too instead of shipping the same bug again.
+  const SPACING_UNIT_REM = 0.25;
+  const TAILWIND_SPACING_SCALE = new Set([
+    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
+    24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+  ]);
+
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const controlBarBlock = demoShell.slice(controlBarMatch.index, demoShell.indexOf("</div>", controlBarMatch.index));
+  const controlBarBottomRem = Number(controlBarMatch[1]) * SPACING_UNIT_REM;
+  const controlHeightsRem = [...controlBarBlock.matchAll(/\bh-(\d+)\b/g)].map(m => Number(m[1]) * SPACING_UNIT_REM);
+  if (controlHeightsRem.length === 0) throw new Error("found no h-* button height inside the docked phone control bar");
+  const controlBarHeightRem = Math.max(...controlHeightsRem);
+  const controlBarTopEdgeRem = controlBarBottomRem + controlBarHeightRem;
+
+  // Every full-height, non-Shell screen root in the app: `min-h-[100dvh]`
+  // (with or without a leading `grid`/other utility) that is not itself
+  // Shell's own definition (Shell already proved safe above; scanning it
+  // here too would just retest the same line for no reason).
+  const screenFiles = componentFiles("components/screens").filter(f => f !== "components/screens/shared.tsx");
+  const FULL_HEIGHT_ROOT = /className="([^"]*\bmin-h-\[100dvh\][^"]*)"/g;
+
+  type Wrapper = { file: string; classes: string };
+  const wrappers: Wrapper[] = [];
+  for (const file of screenFiles) {
+    const src = sourceOf(file);
+    for (const m of src.matchAll(FULL_HEIGHT_ROOT)) {
+      wrappers.push({ file, classes: m[1] });
+    }
+  }
+
+  it("finds at least one full-height screen wrapper to check (so this test is not vacuous)", () => {
+    expect(wrappers.length).toBeGreaterThan(0);
+  });
+
+  // Parse each wrapper's *base* (phone) bottom padding — `p-<n>` or
+  // `pb-<n>` with no responsive prefix — the value active below `md:`,
+  // where the docked control bar is not `md:hidden`'s opposite (it IS
+  // shown). A responsive override (`md:p-*`/`md:pb-*`) does not count: it
+  // never applies on phone, which is exactly the viewport the owner hit
+  // the bug on.
+  const basePaddingRem = (classes: string): { raw: number; className: string } | null => {
+    // Prefer a bare pb- (more specific than p-) if present; otherwise fall
+    // back to p-. Both matched only when NOT preceded by a responsive
+    // prefix like md:/sm:/lg:.
+    const pb = /(?<!\S)pb-(\d+)\b/.exec(classes);
+    if (pb) return { raw: Number(pb[1]), className: pb[0] };
+    const p = /(?<!\S)p-(\d+)\b/.exec(classes);
+    if (p) return { raw: Number(p[1]), className: p[0] };
+    return null;
+  };
+
+  it("gives every non-Shell full-height screen wrapper a parseable base bottom padding", () => {
+    const unparseable = wrappers
+      .filter(w => basePaddingRem(w.classes) === null)
+      .map(w => `${w.file}: \`${w.classes}\` has no bare p-*/pb-* to check`);
+    expect(unparseable).toEqual([]);
+  });
+
+  it("keeps every full-height wrapper's padding class on Tailwind's real spacing scale", () => {
+    const offenders: string[] = [];
+    for (const w of wrappers) {
+      const parsed = basePaddingRem(w.classes);
+      if (!parsed) continue;
+      if (!TAILWIND_SPACING_SCALE.has(parsed.raw)) {
+        offenders.push(
+          `${w.file}: \`${parsed.className}\` (${parsed.raw}) is not on Tailwind's default spacing ` +
+          `scale — it compiles to NO CSS at all, silently leaving zero padding on phone.`,
+        );
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The actual bug: base (phone) bottom padding must clear the docked
+  // control bar's top edge, the same relationship "docked controls
+  // clearance" proves for Shell — with room to spare, not a flush fit.
+  it("gives every non-Shell full-height screen wrapper enough base bottom padding to clear the docked phone control bar", () => {
+    const offenders: string[] = [];
+    for (const w of wrappers) {
+      const parsed = basePaddingRem(w.classes);
+      if (!parsed) continue;
+      const paddingRem = parsed.raw * SPACING_UNIT_REM;
+      if (paddingRem <= controlBarTopEdgeRem) {
+        offenders.push(
+          `${w.file}: \`${parsed.className}\` gives only ${paddingRem}rem of bottom padding on phone, but ` +
+          `the docked control bar (demo-shell.tsx) reaches ${controlBarTopEdgeRem}rem above the viewport ` +
+          `bottom (bottom-${controlBarBottomRem / SPACING_UNIT_REM} + h-${controlBarHeightRem / SPACING_UNIT_REM}). ` +
+          `Content at the bottom of this screen sits behind the bar on a real phone.`,
+        );
+      }
+    }
+    expect(
+      offenders,
+      `found ${offenders.length} full-height screen wrapper(s) whose content the docked phone control bar overlaps:\n` +
+      offenders.join("\n"),
+    ).toEqual([]);
+  });
+});
+
 describe("clinical screens", () => {
   const cma = componentFiles("components/screens/cma").map(f => sourceOf(f)).join("\n");
   const aud = componentFiles("components/screens/audiologist").map(f => sourceOf(f)).join("\n");

@@ -42,7 +42,7 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     {/* One table, two surfaces: the CMA's tablet renders the same component
        read-only, so the comparison the patient reads and the one on the
        tablet can never diverge. */}
-    <CompareTable onSelect={selectDevice}/>
+    <CompareTable layout="cards" onSelect={selectDevice}/>
 
     <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {selected.name}</PrimaryButton></div>
   </Shell>;

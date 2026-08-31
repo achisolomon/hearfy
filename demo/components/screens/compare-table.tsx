@@ -11,24 +11,29 @@ import { useSelectedDevice } from "@/lib/selection";
  * phone and the CMA's tablet can never show different comparisons of the same
  * three devices (2026-08-31).
  *
- * Two trees, toggled by width, both always in the DOM: stacked cards below
- * `lg`, the real table from `lg`. Device columns are `fr` units on purpose —
- * no px floor — so the table narrows with its container instead of scrolling.
+ * The layout is chosen by ROLE, not by viewport width (2026-08-31). The
+ * patient is on a phone and the CMA on a tablet — those are facts about the
+ * product, not about the browser window. Gating on `lg` meant a wide window
+ * rendered the six-across table inside the patient's `max-w-md` column, which
+ * clipped the third device off the screen.
  *
- * `selectable` is the difference between the two surfaces. The patient chooses,
- * so their copy carries live Select controls; the CMA's tablet is a read-only
- * mirror of the same table, because the CMA neither recommends nor decides.
+ * - `layout="cards"` — the patient: one package at a time, six rows each.
+ * - `layout="table"` — the CMA: the wide side-by-side comparison.
+ *
+ * `selectable` is the other difference. The patient chooses, so their copy
+ * carries live Select controls; the CMA's is a read-only mirror, because the
+ * CMA neither recommends nor decides.
  */
-export function CompareTable({ selectable = true, onSelect }: {
-  selectable?: boolean; onSelect?: (name: string) => void;
+export function CompareTable({ layout = "cards", selectable = true, onSelect }: {
+  layout?: "cards" | "table"; selectable?: boolean; onSelect?: (name: string) => void;
 }) {
   const shortlist = devices.slice(0, 3);
   const selected = useSelectedDevice();
 
   return (
     <>
-      {/* From lg: the side-by-side table. */}
-      <div className="hidden lg:block">
+      {/* The CMA's tablet: the side-by-side comparison. */}
+      {layout === "table" && <div>
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-[9rem_repeat(3,1fr)]">
             <div />
@@ -83,10 +88,10 @@ export function CompareTable({ selectable = true, onSelect }: {
             </div>
           ))}
         </Card>
-      </div>
+      </div>}
 
-      {/* Below lg: one card per package, the same six rows. */}
-      <div className="space-y-4 lg:hidden">
+      {/* The patient's phone: one card per package, the same six rows. */}
+      {layout === "cards" && <div className="space-y-4">
         {shortlist.map(d => {
           const isSel = d.name === selected.name;
           const detail = deviceDetail[d.name];
@@ -139,7 +144,7 @@ export function CompareTable({ selectable = true, onSelect }: {
             </Card>
           );
         })}
-      </div>
+      </div>}
     </>
   );
 }

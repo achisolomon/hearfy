@@ -32,7 +32,7 @@ export function CmaStock({ next }: { next: () => void }) {
           <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
           <p className="text-sm leading-6 text-slate-500">{compareRecommendation.cmaNote}</p>
         </Card>
-        <CompareTable selectable={false} />
+        <CompareTable layout="table" selectable={false} />
 
         <p className="mb-2 mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
           In the case

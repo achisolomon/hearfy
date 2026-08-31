@@ -836,19 +836,15 @@ describe("text-size clipping", () => {
   it("shows all six categories and all three devices in both the desktop table and the stacked cards", () => {
     const compareBlock = sourceOf("components/screens/compare-table.tsx");
 
-    // The two branches are visibility-gated with Tailwind's `hidden lg:*` /
-    // `lg:hidden` idiom (see the "shows a wide table only from `lg`..." test
-    // below for why that idiom, not a JS media-query check, is what's
-    // asserted here).
-    const desktopMatch = /hidden lg:(?:block|flex|grid)[^"]*"[^]*?(?=lg:hidden|$)/.exec(compareBlock);
-    const mobileMatch = /\blg:hidden\b[^]*$/.exec(compareBlock);
-    expect(desktopMatch, "could not locate a `hidden lg:*` desktop branch in Compare").toBeTruthy();
-    expect(mobileMatch, "could not locate an `lg:hidden` mobile branch in Compare").toBeTruthy();
+    // The branches are now selected by ROLE (`layout`), not by viewport
+    // width: the patient is on a phone and the CMA on a tablet regardless of
+    // how wide the browser window happens to be.
+    const tableMatch = /layout === "table"[^]*?(?=layout === "cards"|$)/.exec(compareBlock);
+    const cardsMatch = /layout === "cards"[^]*$/.exec(compareBlock);
+    expect(tableMatch, "could not locate the table branch in Compare").toBeTruthy();
+    expect(cardsMatch, "could not locate the cards branch in Compare").toBeTruthy();
 
-    const desktopBranch = desktopMatch![0];
-    const mobileBranch = mobileMatch![0];
-
-    for (const branch of [desktopBranch, mobileBranch]) {
+    for (const branch of [tableMatch![0], cardsMatch![0]]) {
       // All six categories: both branches must iterate the shared array
       // rather than hand-listing a subset of it.
       expect(branch).toContain("compareCategories.map");
@@ -864,10 +860,17 @@ describe("text-size clipping", () => {
   // codebase's established way to show/hide by breakpoint — see BottomNav's
   // sibling screens) rather than a media query or JS width check, so both
   // trees are always in the DOM and nothing depends on JS running first.
-  it("gives Compare a wide table shown only from `lg` and stacked cards hidden from `lg`", () => {
+  it("picks the comparison layout by role, never by viewport width", () => {
     const compareBlock = sourceOf("components/screens/compare-table.tsx");
-    expect(compareBlock).toMatch(/hidden lg:(?:block|flex|grid)/);
-    expect(compareBlock).toMatch(/\blg:hidden\b/);
+    // A wide browser window is not a tablet. Gating on `lg` rendered the
+    // six-across table inside the patient's max-w-md column, clipping the
+    // third device off the screen.
+    expect(compareBlock).toMatch(/layout === "table"/);
+    expect(compareBlock).toMatch(/layout === "cards"/);
+    expect(compareBlock).not.toMatch(/hidden lg:(?:block|flex|grid)|\blg:hidden\b/);
+    // Each surface asks for the layout its device actually has.
+    expect(sourceOf("components/screens/patient/commerce.tsx")).toMatch(/layout="cards"/);
+    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/layout="table"/);
   });
 
   // The header row was a bare `{shortlist.map(...)}` with no leading cell,
@@ -1854,7 +1857,7 @@ describe("the audiologist presents the comparison", () => {
   // The patient decides and the CMA cannot sell, so only the patient's copy
   // carries live Select controls.
   it("gives the CMA a read-only copy — they cannot choose for the patient", () => {
-    expect(suitcase).toMatch(/<CompareTable\s+selectable=\{false\}/);
+    expect(suitcase).toMatch(/<CompareTable[^>]*selectable=\{false\}/);
     expect(table).toContain("selectable");
     // The read-only branch must not wire a click handler at all.
     expect(table).toMatch(/Patient’s choice/);
@@ -1906,5 +1909,87 @@ describe("one call tile everywhere", () => {
   it("gives the patient the same tile as every other role", () => {
     const tile = sourceOf("components/screens/cma/call-tile.tsx");
     expect(tile).toMatch(/export function AudiologistStrip[^]*?<ZoomPanel/);
+  });
+});
+
+describe("ear laterality", () => {
+  // Every ear pair in the demo rendered right-then-left, so the patient's
+  // LEFT ear sat in the RIGHT column on otoscopy, tympanometry, pure tone,
+  // speech, the audiogram legend, the clinical review and the care record.
+  // Audiograms are read anatomically — left on the left — and a demo that
+  // mirrors the patient teaches the wrong reading of its own charts.
+  //
+  // The invariant, not the instance: no component may name "Right" before
+  // "Left" inside a single ear-pair literal, so a new paired step is covered
+  // without anyone remembering to add a case here.
+  const PAIRS = [
+    // Array/tuple literals listing both ears: [["Right", …], ["Left", …]]
+    /\[\s*\[\s*"Right"[^]*?\[\s*"Left"/,
+    // Object literals keyed by label: { label: "Right ear" … label: "Left ear" }
+    /label:\s*"Right ear"[^]*?label:\s*"Left ear"/,
+    // Adjacent JSX ear cards or legend entries.
+    /"Right ear"[^]*?"Left ear"/,
+    /(?:>|\s)Right ear \(air\)[^]*?Left ear \(air\)/,
+    /<EarCard label="Right ear"[^]*?<EarCard label="Left ear"/,
+  ];
+
+  it("puts the left ear before the right everywhere a pair is rendered", () => {
+    const offenders: string[] = [];
+    for (const f of componentFiles()) {
+      const src = sourceOf(f);
+      // Strip comments: the explanatory notes legitimately say "right" first.
+      const code = src.replace(/\/\*[^]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+      if (PAIRS.some(re => re.test(code))) offenders.push(f);
+    }
+    expect(offenders, "renders the right ear before the left").toEqual([]);
+  });
+
+  // The two-column grids specifically: the left ear must be the first child.
+  it("orders the paired exam steps left ear first", () => {
+    const steps = [
+      "components/exam/otoscopy-step.tsx",
+      "components/exam/tympanometry-step.tsx",
+      "components/exam/speech-step.tsx",
+      "components/exam/puretone-step.tsx",
+      "components/screens/patient/results.tsx",
+      "components/screens/patient/support.tsx",
+    ];
+    for (const f of steps) {
+      const code = sourceOf(f)
+        .replace(/\/\*[^]*?\*\//g, "")
+        .replace(/\/\/[^\n]*/g, "");
+      // Only quoted ear labels count — `ChevronRight` and `text-right` are not
+      // lateralities, and matching bare "Right" made this test lie.
+      const sides = [...code.matchAll(/"(Left|Right)(?: ear)?"/g)].map(m => m[1]);
+      expect(sides.length, `${f} renders no ear pair`).toBeGreaterThanOrEqual(2);
+      expect(sides[0], `${f} renders the right ear before the left`).toBe("Left");
+      expect(sides[1]).toBe("Right");
+    }
+  });
+
+  // The audiologist's review shows three pairs (speech, tympanometry,
+  // otoscopy); each must lead with the left ear.
+  it("orders every pair on the clinical review left ear first", () => {
+    const code = sourceOf("components/screens/audiologist/review.tsx")
+      .replace(/\/\*[^]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+    // Two label forms live here: quoted strings in the mapped tuples
+    // (tympanometry, otoscopy) and JSX text nodes in the speech pair.
+    const sides = [...code.matchAll(/"(Left|Right)(?: ear)?"|>(Left|Right)</g)]
+      .map(m => m[1] ?? m[2]);
+    // Three pairs: speech, tympanometry, otoscopy captures.
+    expect(sides.length).toBe(6);
+    for (let i = 0; i < sides.length; i += 2) {
+      expect(sides[i], "a review pair leads with the right ear").toBe("Left");
+      expect(sides[i + 1]).toBe("Right");
+    }
+  });
+
+  // The audiogram legend is read alongside the chart; it follows the same order.
+  it("lists the left ear first in the audiogram legend", () => {
+    const code = sourceOf("components/charts/audiogram.tsx")
+      .replace(/\/\*[^]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+    expect(code.indexOf("Left ear (air)")).toBeLessThan(code.indexOf("Right ear (air)"));
   });
 });

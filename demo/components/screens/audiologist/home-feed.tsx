@@ -29,7 +29,7 @@ export function HomeFeed({ cmaName = cma.name }: { cmaName?: string }) {
           ))}
         </div>
         <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> Live
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Live
         </span>
         <span className="absolute right-3 top-3 flex gap-1.5 text-white/80">
           <Mic size={12} /> <Video size={12} />

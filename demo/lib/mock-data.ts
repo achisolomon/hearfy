@@ -88,14 +88,22 @@ export const visit = { id: "VIS-20847", address: "1240 Alhambra Cir, Coral Gable
  * Six concurrent exams for the 1:many supervision panel (spec §9).
  * The hero plus five extras at staggered steps — one red-flagged, one waiting long.
  */
+/**
+ * `flagReason` says what the red flag actually is. The panel's peek card shows
+ * it, because a flag the clinician cannot interpret is a flag she cannot act
+ * on (critique 2026-08-31).
+ */
 export const supervisionQueue = [
   { id: "hero", name: "Alex R.", step: "Pure tone", waitMins: 0, redFlag: false, connection: "good" as const, cma: "Maya L.", hero: true },
   { id: "s2", name: "Doris P.", step: "Otoscopy", waitMins: 2, redFlag: false, connection: "good" as const, cma: "Ravi S.", hero: false },
   { id: "s3", name: "Walter K.", step: "Awaiting review", waitMins: 14, redFlag: false, connection: "good" as const, cma: "Tara B.", hero: false },
-  { id: "s4", name: "Eleanor M.", step: "Consent", waitMins: 1, redFlag: true, connection: "good" as const, cma: "Jon P.", hero: false },
+  { id: "s4", name: "Eleanor M.", step: "Consent", waitMins: 1, redFlag: true, connection: "good" as const, cma: "Jon P.", hero: false,
+    flagReason: "Consent not yet captured. The exam cannot proceed past this step until it is." },
   { id: "s5", name: "Hector D.", step: "Speech", waitMins: 5, redFlag: false, connection: "weak" as const, cma: "Ana R.", hero: false },
   { id: "s6", name: "Priya N.", step: "Calibration", waitMins: 3, redFlag: false, connection: "good" as const, cma: "Sam W.", hero: false },
 ];
+
+export type SupervisionExam = (typeof supervisionQueue)[number] & { flagReason?: string };
 
 /** Membership tiers (spec §9b) — the patient's device-and-care choice. */
 export const tiers = [

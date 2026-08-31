@@ -3,6 +3,7 @@ import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
+import { dismissDiversion, selectRedFlag, showsDiversion, NO_RED_FLAG } from "./red-flag";
 
 const order = screenOrder();
 
@@ -2062,5 +2063,60 @@ describe("the sale runs on the right screen", () => {
       .toMatch(/goToScreen\(["']cma-day["']\)/);
     expect(closeout, "`next()` here switches role out from under the viewer")
       .not.toMatch(/onClick=\{next\}/);
+  });
+});
+
+/**
+ * Reported 2026-08-31: on the medical-safety screen, selecting a red-flag
+ * symptom, pressing "Go back and change my answer", then selecting a symptom
+ * again did nothing at all — every later click was a dead button.
+ *
+ * The dismissal was sticky for the life of the mount, so it outlived the answer
+ * it was dismissing and always beat the still-set latch. Verified in the browser
+ * against both versions before and after the fix.
+ */
+describe("medical safety red flags", () => {
+  it("diverts on the first symptom selection", () => {
+    expect(showsDiversion(selectRedFlag(NO_RED_FLAG))).toBe(true);
+  });
+
+  it("returns to the questions when the viewer backs out", () => {
+    expect(showsDiversion(dismissDiversion(selectRedFlag(NO_RED_FLAG)))).toBe(false);
+  });
+
+  // The reported bug, as an assertion.
+  it("diverts again on every later selection, not just the first", () => {
+    let s = NO_RED_FLAG;
+    for (let round = 0; round < 4; round++) {
+      s = selectRedFlag(s);
+      expect(showsDiversion(s), `round ${round}: symptom click must divert`).toBe(true);
+      s = dismissDiversion(s);
+      expect(showsDiversion(s), `round ${round}: back-out must return`).toBe(false);
+    }
+  });
+
+  // A back-out must not erase that a flag was ever raised — the latch is what
+  // carries that across the shell's remount on every navigation.
+  it("remembers the flag was raised even while dismissed", () => {
+    expect(dismissDiversion(selectRedFlag(NO_RED_FLAG)).everFlagged).toBe(true);
+  });
+
+  // The wiring, so the invariants above cannot pass while the screen still
+  // computes the diversion itself with a dismissal that never clears.
+  it("wires the safety screen to the shared red-flag rule", () => {
+    const src = sourceOf("components/screens/patient/intake.tsx");
+    const medical = src
+      .split(/(?=export function )/)
+      .find(s => s.startsWith("export function IntakeMedical"));
+    expect(medical, "IntakeMedical not found").toBeTruthy();
+    // It must use the tested rule rather than re-deriving one inline...
+    expect(medical, "the screen must decide via showsDiversion")
+      .toMatch(/showsDiversion\(/);
+    // ...and selecting a symptom must clear any earlier dismissal, which is
+    // precisely what the dead-button bug failed to do.
+    expect(medical, "selecting a symptom must clear the dismissal")
+      .toMatch(/setDismissed\(false\)/);
+    expect(medical, "the old inline rule is what made later clicks dead")
+      .not.toMatch(/&&\s*!dismissed/);
   });
 });

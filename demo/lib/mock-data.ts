@@ -287,6 +287,23 @@ export const compareRecommendation = {
   } as Record<string, string>,
 };
 
+/**
+ * What the patient says on the call while wearing each device, and what Dr.
+ * Reed says back (2026-08-31). The try-on is a CONVERSATION, not a checkbox:
+ * comfort and what they hear are hers to judge with the patient, so the
+ * screen has to carry both voices, not just a record that a fit happened.
+ */
+export const tryOnTalk: Record<string, { patient: string; clinician: string }> = {
+  "Phonak Aud\u00e9o L50": {
+    patient: "\u201cThat one is clearer \u2014 I can hear you without leaning in.\u201d",
+    clinician: "That matches your thresholds. Tell me if it feels tight behind the ear.",
+  },
+  "Signia Pure Charge&Go": {
+    patient: "\u201cComfortable. A little quieter when the fridge is running.\u201d",
+    clinician: "Expected \u2014 this one is at its best in a quiet room like this.",
+  },
+};
+
 export const compareCategories = [
   "Clinical fit", "Use & lifestyle", "Usability", "Commercial", "Terms", "Fulfilment",
 ];

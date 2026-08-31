@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
-import { compareRecommendation, devices } from "./mock-data";
+import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
 
 const order = screenOrder();
 
@@ -1991,5 +1991,43 @@ describe("ear laterality", () => {
       .replace(/\/\*[^]*?\*\//g, "")
       .replace(/\/\/[^\n]*/g, "");
     expect(code.indexOf("Left ear (air)")).toBeLessThan(code.indexOf("Right ear (air)"));
+  });
+});
+
+describe("the sale runs on the right screen", () => {
+  const beatOf = (id: string) => BEATS[beatIndexById(id)];
+
+  // The comparison and the try-on both happen on the CMA's tablet, with Dr.
+  // Reed on video. `stock` led with the patient, so the guided walk jumped to
+  // a phone showing packages while the conversation was on the tablet.
+  it("leads the comparison and the try-on from the CMA's tablet", () => {
+    expect(beatOf("stock").lead).toBe("cma");
+    expect(beatOf("tryon").lead).toBe("cma");
+    expect(beatOf("stock").screens.cma).toBe("cma-stock");
+    expect(beatOf("tryon").screens.cma).toBe("cma-tryon");
+  });
+
+  // ...and only then does the patient decide, on their own phone, before
+  // paying. Compare -> try-on -> choose -> checkout, in that order.
+  it("hands the decision to the patient after the try-on, before checkout", () => {
+    const i = (id: string) => beatIndexById(id);
+    expect(i("stock")).toBeLessThan(i("tryon"));
+    expect(i("tryon")).toBeLessThan(i("choose"));
+    expect(i("choose")).toBeLessThan(i("checkout"));
+    expect(beatOf("choose").lead).toBe("patient");
+    expect(beatOf("choose").screens.patient).toBe("compare");
+  });
+
+  // The try-on is a conversation, not a checkbox: comfort and what the
+  // patient hears are the audiologist's to judge WITH them, so both voices
+  // are on the screen once a fit is recorded.
+  it("carries both voices on the try-on", () => {
+    const suitcase = sourceOf("components/screens/cma/suitcase.tsx");
+    expect(suitcase).toContain("tryOnTalk");
+    for (const d of devices.filter(d => deviceDetail[d.name].inCase)) {
+      expect(tryOnTalk[d.name], `no try-on talk for ${d.name}`).toBeTruthy();
+      expect(tryOnTalk[d.name].patient).toBeTruthy();
+      expect(tryOnTalk[d.name].clinician).toBeTruthy();
+    }
   });
 });

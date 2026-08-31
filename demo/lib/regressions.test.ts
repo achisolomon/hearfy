@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
+import { audiogram, supervisionQueue } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 
 const order = screenOrder();
@@ -1755,5 +1756,273 @@ describe("pure-tone ring label clearance", () => {
     // same words — the cap only works because extra lines are allowed, and
     // there is vertical room for them at every state of the center stack.
     expect(centerCls).not.toMatch(/\btruncate\b|whitespace-nowrap/);
+  });
+});
+
+/**
+ * The chart world (design-chart-world branch): the audiogram's grammar —
+ * named severity bands, plotted marks, real axes — is the product's interface
+ * language, not a results-screen flourish. These pin the invariants that make
+ * that claim true, so a later screen can't quietly drop back to plain tiles
+ * or re-introduce the patterns this direction replaced.
+ */
+describe("chart world", () => {
+  const audiogramSrc = sourceOf("components/charts/audiogram.tsx");
+  const sparklineSrc = sourceOf("components/charts/exam-sparkline.tsx");
+  const weekPlotSrc = sourceOf("components/charts/week-plot.tsx");
+  const supervisionSrc = sourceOf("components/screens/audiologist/supervision.tsx");
+  const resultsSrc = sourceOf("components/screens/patient/results.tsx");
+
+  // The bands are the whole point: without them a threshold is a dot on an
+  // axis the patient has to measure against. Every band needs its own name,
+  // because "where the line lands" is the reading the screen states in words.
+  it("names every severity band on the audiogram", () => {
+    const bands = /const BANDS = \[([\s\S]*?)\n\];/.exec(audiogramSrc);
+    expect(bands, "audiogram.tsx no longer defines a BANDS table").toBeTruthy();
+    const labels = [...bands![1].matchAll(/label: "([^"]+)"/g)].map(m => m[1]);
+    expect(labels).toEqual(["Normal", "Mild", "Moderate", "Severe"]);
+  });
+
+  // Bands must tile the plot with no gap and no overlap, or a threshold can
+  // land in unpainted space and read as belonging to no band at all.
+  it("tiles the plot with contiguous bands, edge to edge", () => {
+    const bands = /const BANDS = \[([\s\S]*?)\n\];/.exec(audiogramSrc)![1];
+    const rows = [...bands.matchAll(/from: (DB_MIN|[\d.]+), to: (DB_MAX|[\d.]+)/g)]
+      .map(m => [m[1], m[2]] as const);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows[0][0]).toBe("DB_MIN");
+    expect(rows[rows.length - 1][1]).toBe("DB_MAX");
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i][0], `band ${i} starts at ${rows[i][0]} but band ${i - 1} ended at ${rows[i - 1][1]}`)
+        .toBe(rows[i - 1][1]);
+    }
+  });
+
+  // A plot mark drawn with fill="none" over a painted band shows the band
+  // through its middle and stops reading as a mark. Banded charts fill white.
+  it("fills plot marks against a painted band", () => {
+    expect(audiogramSrc).toMatch(/fill=\{bands \? "#fff" : "none"\}/);
+    expect(sparklineSrc).toMatch(/fill="#fff"/);
+  });
+
+  // Bands and speech sounds are opt-in: the clinician's overlay stays
+  // uncluttered, and a screen that wants the plain clinical chart still gets
+  // one. Defaulting them on would silently restyle every existing caller.
+  it("keeps bands and speech sounds opt-in", () => {
+    expect(audiogramSrc).toMatch(/bands = false/);
+    expect(audiogramSrc).toMatch(/speech = false/);
+  });
+
+  // The supervision panel's red flag used to pulse the entire card — motion
+  // that reads as alarm while carrying no state, and which the product
+  // register bans outright. It states itself in a row with its action instead.
+  it("does not pulse the whole tile for a red flag", () => {
+    expect(supervisionSrc).not.toMatch(/animate-pulse/);
+    expect(supervisionSrc).toMatch(/Red flag/);
+    expect(supervisionSrc).toMatch(/Respond/);
+  });
+
+  // Six exams read as six charts, which is the claim the panel makes about
+  // the 1:many model. A tile that dropped its chart would be a text row again.
+  it("draws a chart on every supervision tile", () => {
+    expect(supervisionSrc).toMatch(/<ExamSparkline plotted=\{e\.plotted\}/);
+  });
+
+  // Expression may never obscure the task (product register): the week plot
+  // presents the choice, but the choice itself stays a real radio group with
+  // labelled, keyboard-operable controls.
+  it("keeps the week plot's choice a real radio group", () => {
+    expect(weekPlotSrc).toMatch(/role="radiogroup"/);
+    expect(weekPlotSrc).toMatch(/role="radio"/);
+    expect(weekPlotSrc).toMatch(/aria-checked=\{i === selected\}/);
+    // The decorative plot must not also be announced; the buttons carry it.
+    expect(weekPlotSrc).toMatch(/aria-hidden="true"/);
+  });
+
+  // Every tap target on the plot's control row obeys the low-vision floor.
+  it("keeps the week plot's day buttons at the touch-target floor", () => {
+    const btn = /className=\{`(min-h-\d+[^`]*)`\}/.exec(weekPlotSrc);
+    expect(btn, "week-plot day button lost its min-height class").toBeTruthy();
+    const min = /min-h-(\d+)/.exec(btn![1]);
+    expect(Number(min![1]) * SPACING_UNIT_REM).toBeGreaterThanOrEqual(3.5);
+  });
+
+  // The results screen must say the reading in words, not leave the patient
+  // to interpret the plot. That sentence is what makes the chart legible to
+  // someone who has never read an audiogram.
+  it("states the results reading in plain language", () => {
+    expect(resultsSrc).toMatch(/bands speech/);
+    expect(resultsSrc).toMatch(/lossBand\(e\.avg\)\.toLowerCase\(\)/);
+  });
+
+  // slate-400 fails contrast as anything longer than a two-word meta label
+  // (DESIGN.md). The chart world's screens were swept; keep them swept.
+  it("keeps the chart world's screens off slate-400", () => {
+    for (const [name, src] of [
+      ["supervision.tsx", supervisionSrc],
+      ["results.tsx", resultsSrc],
+      ["week-plot.tsx", weekPlotSrc],
+    ] as const) {
+      expect(src, `${name} re-introduced text-slate-400`).not.toMatch(/text-slate-400/);
+    }
+  });
+});
+
+/**
+ * A chart's axis labels live inside the viewBox, so a left pad narrower than
+ * the longest label clips it — "Afternoon" rendered as "ernoon" on the week
+ * plot, which reads as a typo rather than a layout bug. One test per chart
+ * that puts text left of its plot area.
+ */
+describe("chart axis labels fit inside the viewBox", () => {
+  // Rough advance width for the UI face at a given font size. 0.5em per
+  // character is generous for lowercase sans digits/letters and is the same
+  // approximation the pad was sized against.
+  const EM_PER_CHAR = 0.5;
+
+  it("gives the week plot's row labels room to render in full", () => {
+    const src = sourceOf("components/charts/week-plot.tsx");
+    const padL = Number(/PAD_L = (\d+)/.exec(src)![1]);
+    const fontSize = Number(/textAnchor="end" fontSize="([\d.]+)"/.exec(src)![1]);
+    const gap = Number(/x=\{PAD_L - (\d+)\}/.exec(src)![1]);
+    const rows = /const rows = \[([^\]]+)\]/.exec(src)![1];
+    const longest = [...rows.matchAll(/"([^"]+)"/g)]
+      .map(m => m[1])
+      .reduce((a, b) => (b.length > a.length ? b : a), "");
+    const needed = longest.length * fontSize * EM_PER_CHAR + gap;
+    expect(
+      padL,
+      `PAD_L=${padL} clips "${longest}" (needs ~${Math.ceil(needed)} units at fontSize ${fontSize} ` +
+      `plus a ${gap}-unit gap) — right-anchored axis text runs off the left edge of the viewBox`,
+    ).toBeGreaterThanOrEqual(needed);
+  });
+
+  it("gives the audiogram's dB labels room to render in full", () => {
+    const src = sourceOf("components/charts/audiogram.tsx");
+    const padL = Number(/PAD_L = (\d+)/.exec(src)![1]);
+    // The dB axis tops out at DB_MAX, so the widest label is its digit count.
+    const dbMax = Number(/DB_MAX = (\d+)/.exec(src)![1]);
+    const needed = String(dbMax).length * 8 * EM_PER_CHAR + 6;
+    expect(padL).toBeGreaterThanOrEqual(needed);
+  });
+});
+
+/**
+ * A band label sits inside the plot area, so it shares space with the curve.
+ * Right-anchored labels were struck through by the thresholds: hearing loss
+ * slopes down to the right, so the right edge is exactly where the line ends
+ * up. The label anchor has to be on the side the curve leaves clear.
+ */
+describe("audiogram band labels clear the plotted curve", () => {
+  const src = sourceOf("components/charts/audiogram.tsx");
+
+  it("anchors the severity labels away from where the curve lands", () => {
+    const label = /<text x=\{(PAD_L \+ \d+|W - PAD_R - \d+)\} y=\{[^}]+\}\s+textAnchor="(start|end)"/
+      .exec(src);
+    expect(label, "could not find the band label text element in audiogram.tsx").toBeTruthy();
+    const [, xExpr, anchor] = label!;
+    // The demo's own thresholds slope downward, so the last frequency is the
+    // worst. Assert against the data rather than hardcoding a side.
+    const slopesDown = audiogram.right[audiogram.right.length - 1] > audiogram.right[0];
+    if (slopesDown) {
+      expect(
+        anchor,
+        `band labels are ${anchor}-anchored at ${xExpr}, but thresholds worsen toward the right ` +
+        `(${audiogram.right[0]} → ${audiogram.right[audiogram.right.length - 1]} dB), so the curve ` +
+        `runs through that corner and strikes the label out`,
+      ).toBe("start");
+      expect(xExpr).toMatch(/^PAD_L/);
+    }
+  });
+
+  // The labels only stay clear because the left edge is where the curve is
+  // highest. If a threshold at the first frequency ever reached the severe
+  // band, the label would need to move again — this catches that data change.
+  it("keeps the first threshold well above the lowest band", () => {
+    const bands = /const BANDS = \[([\s\S]*?)\n\];/.exec(src)![1];
+    const lastFrom = [...bands.matchAll(/from: (DB_MIN|[\d.]+),/g)].pop()![1];
+    expect(lastFrom).not.toBe("DB_MIN");
+    for (const ear of [audiogram.right, audiogram.left]) {
+      expect(ear[0]).toBeLessThan(Number(lastFrom));
+    }
+  });
+});
+
+/**
+ * An empty chart and a chart that failed to render look identical. Any tile
+ * that can legitimately have nothing plotted has to say so in words, or the
+ * supervisor reads a not-yet-started exam as a broken panel.
+ */
+describe("empty charts state their emptiness", () => {
+  it("labels a supervision tile whose exam has not reached the hearing test", () => {
+    const src = sourceOf("components/charts/exam-sparkline.tsx");
+    expect(src).toMatch(/done\.length === 0 &&/);
+    expect(src).toMatch(/not started/i);
+  });
+
+  // The empty state only matters because the queue actually contains such
+  // exams. If every exam were mid-plot the label would be dead code — and if
+  // `plotted` ever exceeds the frequency count the chart would silently clip.
+  it("keeps every queued exam's plotted count inside the chart's range", () => {
+    const n = audiogram.frequencies.length;
+    for (const e of supervisionQueue) {
+      expect(e.plotted, `${e.name} plots ${e.plotted} of ${n} thresholds`).toBeGreaterThanOrEqual(0);
+      expect(e.plotted).toBeLessThanOrEqual(n);
+    }
+    expect(supervisionQueue.some(e => e.plotted === 0)).toBe(true);
+  });
+});
+
+/**
+ * Left-anchoring the band labels put them level with the dB axis numbers on
+ * the same rows ("MILD" beside "20", "SEVERE" beside "60"). A label has to
+ * clear the gridlines, not just the curve — moving text away from one
+ * collision is how you land in the next one.
+ */
+describe("audiogram band labels clear the dB gridlines", () => {
+  const src = sourceOf("components/charts/audiogram.tsx");
+
+  it("computes label placement instead of pinning it to the band's top edge", () => {
+    // y(b.from) + N puts the label a fixed offset below the band's boundary,
+    // which is exactly where a gridline (and its axis number) sits.
+    expect(
+      src,
+      "band labels are pinned to y(b.from), which is a gridline row — use bandLabelY()",
+    ).not.toMatch(/y=\{y\(b\.from\) \+ \d+\}/);
+    expect(src).toMatch(/y=\{bandLabelY\(b\.from, b\.to\)\}/);
+  });
+
+  it("keeps every band's label off every gridline", () => {
+    const H = Number(/H = (\d+)/.exec(src)![1]);
+    const padT = Number(/PAD_T = (\d+)/.exec(src)![1]);
+    const padB = Number(/PAD_B = (\d+)/.exec(src)![1]);
+    const dbMin = Number(/DB_MIN = (-?\d+)/.exec(src)![1]);
+    const dbMax = Number(/DB_MAX = (\d+)/.exec(src)![1]);
+    const yOf = (db: number) => padT + ((db - dbMin) / (dbMax - dbMin)) * (H - padT - padB);
+
+    const bandsSrc = /const BANDS = \[([\s\S]*?)\n\];/.exec(src)![1];
+    const bands = [...bandsSrc.matchAll(/from: (DB_MIN|-?[\d.]+), to: (DB_MAX|[\d.]+)/g)]
+      .map(m => ({
+        from: m[1] === "DB_MIN" ? dbMin : Number(m[1]),
+        to: m[2] === "DB_MAX" ? dbMax : Number(m[2]),
+      }));
+    const gridlines = JSON.parse(
+      /const DB_GRIDLINES = (\[[^\]]+\])/.exec(src)![1],
+    ) as number[];
+
+    // Mirror bandLabelY's arithmetic, then assert the result clears each line.
+    for (const b of bands) {
+      const mid = (Math.max(b.from, dbMin) + Math.min(b.to, dbMax)) / 2;
+      const nudged = gridlines.some(g => Math.abs(yOf(g) - yOf(mid)) < 6) ? mid + 6 : mid;
+      const labelY = yOf(nudged) + 3;
+      for (const g of gridlines) {
+        // The axis number's own baseline is y(g) + 3; a label within a few
+        // units of it reads as one line of text across the chart.
+        expect(
+          Math.abs(labelY - (yOf(g) + 3)),
+          `band ${b.from}–${b.to} labels at y=${labelY.toFixed(1)}, colliding with the ${g} dB axis number`,
+        ).toBeGreaterThan(5);
+      }
+    }
   });
 });

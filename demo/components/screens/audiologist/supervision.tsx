@@ -4,6 +4,7 @@ import { Card, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
 import { supervisionQueue, clinician } from "@/lib/mock-data";
 import { Audiogram } from "../../charts/audiogram";
+import { ExamSparkline } from "../../charts/exam-sparkline";
 import { HomeFeed } from "./home-feed";
 import { VideoSplit } from "../video-split";
 
@@ -16,10 +17,13 @@ function prioritised() {
 }
 
 function Tile({ e, onOpen }: { e: (typeof supervisionQueue)[number]; onOpen?: () => void }) {
+  // Chart world: the tile IS a chart. A red flag no longer pulses the whole
+  // card (motion that says "alarm" but carries no state); it states itself in
+  // a row with the action beside it, which is both calmer and more useful.
   const className = cn(
     "rounded-2xl border bg-white p-4 text-left transition",
-    e.redFlag ? "border-red-300 animate-pulse motion-reduce:animate-none" : "border-[#e4eef0]",
-    e.hero ? "ring-2 ring-brand-teal" : "cursor-default opacity-90"
+    e.redFlag ? "border-[#eebcbc]" : "border-[#e4eef0]",
+    e.hero ? "ring-2 ring-brand-teal" : "cursor-default"
   );
 
   const body = (
@@ -27,7 +31,7 @@ function Tile({ e, onOpen }: { e: (typeof supervisionQueue)[number]; onOpen?: ()
       <div className="flex items-start justify-between gap-1">
         <div>
           <b className="text-sm">{e.name}</b>
-          <p className="mt-0.5 text-xs text-slate-500">{e.step}</p>
+          <p className="mt-0.5 text-xs text-slate-600">{e.step}</p>
         </div>
         {/* Icons carry state, so each pairs with text for anyone not seeing the glyph. */}
         {e.redFlag && (
@@ -37,16 +41,30 @@ function Tile({ e, onOpen }: { e: (typeof supervisionQueue)[number]; onOpen?: ()
           </span>
         )}
         {e.connection === "weak" && (
-          <span className="flex items-center text-amber-500">
+          <span className="flex items-center text-amber-600">
             <WifiOff size={15} aria-hidden />
             <span className="sr-only">Weak connection</span>
           </span>
         )}
       </div>
-      <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+
+      <ExamSparkline plotted={e.plotted} label={e.name} />
+
+      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-600">
         <span>CMA {e.cma}</span>
-        <span>{e.waitMins === 0 ? "live" : `${e.waitMins}m wait`}</span>
+        <span className="tabular-nums">{e.waitMins === 0 ? "live" : `${e.waitMins}m wait`}</span>
       </div>
+
+      {e.redFlag && (
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-[#fdf1f1] px-3 py-2">
+          <span className="text-[11px] font-bold text-[#a63838]">
+            Red flag · waiting {e.waitMins}m
+          </span>
+          <span className="rounded-full bg-brand-navy px-3 py-1 text-[11px] font-bold text-white">
+            Respond
+          </span>
+        </div>
+      )}
       {e.hero && <p className="mt-3 text-[11px] font-bold text-brand-teal">Open monitoring →</p>}
     </>
   );
@@ -70,10 +88,30 @@ export function AudPanel({ next }: { next: () => void }) {
         <header className="mb-6">
           <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">Live supervision</span>
           <h1 className="mt-2 text-[28px] font-extrabold tracking-[-.02em]">Six exams in progress</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-slate-600">
             {clinician.name}, {clinician.credential} · Licensed in {clinician.licenseState}
           </p>
         </header>
+
+        {/* The room's vital signs, before the tiles: what a supervisor checks
+           first is whether anything needs them right now. */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {[
+            { v: String(list.length), l: "live" },
+            { v: String(list.filter(e => e.redFlag).length), l: "need attention", warn: true },
+            { v: `${Math.round(list.reduce((s, e) => s + e.waitMins, 0) / list.length)}m`, l: "average wait" },
+            { v: `${list.length}/6`, l: "room capacity" },
+          ].map(c => (
+            <span key={c.l} className={cn(
+              "rounded-full border px-3 py-1 text-[11.5px] font-bold",
+              c.warn && Number(c.v) > 0
+                ? "border-[#f3d9a8] bg-[#fff6e8] text-[#9d6514]"
+                : "border-[#e4eef0] bg-white text-slate-600"
+            )}>
+              <b className="text-brand-navy tabular-nums">{c.v}</b> {c.l}
+            </span>
+          ))}
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {list.map(e => <Tile key={e.id} e={e} onOpen={next} />)}
@@ -86,7 +124,7 @@ export function AudPanel({ next }: { next: () => void }) {
             live remote supervision and immediate intervention — the shift from a 1:1
             clinical bottleneck to a 1:many model.
           </p>
-          <p className="mt-3 text-xs leading-5 text-slate-400">
+          <p className="mt-3 text-xs leading-5 text-slate-600">
             Demo note: this shows the target model. The MVP starts at one active encounter
             per clinician, pending validated protocol and legal approval.
           </p>

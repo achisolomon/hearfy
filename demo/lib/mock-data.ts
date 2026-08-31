@@ -88,13 +88,19 @@ export const visit = { id: "VIS-20847", address: "1240 Alhambra Cir, Coral Gable
  * Six concurrent exams for the 1:many supervision panel (spec §9).
  * The hero plus five extras at staggered steps — one red-flagged, one waiting long.
  */
+/**
+ * `plotted` is how many pure-tone thresholds that exam has measured so far,
+ * out of `audiogram.frequencies.length`. It drives the supervision tile's
+ * chart (chart world): an exam before the pure-tone step plots nothing, one
+ * in it plots partway, one past it plots the full six.
+ */
 export const supervisionQueue = [
-  { id: "hero", name: "Alex R.", step: "Pure tone", waitMins: 0, redFlag: false, connection: "good" as const, cma: "Maya L.", hero: true },
-  { id: "s2", name: "Doris P.", step: "Otoscopy", waitMins: 2, redFlag: false, connection: "good" as const, cma: "Ravi S.", hero: false },
-  { id: "s3", name: "Walter K.", step: "Awaiting review", waitMins: 14, redFlag: false, connection: "good" as const, cma: "Tara B.", hero: false },
-  { id: "s4", name: "Eleanor M.", step: "Consent", waitMins: 1, redFlag: true, connection: "good" as const, cma: "Jon P.", hero: false },
-  { id: "s5", name: "Hector D.", step: "Speech", waitMins: 5, redFlag: false, connection: "weak" as const, cma: "Ana R.", hero: false },
-  { id: "s6", name: "Priya N.", step: "Calibration", waitMins: 3, redFlag: false, connection: "good" as const, cma: "Sam W.", hero: false },
+  { id: "hero", name: "Alex R.", step: "Pure tone", waitMins: 0, redFlag: false, connection: "good" as const, cma: "Maya L.", hero: true, plotted: 4 },
+  { id: "s2", name: "Doris P.", step: "Otoscopy", waitMins: 2, redFlag: false, connection: "good" as const, cma: "Ravi S.", hero: false, plotted: 0 },
+  { id: "s3", name: "Walter K.", step: "Awaiting review", waitMins: 14, redFlag: false, connection: "good" as const, cma: "Tara B.", hero: false, plotted: 6 },
+  { id: "s4", name: "Eleanor M.", step: "Consent", waitMins: 1, redFlag: true, connection: "good" as const, cma: "Jon P.", hero: false, plotted: 0 },
+  { id: "s5", name: "Hector D.", step: "Speech", waitMins: 5, redFlag: false, connection: "weak" as const, cma: "Ana R.", hero: false, plotted: 6 },
+  { id: "s6", name: "Priya N.", step: "Calibration", waitMins: 3, redFlag: false, connection: "good" as const, cma: "Sam W.", hero: false, plotted: 0 },
 ];
 
 /** Membership tiers (spec §9b) — the patient's device-and-care choice. */

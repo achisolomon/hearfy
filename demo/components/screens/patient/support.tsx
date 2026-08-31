@@ -84,7 +84,7 @@ function CareRecord({ go }: { go: (s: ScreenId) => void }) {
             </div>
           ))}
         </div>
-        <button onClick={() => go("results")} className="mt-3 flex items-center gap-1 text-xs font-bold text-brand-teal">
+        <button onClick={() => go("results")} className="mt-3 flex min-h-11 items-center gap-1 text-xs font-bold text-teal-ink">
           View full results <ChevronRight size={14} />
         </button>
       </Card>

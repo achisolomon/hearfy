@@ -60,7 +60,7 @@ export function AudiologistStrip({ note, active = false, className }:
       {/* Her real camera feed, framed like a call. */}
       <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-[#16426c] to-[#0c2340]">
         <ReedFeed active={active} />
-        <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
+        <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-[#dc2626] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> Live
         </span>
         <span className="absolute bottom-1.5 right-1.5 flex gap-1 text-white/80">
@@ -88,11 +88,11 @@ function ZoomPanel({ note, active }: { note: string; active: boolean }) {
 
         {/* Call chrome, anchored to the frame's own corners — never to the
             caption column, or it drifts down the feed as the note grows. */}
-        <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
+        <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-[#dc2626] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
           <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Live
         </span>
         {active && (
-          <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-brand-teal px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
+          <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-teal-ink px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
             <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Speaking
           </span>
         )}

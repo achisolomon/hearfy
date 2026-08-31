@@ -74,10 +74,10 @@ export function PureToneStep({ framing }: { framing: Framing }) {
         <div className="max-w-[9rem] text-balance text-center">
           {done ? <>
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={26} /></span>
-            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-brand-teal">Both ears complete</p>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-teal-ink">Both ears complete</p>
           </> : <>
             <b className="text-4xl">{Math.round(sweep.progress)}%</b>
-            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-brand-teal">Testing {sweep.phase} ear</p>
+            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-teal-ink">Testing {sweep.phase} ear</p>
             <motion.p animate={{ opacity: [1, .25, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}
               className="mt-1 text-[10px] font-semibold text-slate-400">♪ tone playing</motion.p>
           </>}

@@ -47,8 +47,10 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
                 type="button"
                 aria-pressed={isSel}
                 onClick={()=>selectDevice(d.name)}
-                className={cn("mt-3 w-full rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
-                  isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500 hover:bg-[#e4eef0]")}>
+                // min-h-11: the desktop table's select control measured 30px tall,
+                // under the 44px touch minimum this demo holds itself to.
+                className={cn("mt-3 flex min-h-11 w-full items-center justify-center rounded-full px-3 text-[11px] font-bold uppercase tracking-wider transition",
+                  isSel?"bg-teal-ink text-white":"bg-[#f1f5f6] text-slate-500 hover:bg-[#e4eef0]")}>
                 {isSel?"Selected":"Select"}
               </button>
             </div>;
@@ -92,7 +94,7 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
               </span>
             </span>
             <span className={cn("shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider",
-              isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500")}>
+              isSel?"bg-teal-ink text-white":"bg-[#f1f5f6] text-slate-500")}>
               {isSel?"Selected":"Select"}
             </span>
           </button>
@@ -120,7 +122,7 @@ export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
       <div className="space-y-3">
         <div className="flex justify-between text-sm"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
         {/* The promise made at booking, visibly kept (spec §9a). */}
-        <div className="flex justify-between text-sm text-brand-teal">
+        <div className="flex justify-between text-sm text-teal-ink">
           <span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
         <div className="flex items-center justify-between border-t border-[#eef4f5] pt-3">
           <b>Due today</b><b className="text-2xl">${dueNow}</b></div>
@@ -152,7 +154,7 @@ export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     <Card className="p-5">
       <div className="space-y-2 text-sm">
         <div className="flex justify-between"><span className="text-slate-500">{chosen.name} · {tier.name}</span><b>${monthly}/mo</b></div>
-        <div className="flex justify-between text-brand-teal"><span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
+        <div className="flex justify-between text-teal-ink"><span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
         <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3"><b>Due today</b><b className="text-lg">${dueNow}</b></div>
       </div>
       <p className="mt-3 text-xs leading-5 text-slate-500">Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.</p>

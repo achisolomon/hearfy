@@ -263,6 +263,25 @@ describe("mobile persona indicator", () => {
     expect(controlBarBlock).toMatch(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
   });
 
+  // The owner's actual complaint: the bar showed a job title ("CMA",
+  // "Patient") — SHORT_ROLE[role] — not a person. The demo's premise is
+  // following four PEOPLE through one story, and personas.ts already has
+  // names (Alex Rivera, Maya Lewis, Dr. Susan Reed, Jordan Pike). The label
+  // must be driven by `personaFor(role).name` (or a first-name derivative of
+  // it), not the old static role-label map, and the old map must be gone —
+  // otherwise a future edit could reintroduce it as an unused decoy while a
+  // name-shaped string sits elsewhere and still pass a looser assertion.
+  it("labels the indicator with the persona's name, not a role/job title", () => {
+    expect(
+      controlBarBlock,
+      "the phone bar's label must read from personaFor(role) (e.g. `.name` or a first-name split of it), not a static role-label lookup",
+    ).toMatch(/personaFor\(role\)\.name/);
+    expect(
+      demoShell,
+      "SHORT_ROLE was the role-label map this bug reported ('CMA', 'Patient', ...) — it must no longer exist now the bar shows the person's name",
+    ).not.toMatch(/SHORT_ROLE/);
+  });
+
   it("opens the same sheet used for role switching when the indicator is tapped", () => {
     // Whatever element wraps the avatar, it must be a control (not inert
     // decoration) that calls setSheet(true) — the same call the grid button
@@ -300,6 +319,46 @@ describe("mobile persona indicator", () => {
     // get announced — doubling the label.
     const between = controlBarBlock.slice(before.lastIndexOf(last![0]), avatarIdx + 40);
     expect(between).toMatch(/aria-hidden/);
+  });
+});
+
+describe("phone Back control visibility", () => {
+  // Owner: "there is no back button." The bar DOES contain a Back <button>
+  // with <ArrowLeft>, but its only styling was `text-brand-navy
+  // disabled:text-slate-300` — a bare icon with no border, fill, or outline
+  // at all, enabled or disabled. Against the white/95 backdrop-blur bar that
+  // reads as decoration, not a control, even before disabling kicks in.
+  // `atStart` itself was checked separately (lib/story.test.ts — Back is
+  // never falsely disabled mid-walk), so the fix here is purely visual: the
+  // control must carry a visible boundary (border/background/ring) so a
+  // disabled Back still reads as "present but unavailable" rather than
+  // absent, the same way the enabled Next pill is unmistakably a button.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const barStart = controlBarMatch.index;
+  const barEnd = demoShell.indexOf("<AnimatePresence>", barStart);
+  const controlBarBlock = demoShell.slice(barStart, barEnd);
+
+  // Isolate the phone bar's own Back button specifically — `aria-label="Previous beat"`
+  // is unique to it (the desktop bar's equivalent button lives in a
+  // different, md:hidden-excluded block entirely, so controlBarBlock never
+  // contains it).
+  const backButtonMatch = /<button\b[^>]*aria-label="Previous beat"[^>]*>/.exec(controlBarBlock);
+
+  it("gives the phone Back button a visible boundary, not just enabled/disabled text colour", () => {
+    expect(backButtonMatch, "expected a Back button (aria-label=\"Previous beat\") inside the phone control bar").toBeTruthy();
+    const classAttr = /className="([^"]*)"/.exec(backButtonMatch![0]);
+    expect(classAttr, "Back button has no className to inspect").toBeTruthy();
+    const classes = classAttr![1];
+    // A visible boundary independent of the disabled text-colour swap: a
+    // border, a background fill, or a ring — any one is enough to keep the
+    // control's outline present when its icon colour goes pale.
+    const hasBoundary = /\bborder(?:-|\b)/.test(classes) || /\bbg-(?!\[)/.test(classes) || /\bring-/.test(classes);
+    expect(
+      hasBoundary,
+      `Back button className "${classes}" relies only on icon text colour (disabled:text-slate-300) with no border/background/ring — a disabled state this faint reads as absent, not present-but-unavailable`,
+    ).toBe(true);
   });
 });
 

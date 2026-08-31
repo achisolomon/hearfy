@@ -13,14 +13,6 @@ import { personaFor } from "@/lib/personas";
 import { prevBeatForRole } from "@/lib/story";
 import { useStory } from "./story-context";
 
-/** Short role labels for the narrow phone bar — mirrors RoleTabs' desktop set. */
-const SHORT_ROLE: Record<string, string> = {
-  patient: "Patient",
-  cma: "CMA",
-  audiologist: "Audiologist",
-  operator: "Operator",
-};
-
 export function DemoShell() {
   const { phase, next, back, beat, mode, role, atWalkEnd } = useStory();
   const [sheet, setSheet] = useState(false);
@@ -83,7 +75,15 @@ export function DemoShell() {
           onClick={back}
           disabled={atStart}
           aria-label="Previous beat"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-brand-navy disabled:text-slate-300"
+          // The owner: "there is no back button." It was really there, but
+          // as a bare icon with no border/fill in either state — nothing
+          // told a viewer it was a control at all, so a disabled first beat
+          // and a merely-easy-to-miss enabled one read the same: absent.
+          // A visible ring now marks it as a control in the enabled state
+          // and stays (paled, not gone) when disabled — present but
+          // unavailable, the same contract Next's filled pill already gives
+          // for granted.
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#dce7e9] text-brand-navy disabled:border-[#eef3f4] disabled:text-slate-300"
         >
           <ArrowLeft size={19} />
         </button>
@@ -92,8 +92,31 @@ export function DemoShell() {
           aria-label={`Viewing as ${personaFor(role).name} — change role`}
           className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-2 text-brand-navy"
         >
-          <span aria-hidden className="shrink-0"><PersonaAvatar role={role} size="sm" /></span>
-          <span className="truncate text-sm font-bold">{SHORT_ROLE[role]}</span>
+          <span aria-hidden className="shrink-0"><PersonaAvatar role={role} size="md" /></span>
+          {/*
+            The bar showed a static role-label lookup ("CMA", "Patient") —
+            a job title, not a person, which is what the owner asked for:
+            "which user am I, not just what is my role?" personas.ts names
+            the four people this demo follows, so the visible label reads
+            from personaFor(role).name (the accessible name above already
+            does).
+
+            Full names don't fit this bar at 375px alongside Back (40px) and
+            Next (~92-114px across the three text sizes) — see the width
+            budget in the fix commit. First name alone ("Maya", "Alex",
+            "Jordan") is unambiguous among these four personas and fits with
+            room to spare. Dr. Susan Reed is the one exception: the "Dr."
+            honorific is clinically load-bearing (she signs the audiogram),
+            so dropping it to fit would misrepresent her credential the same
+            way a bare first name never does for the other three. "Dr. Reed"
+            — the surname, the way she'd actually be addressed clinically —
+            keeps the honorific at roughly the same width as a first name.
+          */}
+          <span className="truncate text-sm font-bold">
+            {personaFor(role).name.startsWith("Dr. ")
+              ? `Dr. ${personaFor(role).name.split(" ").at(-1)}`
+              : personaFor(role).name.split(" ")[0]}
+          </span>
         </button>
         <button
           onClick={next}

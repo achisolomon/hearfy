@@ -1,8 +1,7 @@
 "use client";
 import { Check, CreditCard, PenLine } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { devices, deviceDetail, identity, orderStates, compareCategories, compareRecommendation, serials } from "@/lib/mock-data";
-import { AudiologistStrip } from "../cma/call-tile";
+import { devices, deviceDetail, identity, orderStates, compareCategories, serials } from "@/lib/mock-data";
 import { DeviceThumb } from "../../device-thumb";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { selectDevice, useSelectedDevice } from "@/lib/selection";
@@ -20,15 +19,25 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   // `lg`, the side-by-side table — both trees are in the DOM, toggled by
   // Tailwind visibility. Device columns are `fr` units on purpose (no
   // px/rem floor), so the table can never overflow or need a scrollbar.
-  return <Shell wide>
+  // The patient is on a PHONE (2026-08-31): the six-across table is the
+  // CMA's tablet view, not theirs. This screen keeps the phone column and
+  // the stacked cards — one package at a time, the same six rows — so the
+  // call tile and the cards each get the full width instead of splitting
+  // ~490px between them. `CompareTable` renders its stacked branch here and
+  // its wide branch on the CMA's screen from one source of truth.
+  return <Shell>
     {/* Renamed from "Compare devices" (corrections sheet 2026-08-31, item 9):
        what the patient picks is the service package the device belongs to. */}
-    <PageHeader title="Compare service packages" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
+    <PageHeader title="Compare service packages" subtitle="One package at a time — the same six things for each. Dr. Reed is on the call if you want to talk it through." onBack={back} eyebrow="Compare"/>
 
     {/* She is on the call while the packages are on screen: only the
        audiologist recommends, so the comparison never appears without her
        clinical reason for the pick (2026-08-31). */}
-    <AudiologistStrip active note={compareRecommendation.note}/>
+    {/* No call tile here (2026-08-31): the video lives on the CMA's tablet
+       and the audiologist's screen, which have the width for it. The patient
+       is on a phone, where a 4:3 panel above the cards pushed the packages
+       below the fold. Her recommendation still reaches them — as her words,
+       carried on the card of each package. */}
 
     {/* One table, two surfaces: the CMA's tablet renders the same component
        read-only, so the comparison the patient reads and the one on the

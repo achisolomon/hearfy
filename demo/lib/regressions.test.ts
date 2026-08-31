@@ -1830,12 +1830,18 @@ describe("the audiologist presents the comparison", () => {
   const commerce = sourceOf("components/screens/patient/commerce.tsx");
   const suitcase = sourceOf("components/screens/cma/suitcase.tsx");
 
-  // The packages were compared with no clinician on screen, though the app's
-  // own rule is that only the audiologist recommends. The comparison must
-  // never appear without her reason for the pick.
-  it("puts her on the call on the patient's compare screen", () => {
-    expect(commerce).toContain("AudiologistStrip");
-    expect(commerce).toContain("compareRecommendation.note");
+  // The comparison must never appear without her reason for the pick — the
+  // app's own rule is that only the audiologist recommends. On the patient's
+  // PHONE that reason travels on the cards, not in a call tile: a 4:3 panel
+  // above them pushed the packages below the fold (2026-08-31).
+  it("carries her recommendation on the patient's compare screen", () => {
+    expect(table).toContain("compareRecommendation.reasons");
+  });
+
+  // The call tile belongs to the surfaces with the width for it.
+  it("keeps the video off the patient's phone and on the CMA's screen", () => {
+    expect(commerce).not.toMatch(/AudiologistStrip|ZoomPanel|VideoSplit/);
+    expect(suitcase).toContain("CallSplit");
   });
 
   // Two surfaces rendering their own copy of the same table is how they

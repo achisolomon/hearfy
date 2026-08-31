@@ -1,10 +1,11 @@
 "use client";
-import { Check } from "lucide-react";
+import { Check, CreditCard, PenLine } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { devices, deviceDetail, orderStates, compareCategories, serials } from "@/lib/mock-data";
+import { devices, deviceDetail, identity, orderStates, compareCategories, serials } from "@/lib/mock-data";
 import { DeviceThumb } from "../../device-thumb";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { selectDevice, useSelectedDevice } from "@/lib/selection";
+import { SIGNING_ITEMS, canSign, sign, toggleSigningItem, useSigning } from "@/lib/signing";
 import { cn } from "@/lib/cn";
 import { ScreenId } from "../registry";
 import { Shell } from "../shared";
@@ -132,7 +133,64 @@ export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         ${monthly} per month from next month. Includes the devices, ongoing care and remote
         adjustments. Cancel with 30 days&rsquo; notice.</p>
     </Card>
-    <div className="mt-6"><PrimaryButton onClick={()=>go("order")}>Confirm membership</PrimaryButton></div>
+    <div className="mt-6"><PrimaryButton onClick={()=>go("signing")}>Review &amp; sign</PrimaryButton></div>
+  </Shell>;
+}
+
+/**
+ * The patient signs on their OWN phone (item 12, refined 2026-08-31): the
+ * contract, the terms and the card are theirs to approve, and each approval
+ * lands live on the CMA's mirror. Nothing here is done for them.
+ */
+export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const chosen = useSelectedDevice();
+  const tier = tierFor(deviceDetail[chosen.name].tier);
+  const {monthly,credit,dueNow} = creditedFirstMonth(tier.id);
+  const s = useSigning();
+  return <Shell>
+    <PageHeader title="Sign &amp; authorize" subtitle="Review each item at your own pace. Dr. Reed and Maya can answer anything." onBack={back} eyebrow="Your contract"/>
+    <Card className="p-5">
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between"><span className="text-slate-500">{chosen.name} · {tier.name}</span><b>${monthly}/mo</b></div>
+        <div className="flex justify-between text-brand-teal"><span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
+        <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3"><b>Due today</b><b className="text-lg">${dueNow}</b></div>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-500">Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.</p>
+    </Card>
+    <div className="mt-4 space-y-3">
+      {SIGNING_ITEMS.map(([k,label])=>(
+        <button key={k} onClick={()=>toggleSigningItem(k)} disabled={s.signed}
+          className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
+          <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
+            s[k]?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>
+            {s[k]&&<Check size={15}/>}
+          </span>
+          <span className="text-sm leading-6 text-slate-600">
+            {label}
+            {k==="card"&&<span className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+              <CreditCard size={13}/> Visa •••• 4242 · saved at booking
+            </span>}
+          </span>
+        </button>
+      ))}
+    </div>
+    <button onClick={sign}
+      className={`mt-4 grid min-h-24 w-full place-items-center rounded-2xl border-2 border-dashed p-4 text-center ${
+        s.signed?"border-brand-teal bg-[#edfbfa]":"border-[#c9dadd] bg-white"}`}>
+      {s.signed
+        ? <span>
+            <span className="font-serif text-2xl italic text-brand-navy">{identity.legalName}</span>
+            <span className="mt-1 block text-[11px] text-slate-500">Signed by you · May 21, 2025</span>
+          </span>
+        : <span className="flex items-center gap-2 text-sm font-semibold text-slate-400">
+            <PenLine size={16}/> {canSign(s)?"Tap to sign":"Approve the three items above to sign"}
+          </span>}
+    </button>
+    <div className="mt-6">
+      <PrimaryButton disabled={!s.signed} onClick={()=>go("order")}>
+        {s.signed?"Membership confirmed":"Signature required"}
+      </PrimaryButton>
+    </div>
   </Shell>;
 }
 

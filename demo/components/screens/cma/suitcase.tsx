@@ -8,6 +8,7 @@ import { Shell } from "../shared";
 import { CallSplit } from "./call-tile";
 import { devices, deviceDetail, identity, patient, serials } from "@/lib/mock-data";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
+import { SIGNING_ITEMS, useSigning } from "@/lib/signing";
 
 /**
  * The story shell remounts this screen on back-navigation, which would clear
@@ -107,74 +108,59 @@ export function CmaTryOn({ next }: { next: () => void }) {
 }
 
 /**
- * Nothing activates unsigned (corrections sheet 2026-08-31, item 12): the
- * contract, the terms and the card are all confirmed on the CMA's device,
- * and the patient signs right here before the fit begins.
+ * Nothing activates unsigned (item 12, refined 2026-08-31): the PATIENT
+ * reviews, approves and signs on their own phone. This screen is a READ-ONLY
+ * mirror — every approval lands here live, and the CMA can act on none of
+ * them. The one control is continuing once the signature is in.
  */
 export function CmaSigning({ next }: { next: () => void }) {
   const chosen = devices[0];
   const tier = tierFor(deviceDetail[chosen.name].tier);
-  const { monthly, credit, dueNow } = creditedFirstMonth(tier.id);
-  const [agreed, setAgreed] = useState<Record<string, boolean>>({
-    contract: false, terms: false, card: false,
-  });
-  const [signed, setSigned] = useState(false);
-  const canSign = agreed.contract && agreed.terms && agreed.card;
-  const items: [string, string][] = [
-    ["contract", "Membership contract reviewed with the patient"],
-    ["terms", "Terms & agreement accepted"],
-    ["card", "Card authorized for monthly billing"],
-  ];
+  const s = useSigning();
 
   return (
     <Shell tablet>
-      <PageHeader title="Sign &amp; authorize" subtitle={`${chosen.name} · ${tier.name} membership`} eyebrow="Contract" />
-      <CallSplit active note="Walking the patient through the contract on the call — the sale is hers to close.">
-        <Card className="p-5">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
-            <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
-            <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
-              <b>Due today</b><b className="text-lg">${dueNow}</b>
-            </div>
-          </div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">
-            Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.
+      <PageHeader title="Patient is signing" subtitle={`${chosen.name} · ${tier.name} membership — on the patient's phone`} eyebrow="Contract" />
+      <CallSplit active note="Walking the patient through each item on the call — the approvals below are the patient's own.">
+        <Card className="p-4">
+          <p className="text-sm leading-6 text-slate-500">
+            {patient.name} is reviewing the contract on their phone. You see each approval
+            as it lands — nothing here is yours to tap.
           </p>
         </Card>
-        {/* Every box starts unchecked — same rule as consent (item 2). */}
         <div className="mt-4 space-y-3">
-          {items.map(([k, label]) => (
-            <button key={k} onClick={() => setAgreed(a => ({ ...a, [k]: !a[k] }))}
-              className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
+          {SIGNING_ITEMS.map(([k, label]) => (
+            <div key={k} className="flex w-full items-start gap-3 rounded-2xl bg-white p-4">
               <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-                agreed[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
-                {agreed[k] && <Check size={15} />}
+                s[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+                {s[k] && <Check size={15} />}
               </span>
-              <span className="text-sm leading-6 text-slate-600">
+              <span className="min-w-0 flex-1 text-sm leading-6 text-slate-600">
                 {label}
                 {k === "card" && <span className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-                  <CreditCard size={13} /> Visa •••• 4242 · on file from booking
+                  <CreditCard size={13} /> Visa •••• 4242 · saved at booking
                 </span>}
               </span>
-            </button>
+              <span className={cn("shrink-0 text-[11px] font-bold", s[k] ? "text-brand-teal" : "text-slate-300")}>
+                {s[k] ? "Approved" : "Waiting"}
+              </span>
+            </div>
           ))}
         </div>
-        <button onClick={() => canSign && setSigned(true)}
-          className={cn("mt-4 grid min-h-24 w-full place-items-center rounded-2xl border-2 border-dashed p-4 text-center",
-            signed ? "border-brand-teal bg-[#edfbfa]" : "border-[#c9dadd] bg-white")}>
-          {signed
+        <div className={cn("mt-4 grid min-h-24 w-full place-items-center rounded-2xl border-2 border-dashed p-4 text-center",
+          s.signed ? "border-brand-teal bg-[#edfbfa]" : "border-[#c9dadd] bg-white")}>
+          {s.signed
             ? <span>
                 <span className="font-serif text-2xl italic text-brand-navy">{identity.legalName}</span>
-                <span className="mt-1 block text-[11px] text-slate-500">Signed on the CMA&rsquo;s device · May 21, 2025</span>
+                <span className="mt-1 block text-[11px] text-slate-500">Signed on the patient&rsquo;s phone · May 21, 2025</span>
               </span>
             : <span className="flex items-center gap-2 text-sm font-semibold text-slate-400">
-                <PenLine size={16} /> {canSign ? "Tap here for the patient to sign" : "Complete the three items above to sign"}
+                <PenLine size={16} /> Awaiting the patient&rsquo;s signature
               </span>}
-        </button>
+        </div>
         <div className="mt-6">
-          <PrimaryButton disabled={!signed} onClick={next}>
-            {signed ? "Contract signed — start the fit" : "Signature required"}
+          <PrimaryButton disabled={!s.signed} onClick={next}>
+            {s.signed ? "Signed — start the fit" : "Waiting for the patient"}
           </PrimaryButton>
         </div>
       </CallSplit>

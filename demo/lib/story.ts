@@ -145,12 +145,13 @@ export const BEATS: Beat[] = [
     screens: { patient: "compare", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "checkout", stage: 8, lead: "patient",
     screens: { patient: "checkout", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },
-  // Corrections sheet 2026-08-31, item 12: nothing activates until the
-  // contract, terms and card are signed for — on the CMA's device.
-  { id: "signing", stage: 8, lead: "cma",
-    screens: { patient: "checkout", cma: "cma-signing", audiologist: "aud-prescription", operator: "op-dashboard" } },
+  // Corrections sheet 2026-08-31, item 12 (refined): the PATIENT reviews the
+  // contract, accepts the terms, authorizes the card and signs — on their own
+  // phone. The CMA's screen mirrors those inputs as they land.
+  { id: "signing", stage: 8, lead: "patient",
+    screens: { patient: "signing", cma: "cma-signing", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "activate", stage: 8, lead: "cma",
-    screens: { patient: "checkout", cma: "cma-activate", audiologist: "aud-prescription", operator: "op-dashboard" } },
+    screens: { patient: "signing", cma: "cma-activate", audiologist: "aud-prescription", operator: "op-dashboard" } },
 
   // ---- Stage 9: Fulfilment & follow-up ----
   { id: "closeout", stage: 9, lead: "cma",

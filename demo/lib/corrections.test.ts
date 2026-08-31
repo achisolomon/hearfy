@@ -87,15 +87,25 @@ describe("corrections sheet 2026-08-31", () => {
     expect((src.match(/DeviceThumb/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
-  // Item 12 — a signing beat sits between checkout and activation, and its
-  // agreement boxes start unchecked like consent does.
-  it("requires the signing page before activation", () => {
+  // Item 12 — a signing beat sits between checkout and activation. Refined
+  // 2026-08-31: the PATIENT leads it — contract, terms, card and signature
+  // are approved on the patient's own phone, and the CMA's screen is a
+  // read-only mirror of those inputs (lib/signing is the shared store; its
+  // own test file pins that every approval starts unchecked).
+  it("requires the patient's signing page before activation", () => {
     const signing = beatIndexById("signing");
     expect(signing).toBe(beatIndexById("checkout") + 1);
     expect(beatIndexById("activate")).toBe(signing + 1);
+    expect(BEATS[signing].lead).toBe("patient");
+    expect(BEATS[signing].screens.patient).toBe("signing");
     expect(BEATS[signing].screens.cma).toBe("cma-signing");
-    const src = sourceOf("components/screens/cma/suitcase.tsx");
-    expect(src).toMatch(/contract:\s*false,\s*terms:\s*false,\s*card:\s*false/);
+    // The patient screen owns the actions; the CMA mirror can take none.
+    const patientSrc = sourceOf("components/screens/patient/commerce.tsx");
+    expect(patientSrc).toMatch(/toggleSigningItem/);
+    expect(patientSrc).toMatch(/onClick=\{sign\}/);
+    const cmaSrc = sourceOf("components/screens/cma/suitcase.tsx");
+    expect(cmaSrc).toMatch(/useSigning/);
+    expect(cmaSrc, "the CMA mirror must not write signing state").not.toMatch(/toggleSigningItem|[^.]sign\(\)/);
   });
 
   // Item 13 — the call runs from the first exam step until the patient is

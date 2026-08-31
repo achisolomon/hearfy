@@ -4,6 +4,7 @@ import { Activity,AlertTriangle,CreditCard,FileHeart,HeartPulse,Home,ShieldCheck
 import { Card,PageHeader,SecondaryButton,StatusPill } from "../../ui";
 import { BRAND_NAME, patient } from "@/lib/mock-data";
 import { createLatch } from "@/lib/latch";
+import { showsDiversion } from "@/lib/red-flag";
 import { ScreenId } from "../registry";
 import { Option, Shell, StepPage } from "../shared";
 
@@ -17,14 +18,17 @@ const redFlagLatch = createLatch();
 export function IntakeFor({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [a,setA]=useState(0);return <StepPage title="Who is the visit for?" subtitle="You can book for yourself or someone you care for." step={1} onBack={back} onNext={()=>go("intake-needs")}><Option title="Myself" sub="I am the patient" icon={UserRound} active={a===0} onClick={()=>setA(0)}/><Option title="A family member" sub="I’ll help manage their care" icon={HeartPulse} active={a===1} onClick={()=>setA(1)}/></StepPage>}
 export function IntakeNeeds({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [a,setA]=useState(0);return <StepPage title="What are you noticing?" subtitle="Choose the main issue. You can add more later." step={2} onBack={back} onNext={()=>go("intake-medical")}><Option title="Speech is unclear" sub="Especially in groups or background noise" active={a===0} onClick={()=>setA(0)}/><Option title="TV or phone volume is too high" active={a===1} onClick={()=>setA(1)}/><Option title="Ringing in the ears" active={a===2} onClick={()=>setA(2)}/><Option title="A recent change in hearing" active={a===3} onClick={()=>setA(3)}/></StepPage>}
 export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
-  const [flagged,setFlagged] = useState(false);
   // Tracks an explicit "go back" on this mount, so the still-set latch (which
   // survives a remount on purpose) doesn't override a deliberate dismissal.
+  // Selecting a symptom clears it again — a dismissal that outlived the answer
+  // it dismissed made every later symptom click a dead button.
   const [dismissed,setDismissed] = useState(false);
-  // Hook first, then combine — inside `||` it would be skipped once
-  // `flagged` turns true, and React would see the hook count change.
+  // Hook first, then combine — inside a short-circuit it could be skipped and
+  // React would see the hook count change.
   const everFlagged = redFlagLatch.use();
-  const showDiversion = (flagged || everFlagged) && !dismissed;
+  const showDiversion = showsDiversion({everFlagged,dismissed});
+
+  const selectSymptom = ()=>{redFlagLatch.set();setDismissed(false);};
   const symptoms = [
     "Sudden hearing loss in the last 72 hours",
     "Pain, drainage or bleeding from an ear",
@@ -32,7 +36,7 @@ export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     "Ringing in one ear only",
   ];
 
-  const goBack = ()=>{setFlagged(false);setDismissed(true);};
+  const goBack = ()=>setDismissed(true);
 
   if(showDiversion) return <Shell>
     <PageHeader title="Let's get this looked at first" subtitle="Booking is paused while a clinician reviews your answer." onBack={goBack} eyebrow="Routed to review"/>
@@ -54,7 +58,7 @@ export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   return <Shell>
     <PageHeader title="A few safety questions" subtitle="These help us route you to the right care." onBack={back} eyebrow="Medical safety"/>
     <div className="space-y-3">
-      {symptoms.map(s=><Option key={s} title={s} onClick={()=>{setFlagged(true);redFlagLatch.set();}}/>)}
+      {symptoms.map(s=><Option key={s} title={s} onClick={selectSymptom}/>)}
       <Option title="None of these apply to me" onClick={()=>go("intake-coverage")} active/>
     </div>
     <Card className="mt-4 p-4">

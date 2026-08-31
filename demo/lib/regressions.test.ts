@@ -374,6 +374,71 @@ describe("mobile persona indicator", () => {
   });
 });
 
+describe("cover persona cards", () => {
+  // On a real phone the owner saw "Certifie…", "Cloud A…", "Operati…" — the
+  // "Or enter as one persona" cards on Cover (components/shell/cover.tsx)
+  // truncated every title. Two causes: `grid-cols-2` was unconditional, so
+  // each card only ever had ~half the row (measured ~75px/58px/41px of text
+  // width across the three TextSize root sizes), and the title carried
+  // `truncate`, which clips instead of wrapping once it doesn't fit. Isolate
+  // just the persona-card block (the `ROLES.map` inside the "Or enter as one
+  // persona" grid) so this doesn't false-positive on truncate/grid-cols-2
+  // usage elsewhere on the page (e.g. the stats row).
+  const cover = sourceOf("components/shell/cover.tsx");
+  const sectionStart = cover.indexOf("Or enter as one persona");
+  if (sectionStart === -1) throw new Error("could not locate the 'Or enter as one persona' section in cover.tsx");
+  const gridStart = cover.indexOf("<div", sectionStart);
+  const mapEnd = cover.indexOf("})}", gridStart);
+  const cardBlock = cover.slice(gridStart, mapEnd === -1 ? undefined : mapEnd + 3);
+
+  // The grid itself must not force two-up at the base (phone) breakpoint —
+  // it must stack to one column there and only go two-up from a `sm:`/`md:`
+  // breakpoint up, where there is room. A bare `grid-cols-2` with no
+  // responsive prefix anywhere in the block means every breakpoint —
+  // including phone — is two-up.
+  it("does not force the persona-card grid to two columns unconditionally on phone", () => {
+    expect(
+      cardBlock,
+      "found a bare `grid-cols-2` with no sm:/md: prefix — that forces two cards per row even at " +
+      "375px, where the owner measured only ~75px/58px/41px of text width per column across the " +
+      "three TextSize root sizes. 'Certified Medical Assistant' (~229-298px) can never fit that, " +
+      "which is exactly the 'Certifie…' clipping the owner saw on a real phone. The grid should " +
+      "stack one-per-row at the base breakpoint and go two-up only from sm:/md: up.",
+    ).not.toMatch(/(?<!sm:|md:|lg:|xl:)\bgrid-cols-2\b/);
+  });
+
+  // The title line must not truncate: once the grid gives each card enough
+  // width the title still needs to be allowed to wrap onto a second line
+  // rather than clip with an ellipsis, or a long title at a wide TextSize
+  // step could still clip. Locate whichever element renders `{p.title}` —
+  // the fix leads with the persona's name (matching PersonaChip and the
+  // phone bar), so the title moves out of the `<b>` into a plain `<span>` —
+  // rather than assuming which tag it lives in.
+  it("does not truncate the persona card's title, so a long title wraps instead of clipping", () => {
+    const titleLine = /<(b|span)\b[^>]*>\s*\{p\.title\}/.exec(cardBlock);
+    expect(titleLine, "could not find the title (`{p.title}`) rendered in the persona card block").toBeTruthy();
+    const openTag = titleLine![0];
+    expect(
+      openTag,
+      "the persona card's title element carries `truncate`, which clips long titles " +
+      "('Certified Medical Assistant' -> 'Certifie…') instead of letting them wrap onto a second line.",
+    ).not.toMatch(/\btruncate\b/);
+  });
+
+  // Round two of the fix: the title led and the muted name was secondary,
+  // which inverted the identity — the person's name is who they are, the
+  // title is the qualifier. PersonaChip (components/persona-avatar.tsx) and
+  // the phone demo bar (demo-shell.tsx) both lead with the name; this card
+  // must match so all three places describe a persona the same way.
+  it("leads with the persona's name and shows the title beneath it, matching PersonaChip", () => {
+    const nameIdx = cardBlock.search(/\{p\.name\}/);
+    const titleIdx = cardBlock.search(/\{p\.title\}/);
+    expect(nameIdx, "could not find {p.name} rendered in the persona card block").toBeGreaterThan(-1);
+    expect(titleIdx, "could not find {p.title} rendered in the persona card block").toBeGreaterThan(-1);
+    expect(nameIdx, "the persona's name must render before the title, not after it").toBeLessThan(titleIdx);
+  });
+});
+
 describe("phone Back control visibility", () => {
   // Owner, round one: "there is no back button." The bar DOES contain a Back
   // <button> with <ArrowLeft>, but its only styling was `text-brand-navy

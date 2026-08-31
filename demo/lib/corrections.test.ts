@@ -53,6 +53,8 @@ describe("corrections sheet 2026-08-31", () => {
   it("runs tympanometry right after the ear health check", () => {
     const ids = EXAM_STEPS.map(s => s.id);
     expect(ids.indexOf("tympanometry")).toBe(ids.indexOf("otoscopy") + 1);
+    // Named for what it is (Achi, 2026-08-31): the screen says Tympanometry.
+    expect(EXAM_STEPS.find(s => s.id === "tympanometry")?.title).toBe("Tympanometry");
     expect(beatIndexById("tympanometry")).toBe(beatIndexById("otoscopy") + 1);
     const beat = BEATS[beatIndexById("tympanometry")];
     expect(beat.screens.cma).toBe("cma-tympanometry");

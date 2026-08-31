@@ -24,8 +24,8 @@ export interface ExamStep {
 export const EXAM_STEPS: ExamStep[] = [
   { id: "otoscopy", title: "Ear health check",
     procedure: "Capture a clear image of each ear canal", conditional: false },
-  { id: "tympanometry", title: "Middle ear check",
-    procedure: "Seal the probe and run tympanometry, both ears", conditional: false },
+  { id: "tympanometry", title: "Tympanometry",
+    procedure: "Seal the probe and run the pressure sweep, both ears", conditional: false },
   { id: "puretone", title: "Hearing test",
     procedure: "Run pure tone thresholds, both ears", conditional: false },
   { id: "speech", title: "Speech recognition",

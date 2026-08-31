@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, beatIndexById } from "./story";
 import { EXAM_STEPS } from "./exam";
+import { compareCategories, devices, deviceDetail, tiers } from "./mock-data";
 import { componentFiles, sourceOf } from "./screens";
 
 /**
@@ -87,6 +88,29 @@ describe("corrections sheet 2026-08-31", () => {
     expect((src.match(/DeviceThumb/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
+  // Every screen that touches a device dereferences deviceDetail[d.name] —
+  // the try-on crash class — and the thumbs need a finish, the tiers a
+  // price. One integrity check keeps a new device from arriving half-built.
+  it("gives every device a complete detail record", () => {
+    for (const d of devices) {
+      const detail = deviceDetail[d.name];
+      expect(detail, `${d.name} needs a deviceDetail entry`).toBeTruthy();
+      expect(detail.finish, `${d.name} needs a finish for its picture`).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(tiers.map(t => t.id), `${d.name} must sit in a real tier`).toContain(detail.tier);
+      for (const cat of compareCategories) {
+        expect(detail.compare[cat], `${d.name} must fill "${cat}"`).toBeTruthy();
+      }
+    }
+  });
+
+  // The dispensed pair's serial numbers come from mock-data's `serials` —
+  // three screens show them, and a literal in any of them can drift.
+  it("never hardcodes the device serial numbers in a screen", () => {
+    for (const file of componentFiles()) {
+      expect(sourceOf(file), `${file} must read serials from mock-data`).not.toMatch(/HF-2284/);
+    }
+  });
+
   // Item 12 — a signing beat sits between checkout and activation. Refined
   // 2026-08-31: the PATIENT leads it — contract, terms, card and signature
   // are approved on the patient's own phone, and the CMA's screen is a
@@ -138,6 +162,45 @@ describe("corrections sheet 2026-08-31", () => {
       expect(sourceOf(file), `${file} must render the home feed`).toMatch(/HomeFeed/);
     }
     expect(sourceOf("components/screens/audiologist/home-feed.tsx")).toMatch(/Talk to the room/);
+    // Each of those files holds TWO screens (monitor is one; review holds
+    // review + signature; consult holds consult + prescription) — the feed
+    // must be on both, not just the file: import plus two usages.
+    for (const file of [
+      "components/screens/audiologist/review.tsx",
+      "components/screens/audiologist/consult.tsx",
+    ]) {
+      const uses = sourceOf(file).match(/HomeFeed/g) ?? [];
+      expect(uses.length, `${file}: both of its screens need the feed`).toBeGreaterThanOrEqual(3);
+    }
+    // And the call ENDS when the patient is fitted and happy: activation is
+    // the last CMA screen on the call; the close-out is off it.
+    const suitcaseScreens = sourceOf("components/screens/cma/suitcase.tsx").split(/(?=export function )/);
+    const activate = suitcaseScreens.find(s => s.startsWith("export function CmaActivate"));
+    const closeout = suitcaseScreens.find(s => s.startsWith("export function CmaCloseout"));
+    expect(activate, "CmaActivate is still on the call").toMatch(/CallSplit/);
+    expect(closeout, "CmaCloseout is after the call ends").not.toMatch(/CallSplit/);
+    // Only the audiologist sells (sheet item 13's core rule) — the sale
+    // screens must say so, not merely show her.
+    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/only Dr\. Reed recommends and sells/);
+  });
+
+  // Refined 2026-08-31: exam step numbering is DERIVED from the step lists —
+  // the hand-numbered "Step N of 5" eyebrows are what let tympanometry's
+  // arrival silently misnumber every screen.
+  it("derives the CMA exam numbering instead of hardcoding it", () => {
+    const src = sourceOf("components/screens/cma/exam.tsx");
+    expect(src).not.toMatch(/"Step \d+ of \d+"/);
+    expect(src).toMatch(/CMA_STEPS\.length/);
+    const patientExam = sourceOf("components/screens/patient/exam.tsx");
+    expect(patientExam).not.toMatch(/"Visit \d+ of \d+"/);
+    expect(patientExam).toMatch(/VISIT_FLOW\.length/);
+  });
+
+  // The back-from-Support fix must stay wired: free navigation resolves
+  // through the nearest-role-led lookup, not the first-match one
+  // (lib/regressions.test.ts pins the lookup's behaviour itself).
+  it("routes free navigation through beatForScreenNear", () => {
+    expect(sourceOf("components/shell/story-context.tsx")).toMatch(/beatForScreenNear\(role, screen, beat\)/);
   });
 
   // Refined 2026-08-31: the video is the SAME size in the SAME place on

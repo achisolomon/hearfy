@@ -67,7 +67,11 @@ export function PureToneStep({ framing }: { framing: Framing }) {
                   strokeDashoffset={ARC * (1 - sweep.progress / 100)}
                   style={{ transition: `stroke-dashoffset ${TICK_MS}ms linear` }} />
         </svg>
-        <div className="text-center">
+        {/* Capped inside the arc's 9.6rem clear inner circle: an uncapped
+            tracking-widest line reaches the stroke, where teal-on-teal ate
+            the completion label's ends ("OTH EARS COMPLET", 2026-08-31).
+            Long labels wrap; text-balance splits them at the natural seam. */}
+        <div className="max-w-[9rem] text-balance text-center">
           {done ? <>
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={26} /></span>
             <p className="mt-2 text-xs font-bold uppercase tracking-widest text-brand-teal">Both ears complete</p>

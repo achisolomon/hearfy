@@ -1687,3 +1687,73 @@ describe("route map scales to any column", () => {
     expect(map, "no fixed-pixel marker offsets or x/y animation").not.toMatch(/left-\d|top-\d|\{x:/);
   });
 });
+
+describe("pure-tone ring label clearance", () => {
+  // On a real phone the sweep's completion label read "OTH EARS COMPLET" —
+  // the first and last glyphs were gone (found 2026-08-31). Measured
+  // headless, the loss is identical at every viewport and text size, because
+  // everything involved scales in rem: "Both ears complete" in text-xs bold
+  // uppercase with tracking-widest lays out ~181px wide at the 18px root,
+  // but the ring's clear inner circle — the w-56 (14rem) card, minus the
+  // svg's inset-4 on each side, times the circle's inner-stroke-edge
+  // diameter 2·(43−6/2) of its 100-unit viewBox — is only 9.6rem = 172.8px
+  // across at its widest. The line's ends therefore sat ON the progress
+  // arc's stroke, and label and arc are the same brand teal (#12AAA5), so
+  // once the arc completed under them those glyphs vanished into it. During
+  // the sweep the arc under the label is still the pale #e6efef track,
+  // which is why every earlier state looked fine and the bug only surfaced
+  // at "Both ears complete". The centered stack must cap its own width
+  // inside that clearance (in always-compiling arbitrary-rem syntax, per
+  // the tailwind-scale lesson: a made-up bare max-w-N step could silently
+  // emit no CSS) and let long labels wrap onto extra lines instead.
+  const src = sourceOf("components/exam/puretone-step.tsx");
+
+  const ring = /<div className="([^"]*\bgrid h-(\d+) w-(\d+)\b[^"]*\brounded-full\b[^"]*)">/.exec(src);
+  if (!ring) throw new Error("could not locate the sweep ring container (grid h-N w-N … rounded-full) in puretone-step.tsx");
+  const afterRing = src.slice(ring.index);
+
+  const svgTag = /<svg className="([^"]*)"[^>]*viewBox="0 0 (\d+) \d+"/.exec(afterRing);
+  if (!svgTag) throw new Error("could not locate the ring's svg/viewBox in puretone-step.tsx");
+  const circleTag = /<circle[^>]*\br="(\d+)"[^>]*\bstrokeWidth="(\d+)"/.exec(afterRing);
+  if (!circleTag) throw new Error("could not locate the ring's circle (r/strokeWidth) in puretone-step.tsx");
+
+  const ringDiameterRem = Number(ring[3]) * SPACING_UNIT_REM;
+  const insetMatch = /\binset-(\d+)\b/.exec(svgTag[1]);
+  const insetRem = insetMatch ? Number(insetMatch[1]) * SPACING_UNIT_REM : 0;
+  const viewBoxUnits = Number(svgTag[2]);
+  const innerStrokeEdgeUnits = 2 * (Number(circleTag[1]) - Number(circleTag[2]) / 2);
+  const svgBoxRem = ringDiameterRem - 2 * insetRem;
+  const innerClearanceRem = svgBoxRem * (innerStrokeEdgeUnits / viewBoxUnits);
+
+  it("keeps the ring a square, so the parsed diameter is the real geometry", () => {
+    expect(ring![2]).toBe(ring![3]);
+  });
+
+  // The centered stack holds both branches (the live "Testing … ear" labels
+  // and the completion label), so one cap on it covers every ring state.
+  const centerDiv = /<div className="([^"]*\btext-center\b[^"]*)">/.exec(afterRing);
+  const centerCls = centerDiv?.[1] ?? "";
+
+  it("caps the ring's center stack narrower than the arc's clear inner circle", () => {
+    expect(centerDiv, "could not find the centered text stack inside the sweep ring").toBeTruthy();
+    const cap = /\bmax-w-\[([\d.]+)rem\]/.exec(centerCls);
+    expect(
+      cap,
+      `the ring's center stack ("${centerCls}") has no max-w-[…rem] cap — an uncapped tracking-widest ` +
+      `label line (~10rem for "Both ears complete") reaches the progress arc's stroke, where teal-on-teal ` +
+      `renders it as "OTH EARS COMPLET"`,
+    ).toBeTruthy();
+    expect(
+      Number(cap![1]),
+      `max-w-[${cap![1]}rem] exceeds the ${innerClearanceRem}rem clear inner circle of the arc ` +
+      `(${ringDiameterRem}rem ring − 2×${insetRem}rem svg inset, × ${innerStrokeEdgeUnits}/${viewBoxUnits} inner stroke edge)`,
+    ).toBeLessThanOrEqual(innerClearanceRem);
+  });
+
+  it("lets a capped label wrap instead of clipping to one line", () => {
+    // truncate/nowrap would turn the width cap into a different clip of the
+    // same words — the cap only works because extra lines are allowed, and
+    // there is vertical room for them at every state of the center stack.
+    expect(centerCls).not.toMatch(/\btruncate\b|whitespace-nowrap/);
+  });
+});

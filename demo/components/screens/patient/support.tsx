@@ -65,9 +65,10 @@ function CalibrationCard() {
 function CareRecord({ go }: { go: (s: ScreenId) => void }) {
   const chosen = devices[0];
   const tier = tierFor(deviceDetail[chosen.name].tier);
+  // Left ear in the left column, right ear on the right (see OtoscopyStep).
   const ears = [
-    { label: "Right ear", avg: pta(audiogram.frequencies, audiogram.right) },
     { label: "Left ear", avg: pta(audiogram.frequencies, audiogram.left) },
+    { label: "Right ear", avg: pta(audiogram.frequencies, audiogram.right) },
   ];
   return (
     <>
@@ -84,7 +85,7 @@ function CareRecord({ go }: { go: (s: ScreenId) => void }) {
             </div>
           ))}
         </div>
-        <button onClick={() => go("results")} className="mt-3 flex items-center gap-1 text-xs font-bold text-brand-teal">
+        <button onClick={() => go("results")} className="mt-3 flex min-h-11 items-center gap-1 text-xs font-bold text-teal-ink">
           View full results <ChevronRight size={14} />
         </button>
       </Card>

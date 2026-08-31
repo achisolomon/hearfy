@@ -74,10 +74,10 @@ export function PureToneStep({ framing }: { framing: Framing }) {
         <div className="max-w-[9rem] text-balance text-center">
           {done ? <>
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={26} /></span>
-            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-brand-teal">Both ears complete</p>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-teal-ink">Both ears complete</p>
           </> : <>
             <b className="text-4xl">{Math.round(sweep.progress)}%</b>
-            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-brand-teal">Testing {sweep.phase} ear</p>
+            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-teal-ink">Testing {sweep.phase} ear</p>
             <motion.p animate={{ opacity: [1, .25, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}
               className="mt-1 text-[10px] font-semibold text-slate-400">♪ tone playing</motion.p>
           </>}
@@ -85,10 +85,12 @@ export function PureToneStep({ framing }: { framing: Framing }) {
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <EarCard label="Right ear" avg={right} progress={sweep.progress}
-          state={sweep.phase === "right" ? "testing" : "done"} />
+        {/* Left ear in the left column, right on the right. The sweep still
+            runs right ear first, so the left card is the one that waits. */}
         <EarCard label="Left ear" avg={left} progress={sweep.progress}
           state={sweep.phase === "left" ? "testing" : done ? "done" : "pending"} />
+        <EarCard label="Right ear" avg={right} progress={sweep.progress}
+          state={sweep.phase === "right" ? "testing" : "done"} />
       </div>
 
       {framing === "patient" ? (

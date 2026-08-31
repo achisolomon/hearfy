@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { Ban, Lock, Video } from "lucide-react";
-import { Card, PrimaryButton, StatusPill } from "../../ui";
+import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
-import { devices, tiers, clinician, patient } from "@/lib/mock-data";
+import { devices, deviceDetail, tiers, clinician, patient } from "@/lib/mock-data";
 import { HomeFeed } from "./home-feed";
 import { VideoSplit } from "../video-split";
+import { ConfirmButton } from "./confirm-button";
 
 /**
  * Locking the prescription is a separate, irreversible commitment from signing
@@ -17,22 +18,28 @@ const lockedLatch = createLatch();
 export function AudConsult({ next }: { next: () => void }) {
   // The audiologist recommends 2–3 and excludes at least one with a rationale.
   const [recommended, setRecommended] = useState<string[]>([devices[0].name, devices[1].name]);
+  // The exclusion rationale below describes the Oticon Intent 2 specifically
+  // (open fitting vs. the left air–bone gap), so this index and that device
+  // must stay married. corrections.test.ts pins the pairing: reorder
+  // mock-data's `devices` and the build fails rather than the screen quietly
+  // stating something false about a real product.
   const excluded = devices[2].name;
 
   return (
     <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-4xl">
-        <header className="mb-5 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">Recorded consult</span>
-            <h1 className="mt-1 text-[26px] font-extrabold tracking-[-.02em]">Device shortlist for {patient.name}</h1>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <PageHeader eyebrow="Recorded consult" title={`Device shortlist for ${patient.name}`} />
           </div>
-          <span className="flex items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600">
+          {/* #b91c1c on #fef2f2 is 6.05:1; the shipped red-600 measured 4.41:1
+             at this 12px size, just under the floor PRODUCT.md sets. */}
+          <span className="mt-1 flex shrink-0 items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-[#b91c1c]">
             <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
             <span aria-hidden>REC</span>
             <span className="sr-only">This consult is being recorded</span>
           </span>
-        </header>
+        </div>
 
         {/* She presents the shortlist INTO the room — the call carries the
            consult until the patient is fitted, in the same place and size as
@@ -60,7 +67,19 @@ export function AudConsult({ next }: { next: () => void }) {
                       <b className="text-[15px]">{d.name}</b>
                       <span className="text-xs font-bold text-slate-400">{d.price}</span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">{d.features.join(" · ")}</p>
+                    {/* The fit factors the patient will later see on her own
+                       results screen (persona spec §2) — she authors the
+                       reasoning, so it has to be the reasoning, not a spec
+                       sheet. Generic `features` are marketing copy; these are
+                       clinical. */}
+                    <ul className="mt-2 space-y-1">
+                      {deviceDetail[d.name].fitFactors.map(f => (
+                        <li key={f} className="flex gap-2 text-xs leading-5 text-slate-500">
+                          <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-teal" aria-hidden />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
                     {isEx && (
                       <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-[#9d6514]">
                         <Ban size={13} className="mt-0.5 shrink-0" aria-hidden />
@@ -72,8 +91,11 @@ export function AudConsult({ next }: { next: () => void }) {
                     <button
                       aria-pressed={isRec}
                       onClick={() => setRecommended(r => isRec ? r.filter(n => n !== d.name) : [...r, d.name])}
-                      className={cn("shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
-                        isRec ? "bg-brand-teal text-white" : "bg-[#f1f5f6] text-slate-500")}>
+                      /* White on Vital Teal measured 2.87:1 — the same fault
+                         ui.tsx already fixed for PrimaryButton by moving to
+                         Teal Ink, where white reads 4.97:1. */
+                      className={cn("min-h-11 shrink-0 rounded-full px-4 text-xs font-bold",
+                        isRec ? "bg-teal-ink text-white" : "bg-[#f1f5f6] text-slate-500")}>
                       {isRec ? "Recommended" : "Recommend"}
                     </button>
                   )}
@@ -113,10 +135,7 @@ export function AudPrescription() {
       <div className="mx-auto max-w-5xl">
       {/* Same page header as every other audiologist screen (consistency,
          Achi 2026-08-31) — the card below carries the state, not the title. */}
-      <header className="mb-5">
-        <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">Prescription</span>
-        <h1 className="mt-1 text-[26px] font-extrabold tracking-[-.02em]">{patient.name} — sign &amp; lock</h1>
-      </header>
+      <PageHeader eyebrow="Prescription" title={`${patient.name} — sign & lock`} />
       <VideoSplit video={<HomeFeed />}>
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
@@ -136,7 +155,14 @@ export function AudPrescription() {
         </div>
         {locked && <div className="mt-4"><StatusPill tone="green">Locked &amp; immutable</StatusPill></div>}
         {!locked && (
-          <div className="mt-6"><PrimaryButton onClick={lockedLatch.set}>Sign &amp; lock</PrimaryButton></div>
+          <div className="mt-6">
+            <ConfirmButton
+              label="Sign & lock"
+              confirmLabel="Confirm — sign and lock"
+              note="The shortlist and fitting parameters are frozen once you confirm."
+              onConfirm={lockedLatch.set}
+            />
+          </div>
         )}
       </Card>
       </VideoSplit>

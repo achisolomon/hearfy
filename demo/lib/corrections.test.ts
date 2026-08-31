@@ -84,8 +84,32 @@ describe("corrections sheet 2026-08-31", () => {
   // Refined 2026-08-31: the compare screen shows a picture of each device,
   // in both the desktop table and the phone cards.
   it("shows a device picture on the compare screen", () => {
-    const src = sourceOf("components/screens/patient/commerce.tsx");
+    // The comparison moved into its own component when the CMA's tablet
+    // started rendering it too; the thumbs moved with it.
+    const src = sourceOf("components/screens/compare-table.tsx");
     expect((src.match(/DeviceThumb/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+
+  // The thumb went from a flat capsule to a shaded RIC with gradients, and
+  // three of them render side by side on the compare table. SVG ids are
+  // document-global: a fixed id in <defs> would make all three shells adopt
+  // whichever gradient resolved last, so every id must derive from `finish`.
+  it("derives the device picture's SVG ids from the finish", () => {
+    const src = sourceOf("components/device-thumb.tsx");
+    const ids = src.match(/id=\{?["`][^"`}]*/g) ?? [];
+    expect(ids.length, "the drawing should define gradients").toBeGreaterThan(0);
+    for (const id of ids) {
+      expect(id, `${id} must be per-instance, not a fixed string`).toMatch(/\$\{uid\}|`/);
+    }
+    // And each reference must point at the same per-instance id.
+    expect(src).not.toMatch(/url\(#[a-z]/i);
+  });
+
+  // Three flat colour swatches read as one product in three paints only if the
+  // paints stay far enough apart to tell apart on a phone.
+  it("gives each device a visually distinct finish", () => {
+    const finishes = devices.map(d => deviceDetail[d.name].finish.toLowerCase());
+    expect(new Set(finishes).size, "each device needs its own finish").toBe(devices.length);
   });
 
   // Every screen that touches a device dereferences deviceDetail[d.name] —
@@ -181,7 +205,12 @@ describe("corrections sheet 2026-08-31", () => {
     expect(closeout, "CmaCloseout is after the call ends").not.toMatch(/CallSplit/);
     // Only the audiologist sells (sheet item 13's core rule) — the sale
     // screens must say so, not merely show her.
-    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/only Dr\. Reed recommends and sells/);
+    // The sentence now reaches the screen from mock-data (`cmaNote`), which
+    // the suitcase renders — assert on what the two files carry together, so
+    // the rule stays stated wherever the copy happens to live.
+    const saleCopy = sourceOf("components/screens/cma/suitcase.tsx") + sourceOf("lib/mock-data.ts");
+    expect(saleCopy).toMatch(/only Dr\. Reed recommends and sells/);
+    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/compareRecommendation\.cmaNote/);
   });
 
   // Refined 2026-08-31: exam step numbering is DERIVED from the step lists —
@@ -226,14 +255,24 @@ describe("corrections sheet 2026-08-31", () => {
   // Refined 2026-08-31: every audiologist screen opens with the same page
   // header — eyebrow plus title — including the two sign-off screens,
   // which used to start at a bare card.
+  //
+  // Strengthened 2026-08-31 (critique): "the same header" now means the shared
+  // PageHeader component, not a hand-rolled span that happens to match its
+  // letter-spacing. The audiologist was the only role of four whose screens
+  // rolled their own, which is how seven eyebrows ended up at Vital Teal on
+  // light — 2.87:1, against the rule DESIGN.md already states. PageHeader
+  // switches to Teal Ink on a light surface, so routing through it fixes every
+  // instance at once and stops the next one being typed.
   it("gives every audiologist screen the standard page header", () => {
     for (const file of [
       "components/screens/audiologist/supervision.tsx",
       "components/screens/audiologist/review.tsx",
       "components/screens/audiologist/consult.tsx",
     ]) {
-      const eyebrows = sourceOf(file).match(/tracking-\[\.2em\]/g) ?? [];
-      expect(eyebrows.length, `${file} holds two screens — each needs a header`).toBeGreaterThanOrEqual(2);
+      const src = sourceOf(file);
+      const headers = src.match(/<PageHeader\b/g) ?? [];
+      expect(headers.length, `${file} holds two screens — each needs a PageHeader`).toBeGreaterThanOrEqual(2);
+      expect(src, `${file} must not hand-roll an eyebrow`).not.toMatch(/tracking-\[\.2em\]/);
     }
   });
 
@@ -276,6 +315,130 @@ describe("corrections sheet 2026-08-31", () => {
     const src = sourceOf("components/screens/patient/support.tsx");
     for (const marker of ["Hearing results", "serials", "visitHistory", "membership", "Documents you signed", "Calibrate my devices"]) {
       expect(src, `support screen must include ${marker}`).toContain(marker);
+    }
+  });
+});
+
+/**
+ * The audiologist critique (2026-08-31, owner Achi Solomon). Six screens
+ * scored 22/40; these hold the fixes that answered it.
+ */
+describe("audiologist critique 2026-08-31", () => {
+  // P0 — a pulsing red border that opened nothing. The alarm has to discharge,
+  // or the clinician learns to ignore it (and "state over decoration" becomes
+  // decoration).
+  it("lets the audiologist acknowledge a red-flagged exam", () => {
+    const peek = sourceOf("components/screens/audiologist/peek.tsx");
+    expect(peek).toMatch(/Acknowledge &amp; route to on-call/);
+    expect(peek, "the flag must say what it is, not just that it exists").toMatch(/flagReason/);
+
+    const sup = sourceOf("components/screens/audiologist/supervision.tsx");
+    expect(sup, "acknowledging must clear the pulse").toMatch(/flagging\s*=\s*e\.redFlag && !acknowledged/);
+    expect(sup).toMatch(/setAcked/);
+  });
+
+  // The peek is the ceiling the persona spec sets for a non-hero exam: it may
+  // show state, never a second live call. Two feeds on screen would contradict
+  // "one call, one room" and duplicate the geometry VideoSplit owns.
+  it("keeps the peek card read-only, with no second video feed", () => {
+    // Strip comments first: this file explains in prose why it renders neither,
+    // and the explanation must not read as the thing it forbids.
+    const peek = sourceOf("components/screens/audiologist/peek.tsx")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    expect(peek).not.toMatch(/HomeFeed|VideoSplit/);
+    expect(peek, "only the hero opens full monitoring").toMatch(/\{exam\.hero &&/);
+    expect(peek).toMatch(/Open full monitoring/);
+  });
+
+  // P0 — signing releases results to the patient AND freezes the record, in
+  // one action, and shipped on a single tap. lib/latch.ts already treats
+  // irreversibility as worth engineering; this is that rigor at the trigger.
+  it("puts a confirmation step in front of both irreversible commitments", () => {
+    const confirm = sourceOf("components/screens/audiologist/confirm-button.tsx");
+    expect(confirm, "Escape must disarm").toMatch(/e\.key === "Escape"/);
+    expect(confirm, "the armed state must not be a latch — it resets between beats")
+      .toMatch(/useState\(false\)/);
+
+    for (const file of [
+      "components/screens/audiologist/review.tsx",
+      "components/screens/audiologist/consult.tsx",
+    ]) {
+      const src = sourceOf(file);
+      expect(src, `${file} must gate its commitment`).toMatch(/<ConfirmButton/);
+      expect(src, `${file} must not fire the latch from a bare button`)
+        .not.toMatch(/<PrimaryButton onClick=\{\w+Latch\.set\}/);
+    }
+  });
+
+  // The clinician's own review showed less evidence than the patient's results
+  // screen: no tympanometry (though the data existed, and the stiff left trace
+  // is what corroborates the air–bone gap) and otoscopy as text only.
+  it("shows the full exam evidence on the screen where candidacy is decided", () => {
+    const src = sourceOf("components/screens/audiologist/review.tsx");
+    expect(src, "tympanometry belongs on the review").toMatch(/tympanometry/);
+    expect(src, "the captures themselves, not a description of them").toMatch(/<EarImage/);
+    // One otoscopy view in the product: the review reuses the exam step's.
+    expect(src).toMatch(/from "\.\.\/\.\.\/exam\/otoscopy-step"/);
+  });
+
+  // She authors the reasoning the patient later reads, so the consult has to
+  // show that reasoning — not the marketing feature list.
+  it("shows clinical fit factors on the consult, not the spec sheet", () => {
+    const src = sourceOf("components/screens/audiologist/consult.tsx");
+    expect(src).toMatch(/deviceDetail\[d\.name\]\.fitFactors/);
+    expect(src).not.toMatch(/d\.features\.join/);
+  });
+
+  // The exclusion rationale names one device's fitting type. Achi chose to
+  // pin the pairing rather than restructure the fixtures, so this is the pin:
+  // reorder `devices` and the build fails instead of the screen quietly
+  // stating something false about a real product.
+  it("keeps the exclusion rationale married to the device it describes", () => {
+    expect(devices[2].name).toBe("Oticon Intent 2");
+    const src = sourceOf("components/screens/audiologist/consult.tsx");
+    expect(src).toMatch(/devices\[2\]\.name/);
+    expect(src, "the rationale is about an open fitting and the left air–bone gap")
+      .toMatch(/open fitting is unsuitable/i);
+  });
+
+  // Vital Teal at eyebrow size measured 2.87:1 on the light ground — the exact
+  // case DESIGN.md forbids. PageHeader owns the light/dark decision now, so no
+  // audiologist screen may name the raw token for text again.
+  // The rule is about TEXT below 18px: a lucide glyph sized in px, or an icon
+  // sitting on the #edf8f7 tile, is not text and is not what fails to read.
+  // So this looks for text-brand-teal in a class list that also sets a text
+  // size — the eyebrow shape that actually shipped at 2.87:1.
+  it("never puts Vital Teal text on the light ground", () => {
+    for (const file of componentFiles().filter(f => f.includes("screens/audiologist/"))) {
+      const src = sourceOf(file);
+      for (const cls of src.match(/className="[^"]*text-brand-teal[^"]*"/g) ?? []) {
+        expect(cls, `${file}: teal text below 18px must be Teal Ink`).not.toMatch(/text-\[\d/);
+        expect(cls, `${file}: teal text below 18px must be Teal Ink`).not.toMatch(/text-(xs|sm|base)\b/);
+      }
+      expect(src, `${file} must not fill with brand-teal behind white text`)
+        .not.toMatch(/bg-brand-teal text-white/);
+    }
+  });
+
+  // "Ticking timers, advancing steps" (persona spec §2) — the panel read as a
+  // screenshot. Motion is opt-out everywhere in this demo, so the interval
+  // must not start under prefers-reduced-motion.
+  it("advances the wait times, and stops for reduced motion", () => {
+    const src = sourceOf("components/screens/audiologist/supervision.tsx");
+    expect(src).toMatch(/setInterval/);
+    expect(src).toMatch(/prefers-reduced-motion: reduce/);
+    expect(src, "the interval must be cleared").toMatch(/clearInterval/);
+  });
+
+  // Every animation in the demo needs a reduced-motion path; the live dot was
+  // the one that shipped without one.
+  it("gives every audiologist animation a reduced-motion escape", () => {
+    for (const file of componentFiles().filter(f => f.includes("screens/audiologist/"))) {
+      const src = sourceOf(file);
+      const pulses = (src.match(/animate-pulse/g) ?? []).length;
+      const escapes = (src.match(/motion-reduce:animate-none/g) ?? []).length;
+      expect(escapes, `${file}: ${pulses} animation(s), ${escapes} escape(s)`).toBe(pulses);
     }
   });
 });

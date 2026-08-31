@@ -9,6 +9,7 @@ import { SIGNING_ITEMS, canSign, sign, toggleSigningItem, useSigning } from "@/l
 import { cn } from "@/lib/cn";
 import { ScreenId } from "../registry";
 import { Shell } from "../shared";
+import { CompareTable } from "../compare-table";
 
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
@@ -18,93 +19,30 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   // `lg`, the side-by-side table — both trees are in the DOM, toggled by
   // Tailwind visibility. Device columns are `fr` units on purpose (no
   // px/rem floor), so the table can never overflow or need a scrollbar.
-  return <Shell wide>
+  // The patient is on a PHONE (2026-08-31): the six-across table is the
+  // CMA's tablet view, not theirs. This screen keeps the phone column and
+  // the stacked cards — one package at a time, the same six rows — so the
+  // call tile and the cards each get the full width instead of splitting
+  // ~490px between them. `CompareTable` renders its stacked branch here and
+  // its wide branch on the CMA's screen from one source of truth.
+  return <Shell>
     {/* Renamed from "Compare devices" (corrections sheet 2026-08-31, item 9):
        what the patient picks is the service package the device belongs to. */}
-    <PageHeader title="Compare service packages" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
+    <PageHeader title="Compare service packages" subtitle="One package at a time — the same six things for each. Dr. Reed is on the call if you want to talk it through." onBack={back} eyebrow="Compare"/>
 
-    {/* Desktop / tablet-landscape: a real side-by-side table. Fluid grid
-       columns (fr units) mean the table can only ever get narrower or wider
-       with its container — never wider than the viewport, never a fixed
-       floor to clip or scroll past. */}
-    <div className="hidden lg:block">
-      <Card className="overflow-hidden p-0">
-        <div className="grid grid-cols-[9rem_repeat(3,1fr)]">
-          <div/>
-          {shortlist.map(d=>{
-            const isSel = d.name===selected.name;
-            const detail = deviceDetail[d.name];
-            return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 text-left transition",
-              isSel?"bg-brand-teal/10":"")}>
-              <div className="mb-3 grid h-20 place-items-center rounded-xl bg-gradient-to-br from-[#eef6f6] to-white">
-                <DeviceThumb finish={detail.finish} className="h-16 w-16"/>
-              </div>
-              <b className="block text-[15px] leading-tight">{d.name}</b>
-              <span className="mt-1 block text-[12px] text-slate-500">
-                ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
-              </span>
-              <button
-                type="button"
-                aria-pressed={isSel}
-                onClick={()=>selectDevice(d.name)}
-                className={cn("mt-3 w-full rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
-                  isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500 hover:bg-[#e4eef0]")}>
-                {isSel?"Selected":"Select"}
-              </button>
-            </div>;
-          })}
-        </div>
-        {compareCategories.map(cat=><div key={cat} className="grid grid-cols-[9rem_repeat(3,1fr)] border-t border-[#eef4f5]">
-          <div className="p-4"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</span></div>
-          {shortlist.map(d=>{
-            const isSel = d.name===selected.name;
-            const detail = deviceDetail[d.name];
-            return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 transition",isSel?"bg-brand-teal/5":"")}>
-              <p className="text-[13px] leading-5 text-slate-600">{detail.compare[cat]}</p>
-            </div>;
-          })}
-        </div>)}
-      </Card>
-    </div>
+    {/* She is on the call while the packages are on screen: only the
+       audiologist recommends, so the comparison never appears without her
+       clinical reason for the pick (2026-08-31). */}
+    {/* No call tile here (2026-08-31): the video lives on the CMA's tablet
+       and the audiologist's screen, which have the width for it. The patient
+       is on a phone, where a 4:3 panel above the cards pushed the packages
+       below the fold. Her recommendation still reaches them — as her words,
+       carried on the card of each package. */}
 
-    {/* Phone / tablet-portrait: stacked one-card-per-device, unchanged from
-       the previous attempt — no scroll structurally, since every value
-       wraps in a single column instead of fighting for table width. */}
-    <div className="space-y-4 lg:hidden">
-      {shortlist.map(d=>{
-        const isSel = d.name===selected.name;
-        const detail = deviceDetail[d.name];
-        return <Card key={d.name} className={cn("overflow-hidden p-0 transition",
-          isSel?"border-brand-teal ring-2 ring-brand-teal":"border-[#e4eef0]")}>
-          <button
-            type="button"
-            aria-pressed={isSel}
-            onClick={()=>selectDevice(d.name)}
-            className={cn("flex w-full items-center justify-between gap-3 p-4 text-left transition",
-              isSel?"bg-brand-teal/10":"hover:bg-[#f8fafb]")}>
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#eef6f6] to-white">
-              <DeviceThumb finish={detail.finish} className="h-12 w-12"/>
-            </span>
-            <span className="min-w-0 flex-1">
-              <b className="block text-[15px] leading-tight">{d.name}</b>
-              <span className="mt-1 block text-[12px] text-slate-500">
-                ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
-              </span>
-            </span>
-            <span className={cn("shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider",
-              isSel?"bg-brand-teal text-white":"bg-[#f1f5f6] text-slate-500")}>
-              {isSel?"Selected":"Select"}
-            </span>
-          </button>
-          <div className="space-y-3 border-t border-[#eef4f5] p-4">
-            {compareCategories.map(cat=><div key={cat}>
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat}</span>
-              <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{detail.compare[cat]}</p>
-            </div>)}
-          </div>
-        </Card>;
-      })}
-    </div>
+    {/* One table, two surfaces: the CMA's tablet renders the same component
+       read-only, so the comparison the patient reads and the one on the
+       tablet can never diverge. */}
+    <CompareTable layout="cards" onSelect={selectDevice}/>
 
     <div className="mt-6"><PrimaryButton onClick={()=>go("checkout")}>Continue with the {selected.name}</PrimaryButton></div>
   </Shell>;
@@ -120,7 +58,7 @@ export function Checkout({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
       <div className="space-y-3">
         <div className="flex justify-between text-sm"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
         {/* The promise made at booking, visibly kept (spec §9a). */}
-        <div className="flex justify-between text-sm text-brand-teal">
+        <div className="flex justify-between text-sm text-teal-ink">
           <span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
         <div className="flex items-center justify-between border-t border-[#eef4f5] pt-3">
           <b>Due today</b><b className="text-2xl">${dueNow}</b></div>
@@ -152,7 +90,7 @@ export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     <Card className="p-5">
       <div className="space-y-2 text-sm">
         <div className="flex justify-between"><span className="text-slate-500">{chosen.name} · {tier.name}</span><b>${monthly}/mo</b></div>
-        <div className="flex justify-between text-brand-teal"><span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
+        <div className="flex justify-between text-teal-ink"><span>Your $99 visit fee, credited</span><b>−${credit}</b></div>
         <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3"><b>Due today</b><b className="text-lg">${dueNow}</b></div>
       </div>
       <p className="mt-3 text-xs leading-5 text-slate-500">Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.</p>

@@ -27,9 +27,10 @@ function Tympanogram({ peak, shift, color }: { peak: number; shift: number; colo
 
 /** One tympanogram per ear (corrections sheet 2026-08-31, item 5). */
 export function TympanometryStep({ framing }: { framing: Framing }) {
+  // Left ear in the left column, right ear on the right (see OtoscopyStep).
   const ears = [
-    { label: "Right ear", peak: 44, shift: -4, color: "#ef6b6b", ...tympanometry.right },
     { label: "Left ear", peak: 22, shift: -12, color: "#2788c8", ...tympanometry.left },
+    { label: "Right ear", peak: 44, shift: -4, color: "#ef6b6b", ...tympanometry.right },
   ];
   return (
     <>

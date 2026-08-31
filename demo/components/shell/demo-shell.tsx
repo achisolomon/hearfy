@@ -29,16 +29,26 @@ export function DemoShell() {
     <>
       {/* Desktop: slim persistent top bar. */}
       <div className="sticky top-0 z-40 hidden border-b border-[#dce7e9] bg-white/95 backdrop-blur md:block">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-5">
+        {/* The bar turns on at `md` (768px) but its contents — logo, four role
+            tabs, nine timeline dots, Back and Next — measured 1078px, so from
+            768px up to roughly a laptop the whole PAGE scrolled sideways on
+            every screen (found 2026-08-31 walking at 768px). `min-w-0` lets
+            the row's children shrink instead of forcing the row wider than
+            its container, and the timeline — the one control here that is a
+            shortcut rather than the only way to do something, since Next and
+            Back still move the story — waits for `xl`, where there is room
+            for all nine dots. Nothing is removed at any width; the stage
+            jumper simply reappears once it fits. */}
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-5 lg:gap-4">
           <BrandLogo compact />
-          <RoleTabs />
+          <div className="min-w-0 shrink"><RoleTabs /></div>
           <div className="flex-1" />
-          <Timeline />
+          <div className="hidden xl:block"><Timeline /></div>
           <button
             onClick={back}
             disabled={atStart}
             aria-label="Previous beat"
-            className="flex items-center gap-1.5 rounded-full border border-[#dce7e9] px-3 py-2 text-xs font-bold text-brand-navy disabled:border-transparent disabled:text-slate-300"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#dce7e9] px-3 py-2 text-xs font-bold text-brand-navy disabled:border-transparent disabled:text-slate-300"
           >
             <ArrowLeft size={14} /> Back
           </button>
@@ -47,7 +57,7 @@ export function DemoShell() {
           <button
             onClick={next}
             disabled={atWalkEnd}
-            className="flex items-center gap-1.5 rounded-full bg-brand-navy px-4 py-2 text-xs font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-navy px-4 py-2 text-xs font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
           >
             {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={14} /></>}
           </button>

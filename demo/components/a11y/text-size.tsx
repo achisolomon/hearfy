@@ -125,8 +125,12 @@ export function TextSize() {
           onClick={() => setIndex(idx)}
           aria-pressed={i === idx}
           aria-label={`${s.id} text size`}
-          className={cn("grid h-8 w-8 place-items-center rounded-full font-bold transition",
-            i === idx ? "bg-brand-navy text-white" : "text-slate-500")}
+          // h-11 (44px), not h-8: this is the low-vision patient's own
+          // control, so it must clear the 44px touch minimum rather than sit
+          // under it at 36px. The visual pill stays compact because the
+          // buttons are round and the label inside them is unchanged.
+          className={cn("grid h-11 w-11 place-items-center rounded-full font-bold transition",
+            i === idx ? "bg-brand-navy text-white" : "text-slate-500 hover:bg-[#f1f5f6]")}
           style={{ fontSize: `${11 * s.scale}px` }}
         >
           {s.label}

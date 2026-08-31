@@ -6,7 +6,8 @@ import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { Shell } from "../shared";
 import { CallSplit } from "./call-tile";
-import { devices, deviceDetail, identity, patient, serials } from "@/lib/mock-data";
+import { devices, deviceDetail, identity, patient, serials, compareRecommendation, tryOnTalk } from "@/lib/mock-data";
+import { CompareTable } from "../compare-table";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { SIGNING_ITEMS, useSigning } from "@/lib/signing";
 
@@ -24,7 +25,18 @@ export function CmaStock({ next }: { next: () => void }) {
   return (
     <Shell tablet>
       <PageHeader title="Signed shortlist" subtitle="Open the case. The patient tries what is here." eyebrow="Prescription locked" />
-      <CallSplit active note="Presenting the shortlist over video — only Dr. Reed recommends and sells. You open the case.">
+      <CallSplit active note={compareRecommendation.note}>
+        {/* The same comparison the patient is reading, read-only: the CMA
+           follows the conversation without being able to choose or sell. */}
+        <Card className="mb-4 flex gap-3 p-4">
+          <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
+          <p className="text-sm leading-6 text-slate-500">{compareRecommendation.cmaNote}</p>
+        </Card>
+        <CompareTable layout="table" selectable={false} />
+
+        <p className="mb-2 mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+          In the case
+        </p>
         <div className="space-y-3">
           {shortlist.map(d => {
             const detail = deviceDetail[d.name];
@@ -69,11 +81,12 @@ export function CmaTryOn({ next }: { next: () => void }) {
   const gateOpen = tried.length > 0 || everTried;
   return (
     <Shell tablet>
-      <PageHeader title="Try-on" subtitle="Fit each device. Record which ones were tried." eyebrow="In the home" />
-      <CallSplit note="Watching each fit on the call — comfort and retention are hers to judge with the patient.">
+      <PageHeader title="Try-on" subtitle="Fit each device. The patient tells Dr. Reed how it feels and what they hear." eyebrow="In the home" />
+      <CallSplit active note="Asking how each one sounds — comfort and retention are hers to judge with the patient.">
         <div className="space-y-3">
           {inCase.map(d => {
             const on = tried.includes(d.name);
+            const talk = tryOnTalk[d.name];
             return (
               <button key={d.name}
                 aria-pressed={on}
@@ -87,6 +100,20 @@ export function CmaTryOn({ next }: { next: () => void }) {
                 <span className="flex-1">
                   <b className="block text-sm">{d.name}</b>
                   <span className="text-xs text-slate-500">Dome size M · left and right</span>
+                  {/* Recording the fit opens the conversation it stands for:
+                     what the patient hears, and her read on it. Comfort and
+                     retention are hers to judge WITH the patient, so both
+                     voices belong on the screen — not just a tick. */}
+                  {on && talk && (
+                    <span className="mt-2 block space-y-1.5 border-t border-brand-teal/25 pt-2">
+                      <span className="block text-xs italic leading-5 text-brand-navy">
+                        {patient.name}: {talk.patient}
+                      </span>
+                      <span className="block text-xs leading-5 text-slate-500">
+                        <b className="font-semibold text-teal-ink">Dr. Reed:</b> {talk.clinician}
+                      </span>
+                    </span>
+                  )}
                 </span>
               </button>
             );
@@ -95,6 +122,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
         <Card className="mt-4 p-4">
           <p className="text-sm leading-6 text-slate-500">
             Check comfort and retention on both ears. Swap dome size if the fit is loose.
+            {" "}She asks the patient how each one sounds before anything is chosen.
           </p>
         </Card>
         <div className="mt-6">

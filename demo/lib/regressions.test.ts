@@ -3,6 +3,7 @@ import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
 import { audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
+import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
 
 const order = screenOrder();
 
@@ -217,9 +218,11 @@ describe("patient device choice", () => {
   // and Checkout still derives its device from that store rather than
   // regressing to a literal devices[0].
   it("keeps Compare and Checkout wired to the shared selection store after the layout rewrite", () => {
+    // Compare hands `selectDevice` to the shared table; the table reads the
+    // store. Both halves of that wiring must survive a layout change.
     const compareBlock = commerce.split("export function Checkout")[0];
-    expect(compareBlock).toContain("selectDevice(");
-    expect(compareBlock).toContain("useSelectedDevice(");
+    expect(compareBlock).toContain("selectDevice");
+    expect(sourceOf("components/screens/compare-table.tsx")).toContain("useSelectedDevice(");
 
     const checkoutBlock = commerce.split("export function Checkout")[1]?.split("export function Order")[0] ?? "";
     expect(checkoutBlock).toContain("useSelectedDevice(");
@@ -672,11 +675,20 @@ describe("clinical screens", () => {
   });
 
   // Five of six supervision tiles were buttons with no handler: focusable,
-  // announced as actionable, silently inert.
-  it("does not render a read-only supervision tile as a button", () => {
+  // announced as actionable, silently inert. The first fix made them plain
+  // <div>s. The critique (2026-08-31) found the real fault underneath: the
+  // red-flagged exam could not be opened at all, so a pulsing alarm resolved
+  // to nothing. Every tile is a button again — but now each one carries a
+  // handler that opens its peek card, which is what the original test was
+  // protecting against the absence of.
+  it("gives every supervision tile a real handler, never an inert control", () => {
     const sup = sourceOf("components/screens/audiologist/supervision.tsx");
     expect(sup).not.toMatch(/onClick=\{e\.hero \? onOpen : undefined\}/);
-    expect(sup).toContain("if (!e.hero) return <div");
+    expect(sup).not.toContain("if (!e.hero) return <div");
+    // One tile component, one unconditional handler: no branch can produce a
+    // focusable control that does nothing.
+    expect(sup).toMatch(/<button\s+onClick=\{onOpen\}/);
+    expect(sup).toMatch(/onOpen=\{\(\) => setOpenId\(e\.id\)\}/);
   });
 
   // Icons that carry state need text beside them, per the audiogram's own rule.
@@ -781,8 +793,7 @@ describe("text-size clipping", () => {
   // Compare no longer renders a wide table at all, so there is nothing left
   // to scroll or to floor with a min-width.
   it("gives Compare no horizontally-scrolling region — the owner rejected the scrollbar, so the layout must stack instead", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
     expect(compareBlock).not.toMatch(/overflow-x-auto|overflow-auto/);
     expect(compareBlock).not.toMatch(/\bmin-w-\[/);
   });
@@ -824,22 +835,17 @@ describe("text-size clipping", () => {
   // independently to the same source of truth (`compareCategories`, three
   // devices) rather than trusting that fixing one fixed both.
   it("shows all six categories and all three devices in both the desktop table and the stacked cards", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
 
-    // The two branches are visibility-gated with Tailwind's `hidden lg:*` /
-    // `lg:hidden` idiom (see the "shows a wide table only from `lg`..." test
-    // below for why that idiom, not a JS media-query check, is what's
-    // asserted here).
-    const desktopMatch = /hidden lg:(?:block|flex|grid)[^"]*"[^]*?(?=lg:hidden|$)/.exec(compareBlock);
-    const mobileMatch = /\blg:hidden\b[^]*$/.exec(compareBlock);
-    expect(desktopMatch, "could not locate a `hidden lg:*` desktop branch in Compare").toBeTruthy();
-    expect(mobileMatch, "could not locate an `lg:hidden` mobile branch in Compare").toBeTruthy();
+    // The branches are now selected by ROLE (`layout`), not by viewport
+    // width: the patient is on a phone and the CMA on a tablet regardless of
+    // how wide the browser window happens to be.
+    const tableMatch = /layout === "table"[^]*?(?=layout === "cards"|$)/.exec(compareBlock);
+    const cardsMatch = /layout === "cards"[^]*$/.exec(compareBlock);
+    expect(tableMatch, "could not locate the table branch in Compare").toBeTruthy();
+    expect(cardsMatch, "could not locate the cards branch in Compare").toBeTruthy();
 
-    const desktopBranch = desktopMatch![0];
-    const mobileBranch = mobileMatch![0];
-
-    for (const branch of [desktopBranch, mobileBranch]) {
+    for (const branch of [tableMatch![0], cardsMatch![0]]) {
       // All six categories: both branches must iterate the shared array
       // rather than hand-listing a subset of it.
       expect(branch).toContain("compareCategories.map");
@@ -855,11 +861,17 @@ describe("text-size clipping", () => {
   // codebase's established way to show/hide by breakpoint — see BottomNav's
   // sibling screens) rather than a media query or JS width check, so both
   // trees are always in the DOM and nothing depends on JS running first.
-  it("gives Compare a wide table shown only from `lg` and stacked cards hidden from `lg`", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
-    expect(compareBlock).toMatch(/hidden lg:(?:block|flex|grid)/);
-    expect(compareBlock).toMatch(/\blg:hidden\b/);
+  it("picks the comparison layout by role, never by viewport width", () => {
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
+    // A wide browser window is not a tablet. Gating on `lg` rendered the
+    // six-across table inside the patient's max-w-md column, clipping the
+    // third device off the screen.
+    expect(compareBlock).toMatch(/layout === "table"/);
+    expect(compareBlock).toMatch(/layout === "cards"/);
+    expect(compareBlock).not.toMatch(/hidden lg:(?:block|flex|grid)|\blg:hidden\b/);
+    // Each surface asks for the layout its device actually has.
+    expect(sourceOf("components/screens/patient/commerce.tsx")).toMatch(/layout="cards"/);
+    expect(sourceOf("components/screens/cma/suitcase.tsx")).toMatch(/layout="table"/);
   });
 
   // The header row was a bare `{shortlist.map(...)}` with no leading cell,
@@ -871,8 +883,7 @@ describe("text-size clipping", () => {
   // something in the leading (label) slot before it maps the three devices,
   // so the declared column count always matches the rendered cell count.
   it("gives every grid-cols-[9rem_repeat(3,1fr)] row in Compare a leading cell before it maps the three devices", () => {
-    const commerce = sourceOf("components/screens/patient/commerce.tsx");
-    const compareBlock = commerce.split("export function Checkout")[0];
+    const compareBlock = sourceOf("components/screens/compare-table.tsx");
     const GRID_ROW_OPEN = /grid-cols-\[9rem_repeat\(3,1fr\)\][^>]*>/g;
     const bareRows: string[] = [];
     let match: RegExpExecArray | null;
@@ -1894,5 +1905,268 @@ describe("audiogram band labels collide with nothing", () => {
     const padL = Number(/PAD_L = (\d+)/.exec(src)![1]);
     const dbMax = Number(/DB_MAX = (\d+)/.exec(src)![1]);
     expect(padL).toBeGreaterThanOrEqual(String(dbMax).length * 8 * 0.5 + 6);
+  });
+});
+
+describe("Dr. Reed's camera feed", () => {
+  const feed = sourceOf("components/screens/cma/reed-feed.tsx");
+  const tile = sourceOf("components/screens/cma/call-tile.tsx");
+
+  // The tile drew an "SR" initials chip on a navy gradient. Once real footage
+  // existed, a leftover placeholder would have shown two different Dr. Reeds
+  // depending on which screen you were on.
+  it("shows the footage, not the SR initials placeholder", () => {
+    expect(tile).not.toContain(">SR<");
+    expect(tile).toContain("<ReedFeed");
+  });
+
+  // The source take talks for ~87% of its 10s. Reusing one loop everywhere put
+  // a silently mouthing doctor under every idle screen, where the app is not
+  // claiming she is speaking.
+  it("plays a different loop when she is speaking than when she is listening", () => {
+    expect(feed).toContain("reed-speaking.mp4");
+    expect(feed).toContain("reed-idle.mp4");
+    expect(feed).toContain("active ?");
+  });
+
+  // There is exactly ONE call tile now (the 4:3 ZoomPanel): the patient's
+  // slim strip was a second shape for the same call, so the video changed
+  // size and position between roles. Every surface renders the one panel,
+  // and it takes `active` so the loop matches the SPEAKING pill.
+  it("renders the feed from exactly one call tile, wired to `active`", () => {
+    expect([...tile.matchAll(/<ReedFeed active=\{active\}/g)]).toHaveLength(1);
+    expect(tile).not.toMatch(/h-20 w-24/);
+  });
+
+  // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a
+  // raw <video src> alone, so a literal "/video/..." 404s in production while
+  // working on localhost.
+  it("builds asset URLs through the basePath helper", () => {
+    expect(feed).toContain("asset(");
+    expect(feed).not.toMatch(/(src|poster)=\{?["`]\/video\//);
+  });
+
+  // Autoplay is only permitted for muted video, and the demo has no audio.
+  it("is muted, looping and inline so it can autoplay", () => {
+    for (const attr of ["autoPlay", "loop", "muted", "playsInline"]) {
+      expect(feed).toContain(attr);
+    }
+  });
+
+  // The demo-wide contract: motion degrades to a still, never plays anyway.
+  it("falls back to a poster still under prefers-reduced-motion", () => {
+    expect(feed).toContain("prefers-reduced-motion: reduce");
+    expect(feed).toContain("reed-poster.jpg");
+  });
+
+  // The LIVE/SPEAKING pills and call controls are DOM overlays. If they were
+  // ever baked into the footage the tile would render them twice.
+  it("keeps the call chrome in the DOM, over the feed", () => {
+    expect(tile).toContain("Live");
+    expect(tile).toContain("Speaking");
+  });
+});
+
+describe("the audiologist presents the comparison", () => {
+  const table = sourceOf("components/screens/compare-table.tsx");
+  const commerce = sourceOf("components/screens/patient/commerce.tsx");
+  const suitcase = sourceOf("components/screens/cma/suitcase.tsx");
+
+  // The comparison must never appear without her reason for the pick — the
+  // app's own rule is that only the audiologist recommends. On the patient's
+  // PHONE that reason travels on the cards, not in a call tile: a 4:3 panel
+  // above them pushed the packages below the fold (2026-08-31).
+  it("carries her recommendation on the patient's compare screen", () => {
+    expect(table).toContain("compareRecommendation.reasons");
+  });
+
+  // The call tile belongs to the surfaces with the width for it.
+  it("keeps the video off the patient's phone and on the CMA's screen", () => {
+    expect(commerce).not.toMatch(/AudiologistStrip|ZoomPanel|VideoSplit/);
+    expect(suitcase).toContain("CallSplit");
+  });
+
+  // Two surfaces rendering their own copy of the same table is how they
+  // drift; one component, two modes.
+  it("renders one table on both the patient phone and the CMA tablet", () => {
+    expect(commerce).toContain("<CompareTable");
+    expect(suitcase).toContain("<CompareTable");
+  });
+
+  // The patient decides and the CMA cannot sell, so only the patient's copy
+  // carries live Select controls.
+  it("gives the CMA a read-only copy — they cannot choose for the patient", () => {
+    expect(suitcase).toMatch(/<CompareTable[^>]*selectable=\{false\}/);
+    expect(table).toContain("selectable");
+    // The read-only branch must not wire a click handler at all.
+    expect(table).toMatch(/Patient’s choice/);
+  });
+
+  // Her recommendation has to be derived from the same clinical data the
+  // table shows, or the caption and the columns can tell the patient
+  // different things.
+  it("names a device that is actually on the shortlist", () => {
+    const names = devices.slice(0, 3).map(d => d.name);
+    expect(names).toContain(compareRecommendation.device);
+    for (const n of names) {
+      expect(compareRecommendation.reasons[n], `no reason for ${n}`).toBeTruthy();
+    }
+  });
+
+  // Teal marks live/positive state (The Vital Signal Rule) — a "not advised"
+  // device must not be painted with it.
+  it("marks only the recommended device in teal", () => {
+    expect(table).toMatch(/compareRecommendation\.device \? "text-teal-ink" : "text-slate-500"/);
+  });
+});
+
+describe("one call tile everywhere", () => {
+  // The call was drawn two ways: VideoSplit's 380px 4:3 panel for the CMA and
+  // audiologist, and a slim strip with a 96x80 thumbnail on the patient's five
+  // screens. Same call, two sizes and two shapes, depending which role you
+  // were looking at — exactly what VideoSplit's docblock promises cannot
+  // happen. Pin the shape so a second one cannot come back.
+  it("defines the call's aspect ratio in exactly one place", () => {
+    const owners = componentFiles()
+      .filter(f => /aspect-\[4\/3\]/.test(sourceOf(f)))
+      .sort();
+    expect(owners).toEqual([
+      "components/screens/audiologist/home-feed.tsx",
+      "components/screens/cma/call-tile.tsx",
+    ]);
+  });
+
+  // No screen may size the feed by hand; the tile owns its own box.
+  it("has no fixed-pixel video thumbnail left anywhere", () => {
+    for (const f of componentFiles()) {
+      expect(sourceOf(f), `${f} sizes a call feed by hand`).not.toMatch(/h-20 w-24/);
+    }
+  });
+
+  // The patient's screens must render the same tile the pro roles do, not a
+  // bespoke one of their own.
+  it("gives the patient the same tile as every other role", () => {
+    const tile = sourceOf("components/screens/cma/call-tile.tsx");
+    expect(tile).toMatch(/export function AudiologistStrip[^]*?<ZoomPanel/);
+  });
+});
+
+describe("ear laterality", () => {
+  // Every ear pair in the demo rendered right-then-left, so the patient's
+  // LEFT ear sat in the RIGHT column on otoscopy, tympanometry, pure tone,
+  // speech, the audiogram legend, the clinical review and the care record.
+  // Audiograms are read anatomically — left on the left — and a demo that
+  // mirrors the patient teaches the wrong reading of its own charts.
+  //
+  // The invariant, not the instance: no component may name "Right" before
+  // "Left" inside a single ear-pair literal, so a new paired step is covered
+  // without anyone remembering to add a case here.
+  const PAIRS = [
+    // Array/tuple literals listing both ears: [["Right", …], ["Left", …]]
+    /\[\s*\[\s*"Right"[^]*?\[\s*"Left"/,
+    // Object literals keyed by label: { label: "Right ear" … label: "Left ear" }
+    /label:\s*"Right ear"[^]*?label:\s*"Left ear"/,
+    // Adjacent JSX ear cards or legend entries.
+    /"Right ear"[^]*?"Left ear"/,
+    /(?:>|\s)Right ear \(air\)[^]*?Left ear \(air\)/,
+    /<EarCard label="Right ear"[^]*?<EarCard label="Left ear"/,
+  ];
+
+  it("puts the left ear before the right everywhere a pair is rendered", () => {
+    const offenders: string[] = [];
+    for (const f of componentFiles()) {
+      const src = sourceOf(f);
+      // Strip comments: the explanatory notes legitimately say "right" first.
+      const code = src.replace(/\/\*[^]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+      if (PAIRS.some(re => re.test(code))) offenders.push(f);
+    }
+    expect(offenders, "renders the right ear before the left").toEqual([]);
+  });
+
+  // The two-column grids specifically: the left ear must be the first child.
+  it("orders the paired exam steps left ear first", () => {
+    const steps = [
+      "components/exam/otoscopy-step.tsx",
+      "components/exam/tympanometry-step.tsx",
+      "components/exam/speech-step.tsx",
+      "components/exam/puretone-step.tsx",
+      "components/screens/patient/results.tsx",
+      "components/screens/patient/support.tsx",
+    ];
+    for (const f of steps) {
+      const code = sourceOf(f)
+        .replace(/\/\*[^]*?\*\//g, "")
+        .replace(/\/\/[^\n]*/g, "");
+      // Only quoted ear labels count — `ChevronRight` and `text-right` are not
+      // lateralities, and matching bare "Right" made this test lie.
+      const sides = [...code.matchAll(/"(Left|Right)(?: ear)?"/g)].map(m => m[1]);
+      expect(sides.length, `${f} renders no ear pair`).toBeGreaterThanOrEqual(2);
+      expect(sides[0], `${f} renders the right ear before the left`).toBe("Left");
+      expect(sides[1]).toBe("Right");
+    }
+  });
+
+  // The audiologist's review shows three pairs (speech, tympanometry,
+  // otoscopy); each must lead with the left ear.
+  it("orders every pair on the clinical review left ear first", () => {
+    const code = sourceOf("components/screens/audiologist/review.tsx")
+      .replace(/\/\*[^]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+    // Two label forms live here: quoted strings in the mapped tuples
+    // (tympanometry, otoscopy) and JSX text nodes in the speech pair.
+    const sides = [...code.matchAll(/"(Left|Right)(?: ear)?"|>(Left|Right)</g)]
+      .map(m => m[1] ?? m[2]);
+    // Three pairs: speech, tympanometry, otoscopy captures.
+    expect(sides.length).toBe(6);
+    for (let i = 0; i < sides.length; i += 2) {
+      expect(sides[i], "a review pair leads with the right ear").toBe("Left");
+      expect(sides[i + 1]).toBe("Right");
+    }
+  });
+
+  // The audiogram legend is read alongside the chart; it follows the same order.
+  it("lists the left ear first in the audiogram legend", () => {
+    const code = sourceOf("components/charts/audiogram.tsx")
+      .replace(/\/\*[^]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+    expect(code.indexOf("Left ear (air)")).toBeLessThan(code.indexOf("Right ear (air)"));
+  });
+});
+
+describe("the sale runs on the right screen", () => {
+  const beatOf = (id: string) => BEATS[beatIndexById(id)];
+
+  // The comparison and the try-on both happen on the CMA's tablet, with Dr.
+  // Reed on video. `stock` led with the patient, so the guided walk jumped to
+  // a phone showing packages while the conversation was on the tablet.
+  it("leads the comparison and the try-on from the CMA's tablet", () => {
+    expect(beatOf("stock").lead).toBe("cma");
+    expect(beatOf("tryon").lead).toBe("cma");
+    expect(beatOf("stock").screens.cma).toBe("cma-stock");
+    expect(beatOf("tryon").screens.cma).toBe("cma-tryon");
+  });
+
+  // ...and only then does the patient decide, on their own phone, before
+  // paying. Compare -> try-on -> choose -> checkout, in that order.
+  it("hands the decision to the patient after the try-on, before checkout", () => {
+    const i = (id: string) => beatIndexById(id);
+    expect(i("stock")).toBeLessThan(i("tryon"));
+    expect(i("tryon")).toBeLessThan(i("choose"));
+    expect(i("choose")).toBeLessThan(i("checkout"));
+    expect(beatOf("choose").lead).toBe("patient");
+    expect(beatOf("choose").screens.patient).toBe("compare");
+  });
+
+  // The try-on is a conversation, not a checkbox: comfort and what the
+  // patient hears are the audiologist's to judge WITH them, so both voices
+  // are on the screen once a fit is recorded.
+  it("carries both voices on the try-on", () => {
+    const suitcase = sourceOf("components/screens/cma/suitcase.tsx");
+    expect(suitcase).toContain("tryOnTalk");
+    for (const d of devices.filter(d => deviceDetail[d.name].inCase)) {
+      expect(tryOnTalk[d.name], `no try-on talk for ${d.name}`).toBeTruthy();
+      expect(tryOnTalk[d.name].patient).toBeTruthy();
+      expect(tryOnTalk[d.name].clinician).toBeTruthy();
+    }
   });
 });

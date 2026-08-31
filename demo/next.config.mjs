@@ -13,6 +13,8 @@ const nextConfig = {
   basePath: isPages ? "/hearfy" : "",
   assetPrefix: isPages ? "/hearfy/" : undefined,
   images: { unoptimized: true },
+  // Exposed so client code can build raw asset URLs (see lib/asset.ts).
+  env: { NEXT_PUBLIC_BASE_PATH: isPages ? "/hearfy" : "" },
 };
 
 export default nextConfig;

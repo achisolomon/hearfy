@@ -23,7 +23,8 @@ export function SpeechStep({ framing }: { framing: Framing }) {
       </Card>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        {([["Right", speech.right], ["Left", speech.left]] as const).map(([ear, score]) => (
+        {/* Left ear in the left column, right on the right. */}
+        {([["Left", speech.left], ["Right", speech.right]] as const).map(([ear, score]) => (
           <Card key={ear} className="p-4 text-center">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{ear}</span>
             <b className="mt-1 block text-3xl text-brand-navy">{score}%</b>

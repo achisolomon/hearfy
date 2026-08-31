@@ -13,8 +13,8 @@ export function Review({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <
 // its own chart and its own summary line, not a shared overlay.
 export function Results({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const ears=[
-    {label:"Right ear",ear:"right" as const,avg:pta(audiogram.frequencies,audiogram.right)},
     {label:"Left ear",ear:"left" as const,avg:pta(audiogram.frequencies,audiogram.left)},
+    {label:"Right ear",ear:"right" as const,avg:pta(audiogram.frequencies,audiogram.right)},
   ];
   return <Shell><PageHeader title="Your hearing results" subtitle="Two results, one for each ear. Reviewed and signed by Dr. Susan Reed." onBack={back} eyebrow="Results"/>
   {/* Chart world: the plot is the screen's subject, so each ear's chart runs

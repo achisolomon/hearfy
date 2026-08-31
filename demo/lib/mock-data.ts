@@ -88,14 +88,22 @@ export const visit = { id: "VIS-20847", address: "1240 Alhambra Cir, Coral Gable
  * Six concurrent exams for the 1:many supervision panel (spec §9).
  * The hero plus five extras at staggered steps — one red-flagged, one waiting long.
  */
+/**
+ * `flagReason` says what the red flag actually is. The panel's peek card shows
+ * it, because a flag the clinician cannot interpret is a flag she cannot act
+ * on (critique 2026-08-31).
+ */
 export const supervisionQueue = [
   { id: "hero", name: "Alex R.", step: "Pure tone", waitMins: 0, redFlag: false, connection: "good" as const, cma: "Maya L.", hero: true },
   { id: "s2", name: "Doris P.", step: "Otoscopy", waitMins: 2, redFlag: false, connection: "good" as const, cma: "Ravi S.", hero: false },
   { id: "s3", name: "Walter K.", step: "Awaiting review", waitMins: 14, redFlag: false, connection: "good" as const, cma: "Tara B.", hero: false },
-  { id: "s4", name: "Eleanor M.", step: "Consent", waitMins: 1, redFlag: true, connection: "good" as const, cma: "Jon P.", hero: false },
+  { id: "s4", name: "Eleanor M.", step: "Consent", waitMins: 1, redFlag: true, connection: "good" as const, cma: "Jon P.", hero: false,
+    flagReason: "Consent not yet captured. The exam cannot proceed past this step until it is." },
   { id: "s5", name: "Hector D.", step: "Speech", waitMins: 5, redFlag: false, connection: "weak" as const, cma: "Ana R.", hero: false },
   { id: "s6", name: "Priya N.", step: "Calibration", waitMins: 3, redFlag: false, connection: "good" as const, cma: "Sam W.", hero: false },
 ];
+
+export type SupervisionExam = (typeof supervisionQueue)[number] & { flagReason?: string };
 
 /** Membership tiers (spec §9b) — the patient's device-and-care choice. */
 export const tiers = [
@@ -251,6 +259,51 @@ export const opPanels = {
 };
 
 /** The six MRD comparison categories, in display order. */
+/**
+ * What Dr. Reed says while the three packages are on screen (2026-08-31).
+ *
+ * Only she recommends — the CMA facilitates and the patient decides — so the
+ * comparison is never presented without her clinical reason for the pick.
+ * Each line is derived from `deviceDetail[...].compare["Clinical fit"]`, so
+ * the caption and the table can never tell the patient different things.
+ */
+export const compareRecommendation = {
+  device: "Phonak Aud\u00e9o L50",
+  /** Her spoken line, as the call's live caption. */
+  note:
+    "The Phonak is my recommendation \u2014 it is the closest fit to your air\u2013bone gap. " +
+    "The Signia covers you well in quieter rooms; the Oticon I would rule out for your left ear.",
+  /**
+   * The rule the screen must state, not merely show (corrections sheet item
+   * 13): the CMA facilitates the conversation and can close nothing.
+   */
+  cmaNote:
+    "Presenting the shortlist over video \u2014 only Dr. Reed recommends and sells. You open the case.",
+  /** Why, per device, in her voice. Keyed by device name. */
+  reasons: {
+    "Phonak Aud\u00e9o L50": "Recommended \u2014 closest fit to your air\u2013bone gap",
+    "Signia Pure Charge&Go": "Also suitable \u2014 best in quieter rooms",
+    "Oticon Intent 2": "Not advised \u2014 open fitting leaves your left-ear gap uncovered",
+  } as Record<string, string>,
+};
+
+/**
+ * What the patient says on the call while wearing each device, and what Dr.
+ * Reed says back (2026-08-31). The try-on is a CONVERSATION, not a checkbox:
+ * comfort and what they hear are hers to judge with the patient, so the
+ * screen has to carry both voices, not just a record that a fit happened.
+ */
+export const tryOnTalk: Record<string, { patient: string; clinician: string }> = {
+  "Phonak Aud\u00e9o L50": {
+    patient: "\u201cThat one is clearer \u2014 I can hear you without leaning in.\u201d",
+    clinician: "That matches your thresholds. Tell me if it feels tight behind the ear.",
+  },
+  "Signia Pure Charge&Go": {
+    patient: "\u201cComfortable. A little quieter when the fridge is running.\u201d",
+    clinician: "Expected \u2014 this one is at its best in a quiet room like this.",
+  },
+};
+
 export const compareCategories = [
   "Clinical fit", "Use & lifestyle", "Usability", "Commercial", "Terms", "Fulfilment",
 ];

@@ -139,9 +139,23 @@ export const BEATS: Beat[] = [
   // what is clinically suitable, the patient picks from it. Led by the CMA, the
   // guided walk went from the prescription straight to checkout, so the viewer
   // was billed for a device nobody had let them choose.
-  { id: "stock", stage: 8, lead: "patient",
+  //
+  // The sale runs in three moves (2026-08-31), and the lead follows whoever is
+  // actually driving:
+  //   1. `stock`  — CMA's tablet: the full comparison, Dr. Reed presenting it
+  //                 over video. She recommends; nobody has chosen yet.
+  //   2. `tryon`  — CMA's tablet: the patient wears each device and talks to
+  //                 her about how it feels and what they hear.
+  //   3. `choose` — the patient's own phone: they make the decision, having
+  //                 heard her and worn the devices.
+  //   4. `checkout` — they pay for what they chose.
+  // `stock` led with the patient, which jumped the walkthrough to a phone
+  // showing packages while the conversation was happening on the tablet.
+  { id: "stock", stage: 8, lead: "cma",
     screens: { patient: "compare", cma: "cma-stock", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "tryon", stage: 8, lead: "cma",
+    screens: { patient: "compare", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },
+  { id: "choose", stage: 8, lead: "patient",
     screens: { patient: "compare", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "checkout", stage: 8, lead: "patient",
     screens: { patient: "checkout", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },

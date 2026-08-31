@@ -1,7 +1,34 @@
 "use client";
 import { Play, Wifi } from "lucide-react";
 import { Card, StatusPill } from "../ui";
+import { audiogram } from "@/lib/mock-data";
+import { lossBand, pta } from "@/lib/exam";
 import type { Framing } from "./otoscopy-step";
+
+/**
+ * Two results, one per ear (corrections sheet 2026-08-31, item 4). The demo
+ * freezes the moment the right ear is done and the left is mid-run, so the
+ * per-ear framing is visible while the test still feels live.
+ */
+function EarResults() {
+  const right = pta(audiogram.frequencies, audiogram.right);
+  return (
+    <div className="mt-5 grid grid-cols-2 gap-3">
+      <Card className="p-4">
+        <span className="text-xs text-slate-500">Right ear</span>
+        <h3 className="text-sm font-extrabold">{right} dB HL</h3>
+        <p className="mt-1 text-[11px] leading-4 text-slate-500">{lossBand(right)} · avg 500–4k Hz</p>
+        <div className="mt-2"><StatusPill tone="green">Complete</StatusPill></div>
+      </Card>
+      <Card className="p-4">
+        <span className="text-xs text-slate-500">Left ear</span>
+        <h3 className="text-sm font-extrabold">Testing — 67%</h3>
+        <p className="mt-1 text-[11px] leading-4 text-slate-500">Result posts when the sweep ends</p>
+        <div className="mt-2"><StatusPill tone="blue">In progress</StatusPill></div>
+      </Card>
+    </div>
+  );
+}
 
 export function PureToneStep({ framing }: { framing: Framing }) {
   return (
@@ -17,6 +44,8 @@ export function PureToneStep({ framing }: { framing: Framing }) {
           <p className="mt-1 text-xs font-bold uppercase tracking-widest text-brand-teal">Testing left ear</p>
         </div>
       </div>
+
+      <EarResults />
 
       {framing === "patient" ? (
         <>

@@ -1,7 +1,7 @@
 "use client";
 import { Check } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { devices, deviceDetail, orderStates, compareCategories } from "@/lib/mock-data";
+import { devices, deviceDetail, orderStates, compareCategories, serials } from "@/lib/mock-data";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { selectDevice, useSelectedDevice } from "@/lib/selection";
 import { cn } from "@/lib/cn";
@@ -17,7 +17,9 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   // Tailwind visibility. Device columns are `fr` units on purpose (no
   // px/rem floor), so the table can never overflow or need a scrollbar.
   return <Shell wide>
-    <PageHeader title="Compare devices" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
+    {/* Renamed from "Compare devices" (corrections sheet 2026-08-31, item 9):
+       what the patient picks is the service package the device belongs to. */}
+    <PageHeader title="Compare service packages" subtitle="Side by side on a bigger screen, one at a time on a phone — the same six things either way." onBack={back} eyebrow="Compare"/>
 
     {/* Desktop / tablet-landscape: a real side-by-side table. Fluid grid
        columns (fr units) mean the table can only ever get narrower or wider
@@ -152,7 +154,7 @@ export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             {i<orderStates.length-1&&<span className={`w-0.5 flex-1 ${i<done-1?"bg-brand-teal":"bg-[#eef4f5]"}`}/>}
           </div>
           <div className="pb-5"><b className="text-sm">{s}</b>
-            {s==="Activated"&&i<done&&<p className="mt-1 text-xs text-slate-500">Serial HF-2284-L / HF-2284-R</p>}</div>
+            {s==="Activated"&&i<done&&<p className="mt-1 text-xs text-slate-500">Serial {serials.left} / {serials.right}</p>}</div>
         </div>)}
       </div>
     </Card>

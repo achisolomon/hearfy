@@ -7,8 +7,9 @@ export function BoneStep({ framing }: { framing: Framing }) {
     <>
       <Card className="p-5">
         <div className="flex items-center justify-between">
+          {/* Mandatory on every exam since the 2026-08-31 corrections (item 6). */}
           <b className="text-sm">Bone conduction</b>
-          <StatusPill tone="amber">Additional test</StatusPill>
+          <StatusPill tone="teal">Standard step</StatusPill>
         </div>
         <div className="mt-5 grid h-40 place-items-center rounded-2xl bg-gradient-to-br from-[#e7f8f7] to-white">
           <div className="relative h-24 w-40">

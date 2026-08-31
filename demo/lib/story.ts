@@ -103,6 +103,10 @@ export const BEATS: Beat[] = [
     screens: { patient: "setup", cma: "cma-calibration", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "otoscopy", stage: 4, lead: "cma",
     screens: { patient: "otoscopy", cma: "cma-otoscopy", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // Corrections sheet 2026-08-31, item 5: tympanometry runs on every exam,
+  // between the ear health check and the hearing test.
+  { id: "tympanometry", stage: 4, lead: "cma",
+    screens: { patient: "tympanometry", cma: "cma-tympanometry", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "puretone", stage: 4, lead: "cma",
     screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
 
@@ -141,6 +145,10 @@ export const BEATS: Beat[] = [
     screens: { patient: "compare", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "checkout", stage: 8, lead: "patient",
     screens: { patient: "checkout", cma: "cma-tryon", audiologist: "aud-prescription", operator: "op-dashboard" } },
+  // Corrections sheet 2026-08-31, item 12: nothing activates until the
+  // contract, terms and card are signed for — on the CMA's device.
+  { id: "signing", stage: 8, lead: "cma",
+    screens: { patient: "checkout", cma: "cma-signing", audiologist: "aud-prescription", operator: "op-dashboard" } },
   { id: "activate", stage: 8, lead: "cma",
     screens: { patient: "checkout", cma: "cma-activate", audiologist: "aud-prescription", operator: "op-dashboard" } },
 

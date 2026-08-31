@@ -9,7 +9,7 @@ import { Welcome, SignIn, HomeScreen } from "./screens/patient/welcome";
 import { IntakeFor, IntakeNeeds, IntakeMedical, IntakeCoverage, IntakePlan } from "./screens/patient/intake";
 import { BookDate, BookTime, Payment, Confirmed } from "./screens/patient/booking";
 import { Assigned, Driving, Arrived } from "./screens/patient/dispatch";
-import { Consent, Setup, Otoscopy, Testing, Live } from "./screens/patient/exam";
+import { Consent, Setup, Otoscopy, Tympanometry, Testing, Live } from "./screens/patient/exam";
 import { Review, Results, Recommendation } from "./screens/patient/results";
 import { Compare, Checkout, Order } from "./screens/patient/commerce";
 import { Support } from "./screens/patient/support";
@@ -86,6 +86,7 @@ export function PatientApp2() {
     consent: <Consent go={go} back={back}/>,
     setup: <Setup go={go} back={back}/>,
     otoscopy: <Otoscopy go={go} back={back}/>,
+    tympanometry: <Tympanometry go={go} back={back}/>,
     testing: <Testing go={go} back={back}/>,
     live: <Live go={go} back={back}/>,
     review: <Review go={go} back={back}/>,

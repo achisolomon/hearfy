@@ -20,14 +20,24 @@ function y(db: number) {
   return PAD_T + ((db - DB_MIN) / (DB_MAX - DB_MIN)) * (H - PAD_T - PAD_B);
 }
 
-export function Audiogram({ animate = false, showBone = false }: { animate?: boolean; showBone?: boolean }) {
+/**
+ * `ear` narrows the chart to one side so a screen can present two results,
+ * one per ear (corrections sheet 2026-08-31, item 4). "both" keeps the
+ * combined clinical overlay for the audiologist's screens.
+ */
+export function Audiogram({ animate = false, showBone = false, ear = "both" }:
+  { animate?: boolean; showBone?: boolean; ear?: "both" | "right" | "left" }) {
   const { frequencies, right, left, boneRight, boneLeft } = audiogram;
   const n = frequencies.length;
+  const showRight = ear !== "left";
+  const showLeft = ear !== "right";
 
   return (
     <figure className="w-full">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img"
-           aria-label="Audiogram showing moderate hearing loss in both ears">
+           aria-label={ear === "both"
+             ? "Audiogram showing moderate hearing loss in both ears"
+             : `Audiogram for the ${ear} ear showing moderate hearing loss`}>
         {/* dB gridlines */}
         {[0, 20, 40, 60, 80].map(db => (
           <g key={db}>
@@ -46,35 +56,39 @@ export function Audiogram({ animate = false, showBone = false }: { animate?: boo
         ))}
 
         {/* Air conduction — right ear, circles */}
-        <motion.polyline
-          initial={animate ? { pathLength: 0 } : false} animate={{ pathLength: 1 }} transition={{ duration: .8 }}
-          points={right.map((db, i) => `${x(i, n)},${y(db)}`).join(" ")}
-          fill="none" stroke="#ef6b6b" strokeWidth="2.5"
-        />
-        {right.map((db, i) => (
-          <circle key={i} cx={x(i, n)} cy={y(db)} r="4.5" fill="none" stroke="#ef6b6b" strokeWidth="2" />
-        ))}
+        {showRight && <>
+          <motion.polyline
+            initial={animate ? { pathLength: 0 } : false} animate={{ pathLength: 1 }} transition={{ duration: .8 }}
+            points={right.map((db, i) => `${x(i, n)},${y(db)}`).join(" ")}
+            fill="none" stroke="#ef6b6b" strokeWidth="2.5"
+          />
+          {right.map((db, i) => (
+            <circle key={i} cx={x(i, n)} cy={y(db)} r="4.5" fill="none" stroke="#ef6b6b" strokeWidth="2" />
+          ))}
+        </>}
 
         {/* Air conduction — left ear, crosses */}
-        <motion.polyline
-          initial={animate ? { pathLength: 0 } : false} animate={{ pathLength: 1 }} transition={{ duration: .8, delay: .15 }}
-          points={left.map((db, i) => `${x(i, n)},${y(db)}`).join(" ")}
-          fill="none" stroke="#2788c8" strokeWidth="2.5"
-        />
-        {left.map((db, i) => (
-          <g key={i} stroke="#2788c8" strokeWidth="2">
-            <line x1={x(i, n) - 4} y1={y(db) - 4} x2={x(i, n) + 4} y2={y(db) + 4} />
-            <line x1={x(i, n) - 4} y1={y(db) + 4} x2={x(i, n) + 4} y2={y(db) - 4} />
-          </g>
-        ))}
+        {showLeft && <>
+          <motion.polyline
+            initial={animate ? { pathLength: 0 } : false} animate={{ pathLength: 1 }} transition={{ duration: .8, delay: .15 }}
+            points={left.map((db, i) => `${x(i, n)},${y(db)}`).join(" ")}
+            fill="none" stroke="#2788c8" strokeWidth="2.5"
+          />
+          {left.map((db, i) => (
+            <g key={i} stroke="#2788c8" strokeWidth="2">
+              <line x1={x(i, n) - 4} y1={y(db) - 4} x2={x(i, n) + 4} y2={y(db) + 4} />
+              <line x1={x(i, n) - 4} y1={y(db) + 4} x2={x(i, n) + 4} y2={y(db) - 4} />
+            </g>
+          ))}
+        </>}
 
-        {/* Bone conduction — only shown once that conditional step has run */}
+        {/* Bone conduction — part of every exam since the 2026-08-31 corrections (item 6) */}
         {showBone && (
           <>
-            {boneRight.map((db, i) => (
+            {showRight && boneRight.map((db, i) => (
               <text key={`br${i}`} x={x(i, n)} y={y(db) + 4} textAnchor="middle" fontSize="11" fill="#ef6b6b">&lt;</text>
             ))}
-            {boneLeft.map((db, i) => (
+            {showLeft && boneLeft.map((db, i) => (
               <text key={`bl${i}`} x={x(i, n)} y={y(db) + 4} textAnchor="middle" fontSize="11" fill="#2788c8">&gt;</text>
             ))}
           </>
@@ -83,8 +97,8 @@ export function Audiogram({ animate = false, showBone = false }: { animate?: boo
 
       {/* Legend: shape + label, so colour is never the only cue. */}
       <figcaption className="mt-2 flex flex-wrap gap-4 text-[11px] font-semibold text-slate-500">
-        <span className="flex items-center gap-1.5"><span className="text-[#ef6b6b]">◯</span> Right ear (air)</span>
-        <span className="flex items-center gap-1.5"><span className="text-[#2788c8]">✕</span> Left ear (air)</span>
+        {showRight && <span className="flex items-center gap-1.5"><span className="text-[#ef6b6b]">◯</span> Right ear (air)</span>}
+        {showLeft && <span className="flex items-center gap-1.5"><span className="text-[#2788c8]">✕</span> Left ear (air)</span>}
         {showBone && <span className="flex items-center gap-1.5"><span>&lt; &gt;</span> Bone conduction</span>}
         <span className="text-slate-400">dB HL by frequency (Hz)</span>
       </figcaption>

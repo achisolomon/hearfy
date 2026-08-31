@@ -3,6 +3,18 @@
 export const BRAND_NAME = "HearFy";
 
 export const patient = { name: "Alex", city: "Miami, FL" };
+
+/**
+ * What the CMA verifies at the door (corrections sheet 2026-08-31, item 1):
+ * the person, not the kit — photo ID scan plus the SSN tail on record.
+ */
+export const identity = {
+  legalName: "Alex Rivera",
+  dob: "Mar 14, 1959",
+  idType: "FL driver license",
+  idNumber: "R520-441-59-094-0",
+  ssnLast4: "3921",
+};
 export const cma = { name: "Maya L.", role: "Certified Medical Assistant", rating: 4.9, reviews: 128 };
 export const appointment = { date: "Wed, May 21", fullDate: "May 21, 2025", time: "9:00 – 10:00 AM", price: 99 };
 export const devices = [
@@ -35,6 +47,18 @@ export const speech = { right: 76, left: 82 };
 export const otoscopy = {
   right: { finding: "Clear canal, intact tympanic membrane", tone: "green" as const },
   left: { finding: "Mild cerumen, view adequate", tone: "amber" as const },
+};
+
+/**
+ * Tympanometry, one result per ear (corrections sheet 2026-08-31, item 5).
+ * The stiff left trace is what the left-ear air–bone gap looks like from the
+ * middle ear — the two findings corroborate each other.
+ */
+export const tympanometry = {
+  right: { type: "Type A", pressure: "−15 daPa", compliance: "0.6 ml",
+    finding: "Normal middle ear movement", tone: "green" as const },
+  left: { type: "Type As", pressure: "−45 daPa", compliance: "0.3 ml",
+    finding: "Reduced mobility — matches the left-ear gap", tone: "amber" as const },
 };
 
 /** The CMA's day (CMA persona spec §2). */
@@ -144,6 +168,25 @@ export const deviceDetail: Record<string, {
 export const orderStates = [
   "Submitted", "Supplier accepted", "Configured", "Shipped",
   "Delivered", "Fitting due", "Activated",
+];
+
+/** Serial numbers of the dispensed pair, one per side. */
+export const serials = { left: "HF-2284-L", right: "HF-2284-R" };
+
+/**
+ * The after-delivery care record (corrections sheet 2026-08-31, item 14):
+ * everything the patient signed or went through, summarised in one place.
+ */
+export const signedDocuments = [
+  { name: "Visit & care consent", signed: "May 21, 2025" },
+  { name: "Telehealth consent", signed: "May 21, 2025" },
+  { name: "Membership contract", signed: "May 21, 2025" },
+  { name: "Terms & agreement", signed: "May 21, 2025" },
+];
+
+export const visitHistory = [
+  { date: "May 21, 2025", what: "Home hearing exam, fitting & activation", by: "Maya L. · Dr. Susan Reed", done: true },
+  { date: "Jun 4, 2025", what: "Follow-up hearing check", by: "Scheduled", done: false },
 ];
 
 /** Exception queue — the operator's real work (spec §9). */

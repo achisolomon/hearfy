@@ -1,43 +1,50 @@
 "use client";
-import { Radio } from "lucide-react";
-import { Card, PageHeader, PrimaryButton } from "../../ui";
+import { PageHeader, PrimaryButton } from "../../ui";
 import { Shell } from "../shared";
+import { AudiologistCallTile } from "./call-tile";
 import { OtoscopyStep } from "../../exam/otoscopy-step";
+import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
 import { SpeechStep } from "../../exam/speech-step";
 import { BoneStep } from "../../exam/bone-step";
 import { EXAM_STEPS } from "@/lib/exam";
-import { clinician } from "@/lib/mock-data";
 
-/** Persistent supervision indicator — the audiologist is watching (persona spec §2). */
-function SupervisionBar({ intervening = false }: { intervening?: boolean }) {
-  return (
-    <Card className={`mb-4 flex items-center gap-3 p-3 ${intervening ? "border-brand-teal bg-[#edfbfa]" : ""}`}>
-      <span className="relative grid h-9 w-9 place-items-center rounded-full bg-brand-navy text-white">
-        <Radio size={16} />
-        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-[#47d0c4]" />
-      </span>
-      <div className="flex-1">
-        <b className="text-xs">{intervening ? "Audiologist has joined" : "Supervised live"}</b>
-        <p className="text-[11px] text-slate-500">{clinician.name}, {clinician.credential}</p>
-      </div>
-    </Card>
-  );
-}
+// Analysis happens in the cloud, so the CMA walks every step but that one.
+// The eyebrow counts off this list — adding a step renumbers every screen.
+const CMA_STEPS = EXAM_STEPS.filter(s => s.id !== "analysis");
 
 function step(id: string) {
-  const s = EXAM_STEPS.find(x => x.id === id);
-  return { title: s?.title ?? "", procedure: s?.procedure ?? "" };
+  const i = CMA_STEPS.findIndex(x => x.id === id);
+  const s = CMA_STEPS[i];
+  return {
+    title: s?.title ?? "",
+    procedure: s?.procedure ?? "",
+    eyebrow: `Step ${i + 1} of ${CMA_STEPS.length}`,
+  };
 }
 
 export function CmaOtoscopy({ next }: { next: () => void }) {
   const s = step("otoscopy");
   return (
     <Shell>
-      <PageHeader title={s.title} subtitle={s.procedure} eyebrow="Step 1 of 4" />
-      <SupervisionBar />
+      <PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />
+      <AudiologistCallTile note="Watching both captures live — she flags a retake before you move on." />
       <OtoscopyStep framing="cma" />
       <div className="mt-6"><PrimaryButton onClick={next}>Both ears captured</PrimaryButton></div>
+    </Shell>
+  );
+}
+
+// Corrections sheet 2026-08-31, item 5: tympanometry runs on every exam,
+// between the ear health check and the hearing test.
+export function CmaTympanometry({ next }: { next: () => void }) {
+  const s = step("tympanometry");
+  return (
+    <Shell>
+      <PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />
+      <AudiologistCallTile note="Reading each trace as it lands — a broken seal means a re-run, not a guess." />
+      <TympanometryStep framing="cma" />
+      <div className="mt-6"><PrimaryButton onClick={next}>Both ears traced</PrimaryButton></div>
     </Shell>
   );
 }
@@ -46,8 +53,8 @@ export function CmaPureTone({ next }: { next: () => void }) {
   const s = step("puretone");
   return (
     <Shell>
-      <PageHeader title={s.title} subtitle={s.procedure} eyebrow="Step 2 of 4" />
-      <SupervisionBar intervening />
+      <PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />
+      <AudiologistCallTile active note="Has joined the test — she is adjusting the left-ear sweep herself." />
       <PureToneStep framing="cma" />
       <div className="mt-6"><PrimaryButton onClick={next}>Thresholds complete</PrimaryButton></div>
     </Shell>
@@ -58,25 +65,22 @@ export function CmaSpeech({ next }: { next: () => void }) {
   const s = step("speech");
   return (
     <Shell>
-      <PageHeader title={s.title} subtitle={s.procedure} eyebrow="Step 3 of 4" />
-      <SupervisionBar />
+      <PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />
+      <AudiologistCallTile note="Listening to the word lists live and scoring responses as they come." />
       <SpeechStep framing="cma" />
       <div className="mt-6"><PrimaryButton onClick={next}>Lists complete</PrimaryButton></div>
     </Shell>
   );
 }
 
+// A fixed part of every exam since the 2026-08-31 corrections (item 6) —
+// no longer added case-by-case after the pure tone result.
 export function CmaBone({ next }: { next: () => void }) {
   const s = step("bone");
   return (
     <Shell>
-      <PageHeader title={s.title} subtitle={s.procedure} eyebrow="Step 4 of 4 · added" />
-      <SupervisionBar intervening />
-      <Card className="mb-4 p-4">
-        <p className="text-sm leading-6 text-slate-500">
-          The audiologist added this step after reviewing the pure tone result. Run it as instructed.
-        </p>
-      </Card>
+      <PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />
+      <AudiologistCallTile active note="Watching the bone thresholds — this is what separates conductive from sensorineural loss." />
       <BoneStep framing="cma" />
       <div className="mt-6"><PrimaryButton onClick={next}>Submit exam</PrimaryButton></div>
     </Shell>

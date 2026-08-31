@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Check, Lock } from "lucide-react";
 import { Card, PageHeader, PrimaryButton } from "../../ui";
 import { Shell } from "../shared";
+import { AudiologistCallTile } from "./call-tile";
 import { kit } from "@/lib/mock-data";
 
 /** The calibration checklist is a HARD GATE — no bypass control exists (persona spec §4). */
@@ -13,6 +14,7 @@ export function CmaCalibration({ next }: { next: () => void }) {
   return (
     <Shell>
       <PageHeader title="Kit checklist" subtitle="Every item must pass before the exam can start." eyebrow={`Kit ${kit.id}`} />
+      <AudiologistCallTile note="Watching the checklist pass — the exam stays locked until it does." />
       <div className="space-y-3">
         {kit.checklist.map((item, i) => (
           <button key={item} onClick={() => setDone(d => d.map((v, j) => j === i ? !v : v))}

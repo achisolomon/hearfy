@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
-import { Briefcase, Check, PackageCheck, Truck } from "lucide-react";
+import { Briefcase, Check, CreditCard, PackageCheck, PenLine, Truck } from "lucide-react";
 import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { Shell } from "../shared";
-import { devices, deviceDetail, patient } from "@/lib/mock-data";
+import { AudiologistCallTile } from "./call-tile";
+import { devices, deviceDetail, identity, patient, serials } from "@/lib/mock-data";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 
 /**
@@ -22,6 +23,7 @@ export function CmaStock({ next }: { next: () => void }) {
   return (
     <Shell>
       <PageHeader title="Signed shortlist" subtitle="Open the case. The patient tries what is here." eyebrow="Prescription locked" />
+      <AudiologistCallTile active note="Presenting the shortlist over video — only Dr. Reed recommends and sells. You open the case." />
       <div className="space-y-3">
         {shortlist.map(d => {
           const detail = deviceDetail[d.name];
@@ -66,6 +68,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
   return (
     <Shell>
       <PageHeader title="Try-on" subtitle="Fit each device. Record which ones were tried." eyebrow="In the home" />
+      <AudiologistCallTile note="Watching each fit on the call — comfort and retention are hers to judge with the patient." />
       <div className="space-y-3">
         {inCase.map(d => {
           const on = tried.includes(d.name);
@@ -101,6 +104,81 @@ export function CmaTryOn({ next }: { next: () => void }) {
   );
 }
 
+/**
+ * Nothing activates unsigned (corrections sheet 2026-08-31, item 12): the
+ * contract, the terms and the card are all confirmed on the CMA's device,
+ * and the patient signs right here before the fit begins.
+ */
+export function CmaSigning({ next }: { next: () => void }) {
+  const chosen = devices[0];
+  const tier = tierFor(deviceDetail[chosen.name].tier);
+  const { monthly, credit, dueNow } = creditedFirstMonth(tier.id);
+  const [agreed, setAgreed] = useState<Record<string, boolean>>({
+    contract: false, terms: false, card: false,
+  });
+  const [signed, setSigned] = useState(false);
+  const canSign = agreed.contract && agreed.terms && agreed.card;
+  const items: [string, string][] = [
+    ["contract", "Membership contract reviewed with the patient"],
+    ["terms", "Terms & agreement accepted"],
+    ["card", "Card authorized for monthly billing"],
+  ];
+
+  return (
+    <Shell>
+      <PageHeader title="Sign &amp; authorize" subtitle={`${chosen.name} · ${tier.name} membership`} eyebrow="Contract" />
+      <AudiologistCallTile active note="Walking the patient through the contract on the call — the sale is hers to close." />
+      <Card className="p-5">
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between"><span className="text-slate-500">{tier.name} membership</span><b>${monthly}/mo</b></div>
+          <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
+          <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
+            <b>Due today</b><b className="text-lg">${dueNow}</b>
+          </div>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          Includes the devices, ongoing care and remote adjustments. Cancel with 30 days&rsquo; notice.
+        </p>
+      </Card>
+      {/* Every box starts unchecked — same rule as consent (item 2). */}
+      <div className="mt-4 space-y-3">
+        {items.map(([k, label]) => (
+          <button key={k} onClick={() => setAgreed(a => ({ ...a, [k]: !a[k] }))}
+            className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
+            <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
+              agreed[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+              {agreed[k] && <Check size={15} />}
+            </span>
+            <span className="text-sm leading-6 text-slate-600">
+              {label}
+              {k === "card" && <span className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                <CreditCard size={13} /> Visa •••• 4242 · on file from booking
+              </span>}
+            </span>
+          </button>
+        ))}
+      </div>
+      <button onClick={() => canSign && setSigned(true)}
+        className={cn("mt-4 grid min-h-24 w-full place-items-center rounded-2xl border-2 border-dashed p-4 text-center",
+          signed ? "border-brand-teal bg-[#edfbfa]" : "border-[#c9dadd] bg-white")}>
+        {signed
+          ? <span>
+              <span className="font-serif text-2xl italic text-brand-navy">{identity.legalName}</span>
+              <span className="mt-1 block text-[11px] text-slate-500">Signed on the CMA&rsquo;s device · May 21, 2025</span>
+            </span>
+          : <span className="flex items-center gap-2 text-sm font-semibold text-slate-400">
+              <PenLine size={16} /> {canSign ? "Tap here for the patient to sign" : "Complete the three items above to sign"}
+            </span>}
+      </button>
+      <div className="mt-6">
+        <PrimaryButton disabled={!signed} onClick={next}>
+          {signed ? "Contract signed — start the fit" : "Signature required"}
+        </PrimaryButton>
+      </div>
+    </Shell>
+  );
+}
+
 export function CmaActivate({ next }: { next: () => void }) {
   // The patient's pick — Premium tier in the hero story.
   const chosen = devices[0];
@@ -109,6 +187,7 @@ export function CmaActivate({ next }: { next: () => void }) {
   return (
     <Shell>
       <PageHeader title="Fit &amp; activate" subtitle={`${chosen.name} · ${tierFor(tier).name} membership`} eyebrow="Same day" />
+      <AudiologistCallTile note="Sale closed on the call — the fit, pairing and activation are yours." />
       <Card className="p-5">
         <div className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-slate-500">First month</span><b>${monthly}</b></div>
@@ -141,7 +220,7 @@ export function CmaCloseout({ next }: { next: () => void }) {
           <PackageCheck size={26} />
         </span>
         <b className="mt-4 text-[15px]">{chosen.name} dispensed</b>
-        <p className="mt-2 text-sm text-slate-500">Serial HF-2284-L / HF-2284-R · activated on site</p>
+        <p className="mt-2 text-sm text-slate-500">Serial {serials.left} / {serials.right} · activated on site</p>
       </Card>
       <Card className="mt-3 p-4">
         <b className="text-sm">Next visit</b>

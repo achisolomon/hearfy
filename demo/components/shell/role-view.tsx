@@ -5,12 +5,12 @@ import { useStory } from "./story-context";
 import { CmaDay, CmaEnroute } from "../screens/cma/day";
 import { CmaArrival, CmaConsent } from "../screens/cma/arrival";
 import { CmaCalibration } from "../screens/cma/setup";
-import { CmaOtoscopy, CmaPureTone, CmaSpeech, CmaBone } from "../screens/cma/exam";
+import { CmaOtoscopy, CmaTympanometry, CmaPureTone, CmaSpeech, CmaBone } from "../screens/cma/exam";
 import { CmaHandoff } from "../screens/cma/handoff";
 import { AudPanel, AudMonitor } from "../screens/audiologist/supervision";
 import { AudReview, AudSign } from "../screens/audiologist/review";
 import { AudConsult, AudPrescription } from "../screens/audiologist/consult";
-import { CmaStock, CmaTryOn, CmaActivate, CmaCloseout } from "../screens/cma/suitcase";
+import { CmaStock, CmaTryOn, CmaSigning, CmaActivate, CmaCloseout } from "../screens/cma/suitcase";
 import { OperatorDashboard } from "../screens/operator/dashboard";
 
 /** Placeholder for screens Plan D has not built yet. */
@@ -44,12 +44,14 @@ export function RoleView() {
       case "cma-consent": return <CmaConsent next={next} />;
       case "cma-calibration": return <CmaCalibration next={next} />;
       case "cma-otoscopy": return <CmaOtoscopy next={next} />;
+      case "cma-tympanometry": return <CmaTympanometry next={next} />;
       case "cma-puretone": return <CmaPureTone next={next} />;
       case "cma-speech": return <CmaSpeech next={next} />;
       case "cma-bone": return <CmaBone next={next} />;
       case "cma-handoff": return <CmaHandoff />;
       case "cma-stock": return <CmaStock next={next} />;
       case "cma-tryon": return <CmaTryOn next={next} />;
+      case "cma-signing": return <CmaSigning next={next} />;
       case "cma-activate": return <CmaActivate next={next} />;
       case "cma-closeout": return <CmaCloseout next={next} />;
       default: return <Stub screen={id} />;

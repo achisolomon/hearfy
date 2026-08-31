@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatIndexById, type Role } from "./story";
 import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
+import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 
 const order = screenOrder();
 
@@ -231,6 +232,408 @@ describe("shell controls", () => {
     const shell = sourceOf("components/shell/demo-shell.tsx");
     expect(shell).toContain("onClick={next}");
     expect(shell).toContain("onClick={back}");
+  });
+});
+
+describe("mobile persona indicator", () => {
+  // On a real phone the desktop top bar (which carries RoleTabs) is
+  // `md:hidden`, so RoleTabs only ever renders inside the slide-up sheet.
+  // Nothing on screen said which of the four personas was active — the
+  // owner's own words: "I don't see which one I'm on right now." The docked
+  // phone bar (bottom-0, md:hidden) is the only persistent phone chrome, so
+  // the indicator has to live there. Isolate that bar's block the same way
+  // the "docked controls clearance" tests do, then assert it shows a
+  // role-driven persona avatar and that tapping it opens the role switcher.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  // The clearance tests' `indexOf("</div>", ...)` stops at the FIRST closing
+  // div, which only spans the bar's first child — fine for finding a max
+  // button height, but it would silently drop a middle child (the persona
+  // indicator) from this block. Slice up to the next top-level section
+  // (the sheet's AnimatePresence) instead, so the whole bar is covered.
+  const barStart = controlBarMatch.index;
+  const barEnd = demoShell.indexOf("<AnimatePresence>", barStart);
+  const controlBarBlock = demoShell.slice(barStart, barEnd);
+
+  // A future rewrite could still show *a* role affordance without showing
+  // *which* role is current — e.g. a plain, unlabelled grid icon. Require
+  // the bar to actually reference the live `role` from useStory, not just
+  // some avatar component name, so a hardcoded/static avatar doesn't pass.
+  it("renders a persona avatar driven by the current role inside the phone bar", () => {
+    expect(controlBarBlock).toMatch(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
+  });
+
+  // The owner's actual complaint: the bar showed a job title ("CMA",
+  // "Patient") — SHORT_ROLE[role] — not a person. The demo's premise is
+  // following four PEOPLE through one story, and personas.ts already has
+  // names (Alex Rivera, Maya Lewis, Dr. Susan Reed, Jordan Pike). The label
+  // must be driven by `personaFor(role).name` (or a first-name derivative of
+  // it), not the old static role-label map, and the old map must be gone —
+  // otherwise a future edit could reintroduce it as an unused decoy while a
+  // name-shaped string sits elsewhere and still pass a looser assertion.
+  it("labels the indicator with the persona's name, not a role/job title", () => {
+    expect(
+      controlBarBlock,
+      "the phone bar's label must read from personaFor(role) (e.g. `.name` or a first-name split of it), not a static role-label lookup",
+    ).toMatch(/personaFor\(role\)\.name/);
+    expect(
+      demoShell,
+      "SHORT_ROLE was the role-label map this bug reported ('CMA', 'Patient', ...) — it must no longer exist now the bar shows the person's name",
+    ).not.toMatch(/SHORT_ROLE/);
+  });
+
+  // Round two: the owner confirmed the name reads well, then asked for the
+  // role back too — "I would keep the circle of the avatar... and I will
+  // also bring back the role that you showed me before." Both, not one or
+  // the other. The full title (personaFor(role).title, e.g. "Certified
+  // Medical Assistant" or "Cloud Audiologist, Au.D.") does not fit the
+  // owner's measured text budget at any root size, so this must read from
+  // role-tabs.tsx's short label map (Patient/CMA/Audiologist/Operator), not
+  // the long title — and the long title must not appear in the bar at all,
+  // so a future edit can't silently swap in the title and blow the budget.
+  it("shows a short role label alongside the persona name, not the long title", async () => {
+    expect(
+      controlBarBlock,
+      "the phone bar must show a role label (e.g. the SHORT map from role-tabs.tsx) beside the persona name",
+    ).toMatch(/\{SHORT\[role\]\}/);
+    // Read the real long titles from personas.ts — the actual source of
+    // truth — rather than regex-scanning demoShell for a `title:` pattern,
+    // which would also match unrelated prose. Strip JSX comments first: the
+    // surrounding code legitimately quotes a title in prose as an example of
+    // what does NOT fit (documentation, not rendered output), so the check
+    // must only look at what actually renders.
+    const withoutComments = controlBarBlock.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    const { PERSONAS } = await import("./personas");
+    for (const { title } of Object.values(PERSONAS)) {
+      expect(
+        withoutComments,
+        `the phone bar must not render the long title "${title}" literally — it does not fit the measured width budget`,
+      ).not.toContain(title);
+    }
+    expect(
+      withoutComments,
+      "must not use personaFor(role).title — the full title is too wide for the phone bar's measured budget",
+    ).not.toMatch(/personaFor\(role\)\.title/);
+  });
+
+  // The role line sits directly beneath the name in the same fixed-width
+  // column; if either wraps or overflows it will push the Next pill or break
+  // the bar's single-row layout. Both lines truncate to a single line with
+  // an ellipsis instead.
+  it("truncates the role label instead of wrapping or overflowing", () => {
+    // The bar's aria-label also reads SHORT[role] (inside a `${...}`
+    // template-literal interpolation, e.g. `${SHORT[role]}`), which is not
+    // the rendered text this test cares about — the JSX-content usage is
+    // `{SHORT[role]}` with no leading `$`, so require that the char right
+    // before `{` isn't `$`.
+    const shortMatch = /(?<!\$)\{SHORT\[role\]\}/.exec(controlBarBlock);
+    expect(shortMatch, "no rendered {SHORT[role]} usage found to check for truncation").toBeTruthy();
+    const before = controlBarBlock.slice(0, shortMatch!.index);
+    const openTag = /<span\b[^>]*>\s*$/.exec(before);
+    expect(openTag, "expected {SHORT[role]} to be rendered as the direct content of a <span> whose opening tag immediately precedes it").toBeTruthy();
+    expect(openTag![0]).toMatch(/\btruncate\b/);
+  });
+
+  it("opens the same sheet used for role switching when the indicator is tapped", () => {
+    // Whatever element wraps the avatar, it must be a control (not inert
+    // decoration) that calls setSheet(true) — the same call the grid button
+    // already uses, so it lands on the sheet that renders <RoleTabs full />.
+    const avatarIdx = controlBarBlock.search(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
+    expect(avatarIdx, "no role-driven PersonaAvatar found to check for a tap handler").toBeGreaterThan(-1);
+    const nearby = controlBarBlock.slice(Math.max(0, avatarIdx - 400), avatarIdx + 100);
+    expect(nearby).toMatch(/onClick=\{[^}]*setSheet\(true\)[^}]*\}/);
+  });
+
+  // PersonaAvatar already renders role="img" + its own aria-label, so a
+  // labelled wrapper button must silence the inner SVG rather than doubling
+  // the announcement — the sheet trigger still needs an accessible name.
+  it("gives the indicator button its own accessible name without a doubled announcement", () => {
+    const avatarIdx = controlBarBlock.search(/<PersonaAvatar\b[^>]*\brole=\{role\}/);
+    expect(avatarIdx).toBeGreaterThan(-1);
+    // An aria-labelled <button> must open somewhere before the avatar, with
+    // no OTHER <button> opening in between (i.e. this is the avatar's own
+    // enclosing button, not an unrelated one earlier in the bar).
+    // Arrow-function attributes (onClick={() => ...}) contain a literal `>`,
+    // which would make a naive tag-matching regex stop early. This codebase
+    // consistently closes a multi-line opening tag with `>` immediately
+    // followed by a newline (see every button above), which `=>` never is —
+    // so drop arrows first and the remaining `>` is always a real tag close.
+    const before = controlBarBlock.slice(0, avatarIdx).replace(/=>/g, "==");
+    const buttonOpens = [...before.matchAll(/<button\b([^>]*)>/g)];
+    const last = buttonOpens.at(-1);
+    expect(last, "expected a <button> to open somewhere before the role-driven PersonaAvatar").toBeTruthy();
+    // aria-label may be a plain string ("Demo controls") or, since the
+    // active role's name belongs in it, a JS expression such as a template
+    // literal ({`Viewing as ${name} — change role`}) — accept either.
+    expect(last![1], "the button wrapping the persona indicator must carry its own aria-label").toMatch(/aria-label=(?:"[^"]+"|\{[^}]+\})/);
+    // Something between that button opening and the avatar tag must mark the
+    // inner SVG decorative, so its own role="img"/aria-label doesn't also
+    // get announced — doubling the label.
+    const between = controlBarBlock.slice(before.lastIndexOf(last![0]), avatarIdx + 40);
+    expect(between).toMatch(/aria-hidden/);
+  });
+});
+
+describe("cover persona cards", () => {
+  // On a real phone the owner saw "Certifie…", "Cloud A…", "Operati…" — the
+  // "Or enter as one persona" cards on Cover (components/shell/cover.tsx)
+  // truncated every title. Two causes: `grid-cols-2` was unconditional, so
+  // each card only ever had ~half the row (measured ~75px/58px/41px of text
+  // width across the three TextSize root sizes), and the title carried
+  // `truncate`, which clips instead of wrapping once it doesn't fit. Isolate
+  // just the persona-card block (the `ROLES.map` inside the "Or enter as one
+  // persona" grid) so this doesn't false-positive on truncate/grid-cols-2
+  // usage elsewhere on the page (e.g. the stats row).
+  const cover = sourceOf("components/shell/cover.tsx");
+  const sectionStart = cover.indexOf("Or enter as one persona");
+  if (sectionStart === -1) throw new Error("could not locate the 'Or enter as one persona' section in cover.tsx");
+  const gridStart = cover.indexOf("<div", sectionStart);
+  const mapEnd = cover.indexOf("})}", gridStart);
+  const cardBlock = cover.slice(gridStart, mapEnd === -1 ? undefined : mapEnd + 3);
+
+  // The grid itself must not force two-up at the base (phone) breakpoint —
+  // it must stack to one column there and only go two-up from a `sm:`/`md:`
+  // breakpoint up, where there is room. A bare `grid-cols-2` with no
+  // responsive prefix anywhere in the block means every breakpoint —
+  // including phone — is two-up.
+  it("does not force the persona-card grid to two columns unconditionally on phone", () => {
+    expect(
+      cardBlock,
+      "found a bare `grid-cols-2` with no sm:/md: prefix — that forces two cards per row even at " +
+      "375px, where the owner measured only ~75px/58px/41px of text width per column across the " +
+      "three TextSize root sizes. 'Certified Medical Assistant' (~229-298px) can never fit that, " +
+      "which is exactly the 'Certifie…' clipping the owner saw on a real phone. The grid should " +
+      "stack one-per-row at the base breakpoint and go two-up only from sm:/md: up.",
+    ).not.toMatch(/(?<!sm:|md:|lg:|xl:)\bgrid-cols-2\b/);
+  });
+
+  // The title line must not truncate: once the grid gives each card enough
+  // width the title still needs to be allowed to wrap onto a second line
+  // rather than clip with an ellipsis, or a long title at a wide TextSize
+  // step could still clip. Locate whichever element renders `{p.title}` —
+  // the fix leads with the persona's name (matching PersonaChip and the
+  // phone bar), so the title moves out of the `<b>` into a plain `<span>` —
+  // rather than assuming which tag it lives in.
+  it("does not truncate the persona card's title, so a long title wraps instead of clipping", () => {
+    const titleLine = /<(b|span)\b[^>]*>\s*\{p\.title\}/.exec(cardBlock);
+    expect(titleLine, "could not find the title (`{p.title}`) rendered in the persona card block").toBeTruthy();
+    const openTag = titleLine![0];
+    expect(
+      openTag,
+      "the persona card's title element carries `truncate`, which clips long titles " +
+      "('Certified Medical Assistant' -> 'Certifie…') instead of letting them wrap onto a second line.",
+    ).not.toMatch(/\btruncate\b/);
+  });
+
+  // Round two of the fix: the title led and the muted name was secondary,
+  // which inverted the identity — the person's name is who they are, the
+  // title is the qualifier. PersonaChip (components/persona-avatar.tsx) and
+  // the phone demo bar (demo-shell.tsx) both lead with the name; this card
+  // must match so all three places describe a persona the same way.
+  it("leads with the persona's name and shows the title beneath it, matching PersonaChip", () => {
+    const nameIdx = cardBlock.search(/\{p\.name\}/);
+    const titleIdx = cardBlock.search(/\{p\.title\}/);
+    expect(nameIdx, "could not find {p.name} rendered in the persona card block").toBeGreaterThan(-1);
+    expect(titleIdx, "could not find {p.title} rendered in the persona card block").toBeGreaterThan(-1);
+    expect(nameIdx, "the persona's name must render before the title, not after it").toBeLessThan(titleIdx);
+  });
+});
+
+describe("phone Back control visibility", () => {
+  // Owner, round one: "there is no back button." The bar DOES contain a Back
+  // <button> with <ArrowLeft>, but its only styling was `text-brand-navy
+  // disabled:text-slate-300` — a bare icon with no border, fill, or outline
+  // at all, enabled or disabled. Against the white/95 backdrop-blur bar that
+  // read as decoration, not a control, even before disabling kicked in.
+  //
+  // Owner, round two, on a real phone after the outline-ring fix: "there's
+  // also something on the back button, which I'm not sure what it is." An
+  // unfilled ring floating on a near-white (white/95 backdrop-blur) bar
+  // photographs as an unexplained empty circle, not a control — the fix
+  // traded invisibility for ambiguity. `PageHeader` (components/ui.tsx)
+  // already establishes this codebase's treatment for a circular back
+  // control: a border PLUS a white background fill
+  // (`border border-[#e1ebed] bg-white`), which gives the circle a real
+  // surface distinct from the backdrop instead of just a hairline. This bar
+  // follows that precedent rather than inventing a third treatment.
+  //
+  // `atStart` itself was checked separately (lib/story.test.ts — Back is
+  // never falsely disabled mid-walk), so the fix here is purely visual: the
+  // control must carry a filled, bounded surface so a disabled Back still
+  // reads as "present but unavailable" rather than absent, the same way the
+  // enabled Next pill is unmistakably a button.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const barStart = controlBarMatch.index;
+  const barEnd = demoShell.indexOf("<AnimatePresence>", barStart);
+  const controlBarBlock = demoShell.slice(barStart, barEnd);
+
+  // Isolate the phone bar's own Back button specifically — `aria-label="Previous beat"`
+  // is unique to it (the desktop bar's equivalent button lives in a
+  // different, md:hidden-excluded block entirely, so controlBarBlock never
+  // contains it).
+  const backButtonMatch = /<button\b[^>]*aria-label="Previous beat"[^>]*>/.exec(controlBarBlock);
+  const classAttr = backButtonMatch && /className="([^"]*)"/.exec(backButtonMatch[0]);
+  const classes = classAttr?.[1] ?? "";
+
+  it("gives the phone Back button a visible boundary, not just enabled/disabled text colour", () => {
+    expect(backButtonMatch, "expected a Back button (aria-label=\"Previous beat\") inside the phone control bar").toBeTruthy();
+    expect(classAttr, "Back button has no className to inspect").toBeTruthy();
+    // A visible boundary independent of the disabled text-colour swap: a
+    // border, a background fill, or a ring — any one is enough to keep the
+    // control's outline present when its icon colour goes pale.
+    const hasBoundary = /\bborder(?:-|\b)/.test(classes) || /\bbg-(?!\[)/.test(classes) || /\bring-/.test(classes);
+    expect(
+      hasBoundary,
+      `Back button className "${classes}" relies only on icon text colour (disabled:text-slate-300) with no border/background/ring — a disabled state this faint reads as absent, not present-but-unavailable`,
+    ).toBe(true);
+  });
+
+  // The specific fix for round two: a bare `border` with no background reads
+  // as an empty ring on the near-white bar. Require an actual background
+  // fill (not an arbitrary transparent one) so the circle has a surface,
+  // matching PageHeader's `bg-white` precedent for the same control shape.
+  it("fills the Back button with a background, not just an outline ring", () => {
+    expect(backButtonMatch).toBeTruthy();
+    expect(
+      classes,
+      `Back button className "${classes}" has no plain bg- fill — an unfilled border alone is the exact "empty ring" the owner flagged as ambiguous on a real phone`,
+    ).toMatch(/\bbg-(?!\[)/);
+  });
+
+  // The fill must still be present (paled, not removed) once disabled, so
+  // the disabled state reads as "present but unavailable" rather than
+  // reverting to the original invisible-icon bug.
+  it("keeps a background fill on the Back button in its disabled state too", () => {
+    expect(backButtonMatch).toBeTruthy();
+    expect(
+      classes,
+      `Back button className "${classes}" must pair its disabled: text-colour swap with a disabled: background too, so the control keeps a visible surface once unavailable`,
+    ).toMatch(/disabled:bg-/);
+  });
+});
+
+describe("full-height screen wrapper clearance", () => {
+  // Shell (components/screens/shared.tsx) gives its callers pb-40/md:pb-24,
+  // proven safe by "docked controls clearance" above. But four screens never
+  // call Shell at all — they roll their own full-height root
+  // (`min-h-[100dvh] ... p-6 ...`) with only p-6 (1.5rem) of bottom padding
+  // at every breakpoint, including phone, where the docked demo control bar
+  // (demo-shell.tsx, `fixed inset-x-0 bottom-0 z-40 ... h-14 ... md:hidden`)
+  // reaches 3.5rem up from the viewport bottom. The owner hit this on the
+  // audiologist consult screen — "Continue to prescription" was cut in half
+  // — but the same wrapper string appears verbatim in review.tsx,
+  // supervision.tsx, and operator/dashboard.tsx, so all four are affected.
+  //
+  // These roles (CMA/audiologist/operator) render no BottomNav (that is
+  // patient-only, see shared.tsx), so they only need to clear the control
+  // bar itself, not the taller patient stack "docked controls clearance"
+  // proves Shell clears.
+  //
+  // This scans every screen component generically — any file matching the
+  // same "full-height root that isn't Shell" shape is checked, not just the
+  // four files known today — so a new screen added later with the same
+  // pattern fails here too instead of shipping the same bug again.
+  //
+  // SPACING_UNIT_REM and TAILWIND_SPACING_SCALE come from ./tailwind-scale —
+  // the one place that scale is defined, so this test and "docked controls
+  // clearance" below can never disagree about what's on it. See that
+  // module's own "tailwind spacing scale" describe block for coverage of
+  // the scale/validator itself.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const controlBarBlock = demoShell.slice(controlBarMatch.index, demoShell.indexOf("</div>", controlBarMatch.index));
+  const controlBarBottomRem = Number(controlBarMatch[1]) * SPACING_UNIT_REM;
+  const controlHeightsRem = [...controlBarBlock.matchAll(/\bh-(\d+)\b/g)].map(m => Number(m[1]) * SPACING_UNIT_REM);
+  if (controlHeightsRem.length === 0) throw new Error("found no h-* button height inside the docked phone control bar");
+  const controlBarHeightRem = Math.max(...controlHeightsRem);
+  const controlBarTopEdgeRem = controlBarBottomRem + controlBarHeightRem;
+
+  // Every full-height, non-Shell screen root in the app: `min-h-[100dvh]`
+  // (with or without a leading `grid`/other utility) that is not itself
+  // Shell's own definition (Shell already proved safe above; scanning it
+  // here too would just retest the same line for no reason).
+  const screenFiles = componentFiles("components/screens").filter(f => f !== "components/screens/shared.tsx");
+  const FULL_HEIGHT_ROOT = /className="([^"]*\bmin-h-\[100dvh\][^"]*)"/g;
+
+  type Wrapper = { file: string; classes: string };
+  const wrappers: Wrapper[] = [];
+  for (const file of screenFiles) {
+    const src = sourceOf(file);
+    for (const m of src.matchAll(FULL_HEIGHT_ROOT)) {
+      wrappers.push({ file, classes: m[1] });
+    }
+  }
+
+  it("finds at least one full-height screen wrapper to check (so this test is not vacuous)", () => {
+    expect(wrappers.length).toBeGreaterThan(0);
+  });
+
+  // Parse each wrapper's *base* (phone) bottom padding — `p-<n>` or
+  // `pb-<n>` with no responsive prefix — the value active below `md:`,
+  // where the docked control bar is not `md:hidden`'s opposite (it IS
+  // shown). A responsive override (`md:p-*`/`md:pb-*`) does not count: it
+  // never applies on phone, which is exactly the viewport the owner hit
+  // the bug on.
+  const basePaddingRem = (classes: string): { raw: number; className: string } | null => {
+    // Prefer a bare pb- (more specific than p-) if present; otherwise fall
+    // back to p-. Both matched only when NOT preceded by a responsive
+    // prefix like md:/sm:/lg:.
+    const pb = /(?<!\S)pb-(\d+)\b/.exec(classes);
+    if (pb) return { raw: Number(pb[1]), className: pb[0] };
+    const p = /(?<!\S)p-(\d+)\b/.exec(classes);
+    if (p) return { raw: Number(p[1]), className: p[0] };
+    return null;
+  };
+
+  it("gives every non-Shell full-height screen wrapper a parseable base bottom padding", () => {
+    const unparseable = wrappers
+      .filter(w => basePaddingRem(w.classes) === null)
+      .map(w => `${w.file}: \`${w.classes}\` has no bare p-*/pb-* to check`);
+    expect(unparseable).toEqual([]);
+  });
+
+  it("keeps every full-height wrapper's padding class on Tailwind's real spacing scale", () => {
+    const offenders: string[] = [];
+    for (const w of wrappers) {
+      const parsed = basePaddingRem(w.classes);
+      if (!parsed) continue;
+      if (!TAILWIND_SPACING_SCALE.has(parsed.raw)) {
+        offenders.push(
+          `${w.file}: \`${parsed.className}\` (${parsed.raw}) is not on Tailwind's default spacing ` +
+          `scale — it compiles to NO CSS at all, silently leaving zero padding on phone.`,
+        );
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The actual bug: base (phone) bottom padding must clear the docked
+  // control bar's top edge, the same relationship "docked controls
+  // clearance" proves for Shell — with room to spare, not a flush fit.
+  it("gives every non-Shell full-height screen wrapper enough base bottom padding to clear the docked phone control bar", () => {
+    const offenders: string[] = [];
+    for (const w of wrappers) {
+      const parsed = basePaddingRem(w.classes);
+      if (!parsed) continue;
+      const paddingRem = parsed.raw * SPACING_UNIT_REM;
+      if (paddingRem <= controlBarTopEdgeRem) {
+        offenders.push(
+          `${w.file}: \`${parsed.className}\` gives only ${paddingRem}rem of bottom padding on phone, but ` +
+          `the docked control bar (demo-shell.tsx) reaches ${controlBarTopEdgeRem}rem above the viewport ` +
+          `bottom (bottom-${controlBarBottomRem / SPACING_UNIT_REM} + h-${controlBarHeightRem / SPACING_UNIT_REM}). ` +
+          `Content at the bottom of this screen sits behind the bar on a real phone.`,
+        );
+      }
+    }
+    expect(
+      offenders,
+      `found ${offenders.length} full-height screen wrapper(s) whose content the docked phone control bar overlaps:\n` +
+      offenders.join("\n"),
+    ).toEqual([]);
   });
 });
 
@@ -512,25 +915,23 @@ describe("docked controls clearance", () => {
   // Tailwind's spacing scale is 0.25rem per step, which is how every value
   // below is converted from the class name rather than hand-copied as a
   // number that could drift from the source.
-  const SPACING_UNIT_REM = 0.25;
-  // Tailwind's default theme.spacing keys (the *bare* numeric utilities —
-  // pb-38, bottom-38, h-38, etc.). A bare number NOT in this set compiles to
-  // NOTHING: Tailwind's JIT only emits CSS for class names it recognizes, so
-  // an off-scale utility like `pb-38` (there is no 38 — the scale jumps 36
-  // -> 40) is silently dropped, the element gets zero padding, and nothing
-  // in the DOM or a screenshot-free test run tells you the rule never
-  // existed. This is exactly the bug that shipped: the old version of this
-  // test parsed the integer out of `pb-38` and did correct arithmetic on
-  // it, which made the class *look* covered while the browser applied none
-  // of it. See tailwind.config.ts — theme.extend only adds colors and
-  // boxShadow, no custom spacing step, so this set is the complete scale.
-  const TAILWIND_SPACING_SCALE = new Set([
-    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
-    24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
-  ]);
+  //
+  // SPACING_UNIT_REM and TAILWIND_SPACING_SCALE come from ./tailwind-scale —
+  // the one place that scale is defined, so this test and "full-height
+  // screen wrapper clearance" above can never disagree about what's on it.
+  // A bare number NOT in this set compiles to NOTHING: Tailwind's JIT only
+  // emits CSS for class names it recognizes, so an off-scale utility like
+  // `pb-38` (there is no 38 — the scale jumps 36 -> 40) is silently dropped,
+  // the element gets zero padding, and nothing in the DOM or a
+  // screenshot-free test run tells you the rule never existed. This is
+  // exactly the bug that shipped: the old version of this test parsed the
+  // integer out of `pb-38` and did correct arithmetic on it, which made the
+  // class *look* covered while the browser applied none of it. See the
+  // "tailwind spacing scale" describe block below for coverage of
+  // isOnSpacingScale itself.
   const assertOnScale = (raw: number, context: string) => {
     expect(
-      TAILWIND_SPACING_SCALE.has(raw),
+      isOnSpacingScale(raw),
       `"${raw}" is not on Tailwind's default spacing scale (${context}). ` +
       `Tailwind's JIT compiler only emits CSS for class names on its ` +
       `recognized scale (…, 36, 40, 44, …) or using arbitrary-value syntax ` +
@@ -619,5 +1020,474 @@ describe("docked controls clearance", () => {
   // Shell padding is proven safe for every role, not just the patient's.
   it("also clears the control bar alone, for roles that render no BottomNav", () => {
     expect(shellPaddingRem).toBeGreaterThan(controlBarTopEdgeRem);
+  });
+});
+
+describe("flex row shrinkage at large text", () => {
+  // The owner, on a real phone at the largest TextSize step (root 112.5% *
+  // 1.3 = 23.4px): "Maya L." wrapped mid-name, "Certified Medical Assistant"
+  // stacked one word per line, and the green "Confirmed" StatusPill overflowed
+  // the card and was clipped by the viewport. Root cause, in dispatch.tsx's
+  // Assigned card:
+  //
+  //   <div className="flex items-center gap-3">
+  //     <Avatar/>                          (shrink-0 — fine)
+  //     <div className="flex-1">...name/title/rating...</div>   <-- no min-w-0
+  //     <StatusPill tone="green">Confirmed</StatusPill>          <-- no shrink guard
+  //   </div>
+  //
+  // A flex child with flex-1 (or any flex-grow) defaults to min-width:auto,
+  // NOT 0. That default means the browser will not let the flex-1 child
+  // shrink below its own content's intrinsic width to make room for a
+  // sibling — so as the root font grows and the pill's intrinsic width grows
+  // with it, the pill wins the fight for space and pushes past the card/
+  // viewport edge instead of the text column giving way. `min-w-0` overrides
+  // that default and lets the column actually shrink and wrap.
+  //
+  // Deliberately keyed on flex-1 (this codebase's only flex-grow idiom — no
+  // bare `grow`/`flex-grow` appears anywhere in components/), not on every
+  // `flex items-center`/`justify-between` row: a plain row of two
+  // auto-sized, non-growing children (e.g. consult.tsx's price row, or
+  // supervision.tsx's "Live" pill beside a heading) has no forced-shrink
+  // fight to lose — neither child is told to fill remaining space, so
+  // there's no `min-width:auto` collapse to guard against. Flagging those
+  // too would be a false positive that teaches contributors to ignore this
+  // test. The actual failure mode needs a growing child AND a sibling that
+  // must hold its own size (a StatusPill, or anything marked shrink-0)
+  // fighting it for the same row.
+  const allComponents = componentFiles("components").map(f => ({ file: f, src: sourceOf(f) }));
+
+  // A `<tag className="...flex-1...">` opening tag that lacks `min-w-0` in
+  // the same class string.
+  const FLEX_1_OPEN_TAG = /<\w+\s+className="([^"]*\bflex-1\b[^"]*)"[^>]*>/g;
+
+  // How far past the flexible child's own opening tag to look for the
+  // dangerous sibling (StatusPill, or an explicit shrink-0 element) sharing
+  // its row. Source analysis has no real DOM tree to walk, so this is a
+  // bounded window rather than an exact sibling lookup — the same trade-off
+  // the "accessible name" test above makes with its own ±400 char slice.
+  const SIBLING_WINDOW = 500;
+  // How far back to look for the row's own opening tag, to check whether the
+  // row already opts into `flex-wrap` — a row that wraps has already solved
+  // the crush-vs-overflow fight some other way, so it doesn't need min-w-0
+  // on top of that.
+  const ROW_LOOKBEHIND = 300;
+
+  type Offender = { file: string; snippet: string; reason: string };
+  const offenders: Offender[] = [];
+
+  for (const { file, src } of allComponents) {
+    for (const m of src.matchAll(FLEX_1_OPEN_TAG)) {
+      const classes = m[1];
+      if (/\bmin-w-0\b/.test(classes)) continue; // already guarded
+
+      const tagEnd = m.index! + m[0].length;
+      const after = src.slice(tagEnd, tagEnd + SIBLING_WINDOW);
+      const before = src.slice(Math.max(0, m.index! - ROW_LOOKBEHIND), m.index!);
+
+      // The nearest preceding row-opening tag that establishes the flex
+      // container this child sits in. If it already carries flex-wrap, the
+      // row degrades by wrapping instead of crushing this child, so skip it.
+      const rowOpen = /<\w+\s+className="([^"]*\bflex\b[^"]*)"[^>]*>(?![\s\S]*<\w+\s+className="[^"]*\bflex\b[^"]*>[\s\S]*$)/.exec(before);
+      if (rowOpen && /\bflex-wrap\b/.test(rowOpen[1])) continue;
+
+      const hasStatusPill = /<StatusPill\b/.test(after);
+      const hasShrink0Sibling = /<\w+\s+className="[^"]*\bshrink-0\b[^"]*"/.test(after);
+      if (!hasStatusPill && !hasShrink0Sibling) continue;
+
+      const reason = hasStatusPill
+        ? "a StatusPill sibling follows within the row"
+        : "a shrink-0 sibling follows within the row";
+      offenders.push({
+        file,
+        snippet: src.slice(m.index!, Math.min(src.length, tagEnd + 120)),
+        reason,
+      });
+    }
+  }
+
+  it("finds at least one flex-1 element to check (so this test is not vacuous)", () => {
+    const anyFlex1 = allComponents.some(({ src }) => /\bflex-1\b/.test(src));
+    expect(anyFlex1).toBe(true);
+  });
+
+  it("gives every flex-1 text column min-w-0 when a StatusPill or shrink-0 sibling shares its row", () => {
+    const report = offenders.map(o =>
+      `${o.file}: \`${o.snippet.replace(/\s+/g, " ").trim()}\` — ${o.reason} but the flex-1 element ` +
+      `has no min-w-0, so its min-width defaults to auto. At the largest TextSize step the sibling's ` +
+      `intrinsic width grows and this column cannot shrink to make room for it, so the sibling gets ` +
+      `pushed past the card/viewport edge and clipped instead. Add min-w-0 to the flex-1 element (and ` +
+      `shrink-0 to whichever sibling must hold its size) so the row degrades by shrinking/wrapping text ` +
+      `instead of overflowing.`
+    );
+    expect(offenders, `\n${report.join("\n")}`).toEqual([]);
+  });
+});
+
+describe("phone bar Next control at largest text size", () => {
+  // Measured at 375px: the phone bar (Back circle + persona text column +
+  // Next pill) fits the persona name/role at "standard" and "large" text,
+  // but at "larger" (root 112.5% * 1.3 = 23.4px) the text column shrinks to
+  // ~56.9px while the longest name+role needs ~102.6px — the pill clips.
+  // TextSize (components/a11y/text-size.tsx) holds the chosen step in a
+  // module-scope store read via useSyncExternalStore, not a CSS breakpoint,
+  // so the bar cannot express "only at the largest step" with a Tailwind
+  // responsive prefix — it has to branch on that store's live value. The
+  // owner's fix: render Next as an icon-only circle (matching Back's shape)
+  // only at that step, which recovers ~72px and lets the text column fit at
+  // all three text sizes without ever dropping the name or role.
+  const demoShell = sourceOf("components/shell/demo-shell.tsx");
+  const controlBarMatch = /fixed inset-x-0 bottom-(\d+) z-40[^"]*md:hidden/.exec(demoShell);
+  if (!controlBarMatch) throw new Error("could not locate the docked phone control bar in demo-shell.tsx");
+  const barStart = controlBarMatch.index;
+  const barEnd = demoShell.indexOf("<AnimatePresence>", barStart);
+  const controlBarBlock = demoShell.slice(barStart, barEnd);
+
+  // The bar must read the live text-size step from a11y/text-size.tsx's
+  // module-scope store (directly or through a hook wrapping it), not just
+  // reference the module by name — otherwise a decoy import that never
+  // actually branches rendering would still pass a looser check.
+  it("imports the text-size step from the a11y text-size store", () => {
+    expect(
+      demoShell,
+      "demo-shell.tsx must import something from a11y/text-size.tsx (e.g. a hook exposing the " +
+      "current index or an `isLargestText` boolean) to know when to collapse Next to an icon",
+    ).toMatch(/from ["']\.\.\/a11y\/text-size["']/);
+  });
+
+  // The Next control inside the phone bar specifically (not the desktop
+  // bar's separate Next, which must keep its label at every size per the
+  // "do not change the desktop top bar" constraint). A conditional render
+  // (icon-only at the largest step, labelled pill otherwise) produces TWO
+  // `onClick={next}` buttons in the JSX source, both inside whatever wraps
+  // them (e.g. `{isLargestText ? (...) : (...)}`) — so capture from the
+  // FIRST `onClick={next}` through the LAST matching `</button>` among a run
+  // of consecutive onClick={next} buttons, which spans both branches plus
+  // the condition wrapping them, rather than stopping at the first `</button>`
+  // (which would only ever see one branch and miss the gate around them).
+  const NEXT_BUTTON_OPEN = /<button\b[^>]*onClick=\{next\}/g;
+  const nextButtonOpens = [...controlBarBlock.matchAll(NEXT_BUTTON_OPEN)];
+
+  it("finds the phone bar's Next button to check", () => {
+    expect(nextButtonOpens.length, "expected at least one onClick={next} button inside the docked phone control bar").toBeGreaterThan(0);
+  });
+
+  // From the first onClick={next} button's start, extend through however
+  // many consecutive `<button ... onClick={next} ...>...</button>` runs
+  // follow with only whitespace/JSX-conditional glue between them (a `? (`
+  // / `) : (` / `)}` from the ternary), so both branches of a conditional
+  // render are included as one block.
+  const firstOpenIdx = nextButtonOpens[0]?.index ?? -1;
+  let nextBlock = "";
+  if (firstOpenIdx > -1) {
+    // Walk forward from the first opening tag, matching complete
+    // `<button ...>...</button>` runs (via a lazy .*? on <button ... > up to
+    // its own </button>) plus JSX glue between them, until no further
+    // onClick={next} button follows immediately after.
+    let cursor = firstOpenIdx;
+    let end = firstOpenIdx;
+    const BUTTON_RUN = /<button\b[^>]*onClick=\{next\}[\s\S]*?<\/button>/g;
+    BUTTON_RUN.lastIndex = cursor;
+    let m: RegExpExecArray | null;
+    while ((m = BUTTON_RUN.exec(controlBarBlock))) {
+      if (m.index !== cursor && controlBarBlock.slice(cursor, m.index).replace(/[\s)}:?(]|isLargestText/g, "") !== "") break;
+      end = m.index + m[0].length;
+      cursor = end;
+      BUTTON_RUN.lastIndex = cursor;
+    }
+    nextBlock = controlBarBlock.slice(Math.max(0, firstOpenIdx - 40), end);
+  }
+
+  it("branches the phone Next control on the text-size store rather than always rendering the labelled pill", () => {
+    // The labelled form ("Next" + arrow) must not be unconditional — some
+    // conditional keyed on the text-size step must gate it, so at the
+    // largest step something other than the px-4 labelled pill renders.
+    expect(
+      nextBlock,
+      `the phone bar's Next button must conditionally render an icon-only form at the largest text ` +
+      `step instead of always showing the labelled "Next" pill:\n${nextBlock}`,
+    ).toMatch(/isLargestText|textSizeIndex|SIZES\.length\s*-\s*1/);
+  });
+
+  it("keeps an accessible name on the phone Next control in its icon-only form", () => {
+    // Whether rendered as a labelled pill (accessible name from its text
+    // content) or collapsed to an icon-only circle, the control must carry
+    // an explicit aria-label somewhere so an icon-only render is never
+    // silently unlabelled.
+    expect(
+      nextBlock,
+      `icon-only Next must carry an aria-label (e.g. "Next beat") so collapsing away the visible ` +
+      `"Next" text does not also remove its accessible name:\n${nextBlock}`,
+    ).toMatch(/aria-label=(?:"[^"]+"|\{[^}]+\})/);
+  });
+
+  it("still conveys the atWalkEnd state when Next is collapsed to an icon", () => {
+    // atWalkEnd already disables the button (disabled={atWalkEnd}); the
+    // icon-only form must not silently drop that, since it can no longer
+    // rely on the "End of this persona's day" text label to convey it.
+    expect(nextBlock).toContain("disabled={atWalkEnd}");
+  });
+
+  // The persona text column (name over role) must not be able to overflow
+  // the row even if the 375px budget above is wrong for a narrower phone
+  // (360px, 320px devices exist) — it must degrade by truncating instead.
+  it("keeps the persona text column shrinkable and truncating, so it cannot overflow the row on narrower phones", () => {
+    const personaButtonMatch = /<button\b[^>]*onClick=\{\(\) => setSheet\(true\)\}[\s\S]*?<\/button>/.exec(controlBarBlock);
+    expect(personaButtonMatch, "could not find the persona indicator button in the phone control bar").toBeTruthy();
+    const personaBlock = personaButtonMatch![0];
+    expect(
+      personaBlock,
+      "the persona button's flex-1 text column must carry min-w-0, or a flex-1 sibling's default " +
+      "min-width:auto stops it from shrinking to make room for Next",
+    ).toMatch(/\bmin-w-0\b/);
+    expect(
+      personaBlock,
+      "the persona name and role lines must keep `truncate` so they clip with an ellipsis instead " +
+      "of overflowing the row on a narrower phone (360px/320px) where the measured 375px budget " +
+      "no longer holds",
+    ).toMatch(/\btruncate\b/);
+  });
+});
+
+describe("tailwind spacing scale", () => {
+  // "docked controls clearance" and "full-height screen wrapper clearance"
+  // (above) both depend on ./tailwind-scale to catch an off-scale class like
+  // `pb-38` before it ships as silently-zero padding. Neither of those tests
+  // actually proves the scale itself is right, though — they only prove
+  // Shell's own numbers happen to be on it. A wrong or incomplete scale
+  // (missing a real step, or wrongly admitting a fake one) would make both
+  // tests pass or fail for the wrong reason. This proves the scale and its
+  // validator directly, independent of any one component.
+
+  // Tailwind's default scale is not consecutive integers — it has a run of
+  // half-steps at the bottom (0.5, 1.5, 2.5, 3.5) and then starts skipping
+  // whole integers once it passes 12 (13 is missing, then 15, 17..19, 21..23,
+  // ...). A validator built from `Number.isInteger` or `raw <= 96` would
+  // wrongly accept a fair number of these gaps, which is exactly how `pb-38`
+  // could have looked plausible if nobody had enumerated the real scale.
+  it("rejects a sample of the actual gaps in Tailwind's scale, not just implausibly large numbers", () => {
+    // 38 is the bug that shipped; 13, 15, and 21 are unrelated gaps nearby
+    // that a naive "must be a multiple of 4" or "must be even" rule would
+    // handle differently — picked to stress different wrong heuristics.
+    for (const gap of [13, 15, 17, 21, 38, 45, 100]) {
+      expect(isOnSpacingScale(gap), `${gap} should not be on the scale`).toBe(false);
+    }
+  });
+
+  it("accepts every real step on Tailwind's default scale, including the sub-1 half-steps", () => {
+    // The half-steps are the easiest real values for an integer-only
+    // validator to wrongly reject — pin them by name, not just via the
+    // shared set, so a validator rewrite that drops half-step support fails
+    // here even if someone also "fixes" TAILWIND_SPACING_SCALE to match.
+    for (const step of [0.5, 1.5, 2.5, 3.5]) {
+      expect(isOnSpacingScale(step), `${step} is a real Tailwind half-step and should be on the scale`).toBe(true);
+    }
+    // And the full published scale, so a future edit that drops or
+    // mistypes any step (e.g. 44 -> 45) is caught here rather than only in
+    // whichever component test happens to use that particular step.
+    const published = [
+      0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20,
+      24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+    ];
+    for (const step of published) {
+      expect(isOnSpacingScale(step), `${step} is on Tailwind's published default scale`).toBe(true);
+    }
+    expect(TAILWIND_SPACING_SCALE.size).toBe(published.length);
+  });
+
+  // spacingUtilitiesIn is the scanner the codebase-wide check below relies
+  // on to even find candidate classes. Arbitrary-value syntax (`pb-[9.5rem]`)
+  // is Tailwind's real escape hatch for an off-scale value — it always
+  // compiles to real CSS — so the scanner must treat it as a different kind
+  // of thing entirely, not as a spacing utility to validate against the
+  // scale. If the scanner mis-parsed it as a bare step, a legitimate
+  // `pb-[9.5rem]` would be flagged as a false positive.
+  it("does not treat arbitrary-value syntax as a bare scale step", () => {
+    const found = spacingUtilitiesIn('<div className="pb-[9.5rem] w-[560px]">');
+    expect(found).toEqual([]);
+  });
+
+  // Fraction utilities (`w-1/2`) and bare keywords (`w-full`, `h-screen`,
+  // `inset-0` aside — that IS numeric and valid) use the same `prop-value`
+  // shape as a real spacing step but are a different Tailwind feature
+  // entirely and must not false-positive.
+  it("does not mistake fraction or keyword width/height utilities for spacing steps", () => {
+    const found = spacingUtilitiesIn('<div className="w-1/2 w-full h-screen h-auto h-fit">');
+    expect(found).toEqual([]);
+  });
+
+  // The scanner must still find a real bare step sitting right next to the
+  // syntax it's supposed to ignore, including through a responsive prefix
+  // (md:pb-24) — a scanner that over-corrected to avoid false positives
+  // above could just as easily start missing real classes too.
+  it("still finds a real bare spacing step next to arbitrary-value and fraction utilities", () => {
+    const found = spacingUtilitiesIn('<div className="w-1/2 pb-[9.5rem] md:pb-24 gap-2.5">');
+    const classNames = found.map(f => f.className).sort();
+    expect(classNames).toEqual(["gap-2.5", "pb-24"]);
+  });
+
+  // The actual proof this whole describe block exists for: feed the
+  // scanner the exact class the owner's bug shipped with, and confirm the
+  // combination — found by the scanner, then rejected by the validator —
+  // is what would have failed the "docked controls clearance" test, instead
+  // of the old version that quietly parsed `38` out of `pb-38` and did
+  // arithmetic as if it meant something.
+  it("catches the exact pb-38 class the original bug shipped, end to end", () => {
+    const found = spacingUtilitiesIn('<div className="fixed inset-x-0 bottom-0 z-40 pb-38 md:hidden">');
+    const pb = found.find(f => f.className.startsWith("pb-"));
+    expect(pb, "scanner should have found the pb-38 utility").toBeTruthy();
+    expect(isOnSpacingScale(pb!.raw)).toBe(false);
+  });
+});
+
+describe("codebase-wide tailwind spacing scale scan", () => {
+  // The one instance (docked controls clearance, full-height wrapper
+  // clearance) and the validator itself (tailwind spacing scale, above) are
+  // both covered, but neither scans the rest of the app. A second off-scale
+  // class of the exact same shape (silently-zero CSS, a test that "passes"
+  // because nothing renders to disagree with it) could ship anywhere else
+  // in components/ or app/ and nothing here would notice. This scans every
+  // .tsx file under both directories for every spacing utility this
+  // codebase uses and fails naming any class whose numeric step isn't on
+  // Tailwind's real scale — not just the corner this session already found.
+  const files = [...componentFiles("components"), ...componentFiles("app")];
+
+  it("scans more than a handful of files, so this check is not accidentally vacuous", () => {
+    expect(files.length).toBeGreaterThan(20);
+  });
+
+  it("keeps every spacing utility class in components/ and app/ on Tailwind's real scale", () => {
+    const offenders: string[] = [];
+    for (const file of files) {
+      const src = sourceOf(file);
+      for (const { className, raw } of spacingUtilitiesIn(src)) {
+        if (!isOnSpacingScale(raw)) {
+          offenders.push(
+            `${file}: \`${className}\` (${raw}) is not on Tailwind's default spacing scale — it ` +
+            `compiles to NO CSS at all, silently leaving the property unset. This is the exact ` +
+            `failure mode of the pb-38 bug: nothing in the DOM or a screenshot-free test tells you ` +
+            `the class never applied.`,
+          );
+        }
+      }
+    }
+    expect(
+      offenders,
+      `found ${offenders.length} off-scale Tailwind spacing utilit${offenders.length === 1 ? "y" : "ies"} ` +
+      `in components/ or app/:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+});
+
+describe("operator MRR reconciliation", () => {
+  // The plan originally specified mrr: 148_916 while metrics.mix (702×$99 +
+  // 431×$149 + 151×$299) sums to $178,866. Both render on the same
+  // dashboard panel (components/screens/operator/metrics.tsx) — the top MRR
+  // stat card, and the mix breakdown directly beneath it — so an investor
+  // doing the arithmetic the mix table invites would see the two disagree.
+  // This is a data assertion against the real fixture, not source analysis:
+  // it fails again if anyone edits mrr or the mix independently in the
+  // future, whichever one drifts.
+  it("keeps metrics.mrr equal to the sum of metrics.mix's own count × monthly", async () => {
+    const { metrics } = await import("./mock-data");
+    const reconciled = metrics.mix.reduce((sum, m) => sum + m.count * m.monthly, 0);
+    expect(
+      metrics.mrr,
+      `metrics.mrr (${metrics.mrr}) does not match metrics.mix's own count × monthly (${reconciled}). ` +
+      `Both numbers render on the same operator dashboard panel, so a mismatch reads as a ` +
+      `contradiction to anyone who does the mix table's own arithmetic.`,
+    ).toBe(reconciled);
+  });
+
+  it("keeps metrics.activeMemberships equal to the sum of metrics.mix's own counts", async () => {
+    const { metrics } = await import("./mock-data");
+    const reconciled = metrics.mix.reduce((sum, m) => sum + m.count, 0);
+    expect(
+      metrics.activeMemberships,
+      `metrics.activeMemberships (${metrics.activeMemberships}) does not match the sum of ` +
+      `metrics.mix's own tier counts (${reconciled}) — the same dashboard shows both the total and ` +
+      `the per-tier breakdown that should add up to it.`,
+    ).toBe(reconciled);
+  });
+});
+
+describe("unsourced operator figures stay visibly marked", () => {
+  // metrics.conversion, metrics.deviceGrossProfit, metrics.cmaShare and
+  // metrics.supervisionRatio appear in neither the deck nor the MRD — the
+  // product owner flagged them as demo placeholders only (spec §14,
+  // mock-data.ts's own comment above `metrics`). They render in the funnel
+  // row of components/screens/operator/metrics.tsx alongside the genuinely
+  // sourced "Visit fee $99" card. Nothing about the rendered card
+  // distinguishes a placeholder from a real figure except the "Illustrative"
+  // tag — if that tag is ever removed, these numbers read to an investor as
+  // sourced company metrics, which they are not.
+  const metricsSrc = sourceOf("components/screens/operator/metrics.tsx");
+
+  // Isolate the funnel row specifically — the same "Or enter as one
+  // persona"-style isolation the cover/mobile-indicator tests use above —
+  // so this doesn't accidentally match an unrelated "Illustrative"-shaped
+  // string elsewhere on the dashboard.
+  const funnelStart = metricsSrc.indexOf("Conversion, Device GP and Supervision");
+  if (funnelStart === -1) throw new Error("could not locate the funnel row's placeholder-figures comment in metrics.tsx");
+  const funnelBlock = metricsSrc.slice(funnelStart);
+
+  it("still renders a visible 'Illustrative' marker in the funnel row", () => {
+    expect(
+      funnelBlock,
+      "the funnel row (components/screens/operator/metrics.tsx) must render a visible 'Illustrative' " +
+      "marker — these four figures (conversion, device gross profit, cma share, supervision ratio) " +
+      "are demo placeholders per spec §14, unsourced from either the deck or the MRD, and must never " +
+      "read to an investor as sourced company metrics.",
+    ).toContain("Illustrative");
+  });
+
+  // The marker must be driven from each card's own data (a per-card
+  // `illustrative` boolean fed into a shared `.map`), not hand-authored once
+  // per card — a hardcoded per-card marker is exactly the shape of edit
+  // that silently drops the tag from one card (e.g. copy-pasting a new card
+  // without its flag) while every existing test that only checks "the text
+  // 'Illustrative' appears somewhere" keeps passing.
+  it("drives the Illustrative marker from card data rather than one hardcoded per-card element", () => {
+    // The funnel's four cards are declared as an array of tuples fed
+    // through one `.map` — the fourth element of each tuple is the
+    // per-card illustrative flag, and the JSX must branch on that flag
+    // (`{illustrative && ...}`) rather than repeating a literal
+    // "Illustrative" span once per card.
+    expect(
+      funnelBlock,
+      "expected the funnel row to map over an array of per-card data (so the four funnel cards share " +
+      "one render path) rather than hand-authoring four separate cards",
+    ).toMatch(/\]\)\.map\(/);
+    expect(
+      funnelBlock,
+      "expected the 'Illustrative' tag to be gated by a per-card boolean (e.g. `{illustrative && ...}`) " +
+      "read from that card's own data, not rendered unconditionally or duplicated by hand per card",
+    ).toMatch(/\{illustrative\s*&&/);
+    // Exactly one occurrence of the literal tag text: if a future edit
+    // hardcoded a second "Illustrative" span per card instead of reusing
+    // the data-driven one, or duplicated the whole card block, this would
+    // catch the drift even though "still renders a visible marker" above
+    // would keep passing on the surviving copy.
+    const literalOccurrences = (funnelBlock.match(/Illustrative/g) ?? []).length;
+    expect(
+      literalOccurrences,
+      `found the literal text "Illustrative" ${literalOccurrences} times in the funnel row — expected ` +
+      "exactly one, from the single data-driven render path",
+    ).toBe(1);
+  });
+
+  // The one genuinely sourced figure in the same row — Visit fee, spec §9a
+  // — must stay unmarked, so the tag keeps meaning something. If every card
+  // carried the tag, "Illustrative" would stop communicating "unsourced"
+  // and just read as decoration.
+  it("leaves the genuinely sourced Visit fee card unmarked", () => {
+    const visitFeeIdx = funnelBlock.indexOf('"Visit fee"');
+    expect(visitFeeIdx, "could not find the Visit fee card's data in the funnel row").toBeGreaterThan(-1);
+    // The Visit fee tuple's own trailing boolean (its `illustrative` flag)
+    // must be false — check the tuple line itself rather than the whole
+    // block, since the whole block legitimately contains "false" for the
+    // one card that should have it.
+    const tupleLine = funnelBlock.slice(visitFeeIdx, funnelBlock.indexOf("\n", visitFeeIdx));
+    expect(tupleLine, `Visit fee's card data must end with \`false\` (not illustrative): "${tupleLine}"`).toMatch(/false\]/);
   });
 });

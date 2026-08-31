@@ -18,7 +18,7 @@ export function AudConsult({ next }: { next: () => void }) {
   const excluded = devices[2].name;
 
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 text-brand-navy">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-4xl">
         <header className="mb-5 flex items-center justify-between">
           <div>
@@ -99,7 +99,7 @@ export function AudConsult({ next }: { next: () => void }) {
 export function AudPrescription() {
   const locked = lockedLatch.use();
   return (
-    <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 text-brand-navy">
+    <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           <Lock size={21} aria-hidden />

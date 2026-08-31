@@ -125,6 +125,26 @@ describe("solo mode (per-persona entry)", () => {
     expect(prevBeatForRole(beats[0], "cma")).toBe(beats[0]);
     expect(prevBeatForRole(beats[2], "cma")).toBe(beats[1]);
   });
+
+  // The phone bar disables Back when `prevBeatForRole(beat, role) === beat`
+  // (demo-shell.tsx's `atStart`). A viewer mid-walk who saw Back look dead
+  // reported "there is no back button" — this proves the guard itself is
+  // sound: for every role, every beat actually reachable in that role's solo
+  // walk EXCEPT the first reports Back as available. If this ever regresses
+  // (e.g. a future edit to beatsForRole or prevBeatForRole reintroduces a
+  // beat where the walk's own pointer looks stuck), Back would go dead mid-
+  // story again with no visual difference from the legitimate first-beat case.
+  it("never reports Back as unavailable except at the true first beat of a role's walk", () => {
+    for (const role of ROLES) {
+      const walk = beatsForRole(role);
+      for (const beat of walk.slice(1)) {
+        expect(
+          prevBeatForRole(beat, role),
+          `${role} beat ${beat} (not the walk's first beat) falsely reports atStart`,
+        ).not.toBe(beat);
+      }
+    }
+  });
 });
 
 describe("solo walk boundaries", () => {

@@ -36,8 +36,8 @@ export function PureToneStep({ framing }: { framing: Framing }) {
       )}
 
       <Card className="mt-4 flex items-center gap-3 p-4">
-        <Wifi className="text-brand-teal" />
-        <div className="flex-1">
+        <Wifi className="shrink-0 text-brand-teal" />
+        <div className="min-w-0 flex-1">
           <b className="text-sm">Environment is stable</b>
           <p className="text-xs text-slate-500">Ambient noise within clinical range</p>
         </div>

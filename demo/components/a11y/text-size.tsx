@@ -43,6 +43,33 @@ function setIndex(i: number) {
 const rootFontSize = (scale: number) => `${scale * 112.5}%`;
 
 /**
+ * The current text-size step, for chrome that must react to it outside the
+ * `TextSize` control itself.
+ *
+ * The phone docked bar (DemoShell) is rem-based like everything else, so it
+ * scales together with the text — but the 375px viewport does not scale, and
+ * at the largest step ("larger") the persona name/role column no longer has
+ * room for the labelled "Next" pill. That can't be expressed as a Tailwind
+ * responsive prefix (`lg:`/`md:`) because it isn't a viewport breakpoint —
+ * it's this module's own runtime index, chosen independently of screen size.
+ * This hook gives DemoShell (or any other consumer) read access to that same
+ * `useSyncExternalStore`-backed index without duplicating the store.
+ *
+ * SSR-safe the same way `TextSize` itself is: the server snapshot is always
+ * `0` (standard), so the first paint never disagrees with the client before
+ * hydration reconciles it.
+ */
+export function useTextSizeIndex() {
+  return useSyncExternalStore(subscribe, getIndex, () => 0);
+}
+
+/** True at the largest step ("larger") — the one step where the phone
+ * docked bar's Next pill no longer fits beside the persona name/role. */
+export function useIsLargestTextSize() {
+  return useTextSizeIndex() === SIZES.length - 1;
+}
+
+/**
  * Reset to the standard size, for the start of a fresh walkthrough.
  *
  * Writes `document.documentElement.style.fontSize` directly rather than only

@@ -42,19 +42,19 @@ export function Cover() {
         <p className="mt-9 text-[11px] font-extrabold uppercase tracking-[.2em] text-slate-400">
           Or enter as one persona
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ROLES.map(r => {
             const p = personaFor(r);
             return (
               <button
                 key={r}
                 onClick={() => startAs(r)}
-                className="flex items-center gap-3 rounded-2xl border border-[#dfeaec] bg-white p-3 text-left transition hover:border-brand-teal"
+                className="flex min-h-[4.5rem] items-start gap-3 rounded-2xl border border-[#dfeaec] bg-white p-3 text-left transition hover:border-brand-teal"
               >
                 <PersonaAvatar role={r} size="md" />
                 <span className="min-w-0">
-                  <b className="block truncate text-[13px] leading-tight">{p.title}</b>
-                  <span className="block truncate text-[11px] text-slate-400">{p.name}</span>
+                  <b className="block text-[13px] leading-tight">{p.name}</b>
+                  <span className="block text-[11px] leading-snug text-slate-400">{p.title}</span>
                 </span>
               </button>
             );

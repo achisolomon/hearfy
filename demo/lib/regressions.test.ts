@@ -1757,3 +1757,59 @@ describe("pure-tone ring label clearance", () => {
     expect(centerCls).not.toMatch(/\btruncate\b|whitespace-nowrap/);
   });
 });
+
+describe("Dr. Reed's camera feed", () => {
+  const feed = sourceOf("components/screens/cma/reed-feed.tsx");
+  const tile = sourceOf("components/screens/cma/call-tile.tsx");
+
+  // The tile drew an "SR" initials chip on a navy gradient. Once real footage
+  // existed, a leftover placeholder would have shown two different Dr. Reeds
+  // depending on which screen you were on.
+  it("shows the footage, not the SR initials placeholder", () => {
+    expect(tile).not.toContain(">SR<");
+    expect(tile).toContain("<ReedFeed");
+  });
+
+  // The source take talks for ~87% of its 10s. Reusing one loop everywhere put
+  // a silently mouthing doctor under every idle screen, where the app is not
+  // claiming she is speaking.
+  it("plays a different loop when she is speaking than when she is listening", () => {
+    expect(feed).toContain("reed-speaking.mp4");
+    expect(feed).toContain("reed-idle.mp4");
+    expect(feed).toContain("active ?");
+  });
+
+  // Both renderings take `active`, so the loop matches the SPEAKING pill in
+  // the strip as well as the panel — not just wherever it was wired first.
+  it("passes `active` into both the strip and the zoom panel", () => {
+    expect([...tile.matchAll(/<ReedFeed active=\{active\}/g)]).toHaveLength(2);
+  });
+
+  // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a
+  // raw <video src> alone, so a literal "/video/..." 404s in production while
+  // working on localhost.
+  it("builds asset URLs through the basePath helper", () => {
+    expect(feed).toContain("asset(");
+    expect(feed).not.toMatch(/(src|poster)=\{?["`]\/video\//);
+  });
+
+  // Autoplay is only permitted for muted video, and the demo has no audio.
+  it("is muted, looping and inline so it can autoplay", () => {
+    for (const attr of ["autoPlay", "loop", "muted", "playsInline"]) {
+      expect(feed).toContain(attr);
+    }
+  });
+
+  // The demo-wide contract: motion degrades to a still, never plays anyway.
+  it("falls back to a poster still under prefers-reduced-motion", () => {
+    expect(feed).toContain("prefers-reduced-motion: reduce");
+    expect(feed).toContain("reed-poster.jpg");
+  });
+
+  // The LIVE/SPEAKING pills and call controls are DOM overlays. If they were
+  // ever baked into the footage the tile would render them twice.
+  it("keeps the call chrome in the DOM, over the feed", () => {
+    expect(tile).toContain("Live");
+    expect(tile).toContain("Speaking");
+  });
+});

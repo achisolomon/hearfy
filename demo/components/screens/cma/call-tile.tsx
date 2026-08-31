@@ -3,6 +3,7 @@ import { Mic, Video } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clinician } from "@/lib/mock-data";
 import { VideoSplit } from "../video-split";
+import { ReedFeed } from "./reed-feed";
 
 /**
  * The audiologist's live video presence on the CMA's screen (corrections
@@ -17,7 +18,10 @@ import { VideoSplit } from "../video-split";
  *   should feel she is in the room.
  *
  * `active` marks the moments she is speaking or has taken over — the tile
- * brightens rather than appearing, because she never left.
+ * brightens rather than appearing, because she never left. It also selects
+ * which of her two camera loops plays (see `ReedFeed`): talking when active,
+ * listening otherwise. The LIVE/SPEAKING pills, call controls and caption
+ * stay DOM overlays on top of the footage — never baked into the video.
  */
 export function AudiologistCallTile({ note, active = false }:
   { note: string; active?: boolean }) {
@@ -53,9 +57,9 @@ export function AudiologistStrip({ note, active = false, className }:
     <div className={cn(
       "mb-4 flex items-stretch gap-3 rounded-[24px] border bg-white p-3 shadow-card",
       active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]", className)}>
-      {/* The "video feed" — framed like a call, not an avatar chip. */}
-      <div className="relative grid h-20 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <span className="grid h-11 w-11 place-items-center rounded-full bg-white/90 text-sm font-extrabold text-brand-navy">SR</span>
+      {/* Her real camera feed, framed like a call. */}
+      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-[#16426c] to-[#0c2340]">
+        <ReedFeed active={active} />
         <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> Live
         </span>
@@ -79,31 +83,41 @@ function ZoomPanel({ note, active }: { note: string; active: boolean }) {
     <div className={cn(
       "overflow-hidden rounded-[28px] border bg-white shadow-card",
       active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]")}>
-      <div className="relative grid aspect-[4/3] place-items-center bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <div className="text-center">
-          <span className="mx-auto grid h-28 w-28 place-items-center rounded-full bg-white/90 text-3xl font-extrabold text-brand-navy">SR</span>
-          <p className="mt-4 text-[15px] font-extrabold text-white">{clinician.name}, {clinician.credential}</p>
-          <p className="mt-0.5 text-xs text-white/60">Licensed Audiologist · {clinician.licenseState}</p>
-        </div>
+      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
+        <ReedFeed active={active} />
+
+        {/* Call chrome, anchored to the frame's own corners — never to the
+            caption column, or it drifts down the feed as the note grows. */}
         <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> Live
+          <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Live
         </span>
         {active && (
           <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-brand-teal px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
             <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Speaking
           </span>
         )}
-        <span className="absolute bottom-4 right-4 flex gap-2">
-          {[Mic, Video].map((I, i) => (
-            <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
-          ))}
-        </span>
-        {/* Her words land as a live caption, the way a call renders speech. */}
-        <p className={cn(
-          "absolute inset-x-6 bottom-4 mx-auto max-w-md rounded-2xl px-4 py-2.5 text-center text-xs leading-5 text-white",
-          active ? "bg-black/60 font-semibold" : "bg-black/45")}>
-          {note}
-        </p>
+
+        {/* Nameplate above caption in one bottom-anchored column, so a long
+            note pushes the stack up instead of colliding with the name. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-4 pb-4 pt-12">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-extrabold leading-tight text-white">{clinician.name}, {clinician.credential}</p>
+              <p className="mt-0.5 truncate text-xs text-white/75">Licensed Audiologist · {clinician.licenseState}</p>
+            </div>
+            <span className="flex shrink-0 gap-2">
+              {[Mic, Video].map((I, i) => (
+                <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
+              ))}
+            </span>
+          </div>
+          {/* Her words land as a live caption, the way a call renders speech. */}
+          <p className={cn(
+            "rounded-2xl px-3 py-2 text-xs leading-5 text-white",
+            active ? "bg-black/65 font-semibold" : "bg-black/50")}>
+            {note}
+          </p>
+        </div>
       </div>
     </div>
   );

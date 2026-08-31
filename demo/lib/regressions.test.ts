@@ -674,11 +674,20 @@ describe("clinical screens", () => {
   });
 
   // Five of six supervision tiles were buttons with no handler: focusable,
-  // announced as actionable, silently inert.
-  it("does not render a read-only supervision tile as a button", () => {
+  // announced as actionable, silently inert. The first fix made them plain
+  // <div>s. The critique (2026-08-31) found the real fault underneath: the
+  // red-flagged exam could not be opened at all, so a pulsing alarm resolved
+  // to nothing. Every tile is a button again — but now each one carries a
+  // handler that opens its peek card, which is what the original test was
+  // protecting against the absence of.
+  it("gives every supervision tile a real handler, never an inert control", () => {
     const sup = sourceOf("components/screens/audiologist/supervision.tsx");
     expect(sup).not.toMatch(/onClick=\{e\.hero \? onOpen : undefined\}/);
-    expect(sup).toContain("if (!e.hero) return <div");
+    expect(sup).not.toContain("if (!e.hero) return <div");
+    // One tile component, one unconditional handler: no branch can produce a
+    // focusable control that does nothing.
+    expect(sup).toMatch(/<button\s+onClick=\{onOpen\}/);
+    expect(sup).toMatch(/onOpen=\{\(\) => setOpenId\(e\.id\)\}/);
   });
 
   // Icons that carry state need text beside them, per the audiogram's own rule.
@@ -1778,10 +1787,13 @@ describe("Dr. Reed's camera feed", () => {
     expect(feed).toContain("active ?");
   });
 
-  // Both renderings take `active`, so the loop matches the SPEAKING pill in
-  // the strip as well as the panel — not just wherever it was wired first.
-  it("passes `active` into both the strip and the zoom panel", () => {
-    expect([...tile.matchAll(/<ReedFeed active=\{active\}/g)]).toHaveLength(2);
+  // There is exactly ONE call tile now (the 4:3 ZoomPanel): the patient's
+  // slim strip was a second shape for the same call, so the video changed
+  // size and position between roles. Every surface renders the one panel,
+  // and it takes `active` so the loop matches the SPEAKING pill.
+  it("renders the feed from exactly one call tile, wired to `active`", () => {
+    expect([...tile.matchAll(/<ReedFeed active=\{active\}/g)]).toHaveLength(1);
+    expect(tile).not.toMatch(/h-20 w-24/);
   });
 
   // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a
@@ -1857,5 +1869,36 @@ describe("the audiologist presents the comparison", () => {
   // device must not be painted with it.
   it("marks only the recommended device in teal", () => {
     expect(table).toMatch(/compareRecommendation\.device \? "text-teal-ink" : "text-slate-500"/);
+  });
+});
+
+describe("one call tile everywhere", () => {
+  // The call was drawn two ways: VideoSplit's 380px 4:3 panel for the CMA and
+  // audiologist, and a slim strip with a 96x80 thumbnail on the patient's five
+  // screens. Same call, two sizes and two shapes, depending which role you
+  // were looking at — exactly what VideoSplit's docblock promises cannot
+  // happen. Pin the shape so a second one cannot come back.
+  it("defines the call's aspect ratio in exactly one place", () => {
+    const owners = componentFiles()
+      .filter(f => /aspect-\[4\/3\]/.test(sourceOf(f)))
+      .sort();
+    expect(owners).toEqual([
+      "components/screens/audiologist/home-feed.tsx",
+      "components/screens/cma/call-tile.tsx",
+    ]);
+  });
+
+  // No screen may size the feed by hand; the tile owns its own box.
+  it("has no fixed-pixel video thumbnail left anywhere", () => {
+    for (const f of componentFiles()) {
+      expect(sourceOf(f), `${f} sizes a call feed by hand`).not.toMatch(/h-20 w-24/);
+    }
+  });
+
+  // The patient's screens must render the same tile the pro roles do, not a
+  // bespoke one of their own.
+  it("gives the patient the same tile as every other role", () => {
+    const tile = sourceOf("components/screens/cma/call-tile.tsx");
+    expect(tile).toMatch(/export function AudiologistStrip[^]*?<ZoomPanel/);
   });
 });

@@ -38,6 +38,8 @@ export function CallSplit({ note, active = false, children }:
   { note: string; active?: boolean; children: React.ReactNode }) {
   return (
     <>
+      {/* Below `md` the same panel stacks above the work; from `md` it moves
+         into VideoSplit's column. One tile, one shape, every role. */}
       <AudiologistStrip note={note} active={active} className="md:hidden" />
       <VideoSplit hideVideoBelowMd video={<ZoomPanel note={note} active={active} />}>
         {children}
@@ -47,38 +49,27 @@ export function CallSplit({ note, active = false, children }:
 }
 
 /**
- * The phone-sized presence: Dr. Reed as a slim call strip. The CMA sees it
- * below `md`; the PATIENT sees it on every exam screen — she is right next
- * to them in their home hearing lab (refined 2026-08-31).
+ * Dr. Reed on the patient's own screen (refined 2026-08-31): the SAME 4:3
+ * call panel every other role sees, laid full-width in the patient's phone
+ * column instead of in `VideoSplit`'s 380px one.
+ *
+ * It renders `ZoomPanel` rather than a second layout of its own. Before, this
+ * was a slim strip with a 96x80 thumbnail, so the patient's five screens
+ * showed the call at a different size and shape from the CMA's and the
+ * audiologist's — the one thing `VideoSplit` exists to prevent. The column
+ * differs by device; the tile inside it must not.
+ *
+ * Capped at 380px — VideoSplit's column width — so the call is the same size
+ * on a `wide` screen (Compare) as on a phone-width one. Without the cap it
+ * stretched to the wide column and rendered 961px against the exam screens'
+ * 457px, which is the same inconsistency in the other direction.
  */
 export function AudiologistStrip({ note, active = false, className }:
   { note: string; active?: boolean; className?: string }) {
-  return (
-    <div className={cn(
-      "mb-4 flex items-stretch gap-3 rounded-[24px] border bg-white p-3 shadow-card",
-      active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]", className)}>
-      {/* Her real camera feed, framed like a call. */}
-      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <ReedFeed active={active} />
-        <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-[#dc2626] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> Live
-        </span>
-        <span className="absolute bottom-1.5 right-1.5 flex gap-1 text-white/80">
-          <Mic size={11} /> <Video size={11} />
-        </span>
-      </div>
-      <div className="min-w-0 flex-1 py-1">
-        <b className="block text-xs">{clinician.name}, {clinician.credential}</b>
-        <p className="text-[11px] text-slate-500">Licensed · {clinician.licenseState} · on the call</p>
-        <p className={cn("mt-1.5 text-[11px] leading-4", active ? "font-semibold text-brand-navy" : "text-slate-500")}>
-          {note}
-        </p>
-      </div>
-    </div>
-  );
+  return <div className={cn("mb-4 w-full max-w-[380px]", className)}><ZoomPanel note={note} active={active} /></div>;
 }
 
-function ZoomPanel({ note, active }: { note: string; active: boolean }) {
+export function ZoomPanel({ note, active }: { note: string; active: boolean }) {
   return (
     <div className={cn(
       "overflow-hidden rounded-[28px] border bg-white shadow-card",

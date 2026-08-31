@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { Check, ScanLine, ShieldCheck, UserRound } from "lucide-react";
 import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { Shell } from "../shared";
-import { AudiologistCallTile } from "./call-tile";
 import { identity, patient, visit } from "@/lib/mock-data";
 
 /**
@@ -118,7 +117,6 @@ export function CmaConsent({ next }: { next: () => void }) {
   return (
     <Shell>
       <PageHeader title="Capture consent" subtitle="Walk the patient through each item. Consent is a gate." eyebrow="Consent" />
-      <AudiologistCallTile note="Present while consent is captured — the telehealth item is her session." />
       <div className="space-y-3">
         {items.map(([k, label]) => (
           <button key={k} onClick={() => setGranted(g => ({ ...g, [k]: !g[k] }))}

@@ -2,6 +2,7 @@
 import { Check } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
 import { devices, deviceDetail, orderStates, compareCategories, serials } from "@/lib/mock-data";
+import { DeviceThumb } from "../../device-thumb";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { selectDevice, useSelectedDevice } from "@/lib/selection";
 import { cn } from "@/lib/cn";
@@ -34,6 +35,9 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             const detail = deviceDetail[d.name];
             return <div key={d.name} className={cn("border-l border-[#eef4f5] p-4 text-left transition",
               isSel?"bg-brand-teal/10":"")}>
+              <div className="mb-3 grid h-20 place-items-center rounded-xl bg-gradient-to-br from-[#eef6f6] to-white">
+                <DeviceThumb finish={detail.finish} className="h-16 w-16"/>
+              </div>
               <b className="block text-[15px] leading-tight">{d.name}</b>
               <span className="mt-1 block text-[12px] text-slate-500">
                 ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}
@@ -77,7 +81,10 @@ export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             onClick={()=>selectDevice(d.name)}
             className={cn("flex w-full items-center justify-between gap-3 p-4 text-left transition",
               isSel?"bg-brand-teal/10":"hover:bg-[#f8fafb]")}>
-            <span>
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#eef6f6] to-white">
+              <DeviceThumb finish={detail.finish} className="h-12 w-12"/>
+            </span>
+            <span className="min-w-0 flex-1">
               <b className="block text-[15px] leading-tight">{d.name}</b>
               <span className="mt-1 block text-[12px] text-slate-500">
                 ${tierFor(detail.tier).monthly}/mo · {tierFor(detail.tier).name}

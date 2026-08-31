@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, beatIndexById } from "./story";
 import { EXAM_STEPS } from "./exam";
-import { sourceOf } from "./screens";
+import { componentFiles, sourceOf } from "./screens";
 
 /**
  * One test per item on the corrections sheet (2026-08-31, owner Achi Solomon).
@@ -80,6 +80,13 @@ describe("corrections sheet 2026-08-31", () => {
     expect(sourceOf("components/screens/patient/commerce.tsx")).toMatch(/Compare service packages/);
   });
 
+  // Refined 2026-08-31: the compare screen shows a picture of each device,
+  // in both the desktop table and the phone cards.
+  it("shows a device picture on the compare screen", () => {
+    const src = sourceOf("components/screens/patient/commerce.tsx");
+    expect((src.match(/DeviceThumb/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+
   // Item 12 — a signing beat sits between checkout and activation, and its
   // agreement boxes start unchecked like consent does.
   it("requires the signing page before activation", () => {
@@ -121,6 +128,34 @@ describe("corrections sheet 2026-08-31", () => {
       expect(sourceOf(file), `${file} must render the home feed`).toMatch(/HomeFeed/);
     }
     expect(sourceOf("components/screens/audiologist/home-feed.tsx")).toMatch(/Talk to the room/);
+  });
+
+  // Refined 2026-08-31: the video is the SAME size in the SAME place on
+  // every screen that carries it — the geometry lives in exactly one
+  // component, and every video screen on both sides renders through it.
+  it("defines the call's size and place in one component only", () => {
+    const geometry = /minmax\(0,380px\)/;
+    expect(sourceOf("components/screens/video-split.tsx")).toMatch(geometry);
+    for (const file of componentFiles()) {
+      if (file.endsWith("video-split.tsx")) continue;
+      expect(sourceOf(file), `${file} must not define its own video column`).not.toMatch(geometry);
+    }
+    for (const file of [
+      "components/screens/cma/call-tile.tsx",
+      "components/screens/audiologist/supervision.tsx",
+      "components/screens/audiologist/review.tsx",
+      "components/screens/audiologist/consult.tsx",
+    ]) {
+      expect(sourceOf(file), `${file} must place its video via VideoSplit`).toMatch(/VideoSplit/);
+    }
+  });
+
+  // Refined 2026-08-31: the patient's exam feels like a hearing lab with
+  // the audiologist right next to them — her live strip is on every exam
+  // step of the patient's phone.
+  it("keeps Dr. Reed next to the patient through the exam", () => {
+    const src = sourceOf("components/screens/patient/exam.tsx");
+    expect((src.match(/<AudiologistStrip /g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
   // Only the patient is on a phone (refined 2026-08-31): every CMA screen

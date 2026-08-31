@@ -111,11 +111,13 @@ export const visitFee = 99;
 export const deviceDetail: Record<string, {
   tier: string;
   inCase: boolean;
+  /** Shell colour for the stylised product drawing (components/device-thumb.tsx). */
+  finish: string;
   fitFactors: string[];
   compare: Record<string, string>;
 }> = {
   "Phonak Audéo L50": {
-    tier: "premium", inCase: true,
+    tier: "premium", inCase: true, finish: "#b3a18c",
     fitFactors: [
       "Matches your moderate loss across speech frequencies",
       "Rechargeable — no small batteries to handle",
@@ -131,7 +133,7 @@ export const deviceDetail: Record<string, {
     },
   },
   "Signia Pure Charge&Go": {
-    tier: "essential", inCase: true,
+    tier: "essential", inCase: true, finish: "#7f8a9b",
     fitFactors: [
       "Covers your loss at conversational levels",
       "Rechargeable with a simple two-button control",
@@ -147,7 +149,7 @@ export const deviceDetail: Record<string, {
     },
   },
   "Oticon Intent 2": {
-    tier: "vip", inCase: false,
+    tier: "vip", inCase: false, finish: "#33465f",
     fitFactors: [
       "Premium processing for noisy environments",
       "Rechargeable with the longest battery life",

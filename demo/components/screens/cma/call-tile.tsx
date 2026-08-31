@@ -2,6 +2,7 @@
 import { Mic, Video } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clinician } from "@/lib/mock-data";
+import { VideoSplit } from "../video-split";
 
 /**
  * The audiologist's live video presence on the CMA's screen (corrections
@@ -18,35 +19,36 @@ import { clinician } from "@/lib/mock-data";
  * `active` marks the moments she is speaking or has taken over — the tile
  * brightens rather than appearing, because she never left.
  */
-export function AudiologistCallTile({ note, active = false, zoom = false }:
-  { note: string; active?: boolean; zoom?: boolean }) {
-  if (!zoom) return <CompactTile note={note} active={active} />;
+export function AudiologistCallTile({ note, active = false }:
+  { note: string; active?: boolean }) {
+  return <AudiologistStrip note={note} active={active} />;
+}
+
+/**
+ * The split every on-call CMA screen shares — the video geometry itself
+ * (size, place, stickiness) lives in ONE component, `VideoSplit`, so the
+ * call looks identical on every screen of both roles. Below `md` the
+ * compact strip stands in. Children carry their own action button.
+ */
+export function CallSplit({ note, active = false, children }:
+  { note: string; active?: boolean; children: React.ReactNode }) {
   return (
     <>
-      <CompactTile note={note} active={active} className="md:hidden" />
-      <div className="hidden md:block md:sticky md:top-6">
-        <ZoomPanel note={note} active={active} />
-      </div>
+      <AudiologistStrip note={note} active={active} className="md:hidden" />
+      <VideoSplit hideVideoBelowMd video={<ZoomPanel note={note} active={active} />}>
+        {children}
+      </VideoSplit>
     </>
   );
 }
 
 /**
- * The tablet split every on-call CMA screen shares: Dr. Reed's Zoom panel on
- * the left, the work on the right; one column with the compact strip below
- * `md`. Children carry their own action button.
+ * The phone-sized presence: Dr. Reed as a slim call strip. The CMA sees it
+ * below `md`; the PATIENT sees it on every exam screen — she is right next
+ * to them in their home hearing lab (refined 2026-08-31).
  */
-export function CallSplit({ note, active = false, children }:
-  { note: string; active?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="md:grid md:grid-cols-2 md:items-start md:gap-6">
-      <AudiologistCallTile zoom active={active} note={note} />
-      <div>{children}</div>
-    </div>
-  );
-}
-
-function CompactTile({ note, active, className }: { note: string; active: boolean; className?: string }) {
+export function AudiologistStrip({ note, active = false, className }:
+  { note: string; active?: boolean; className?: string }) {
   return (
     <div className={cn(
       "mb-4 flex items-stretch gap-3 rounded-[24px] border bg-white p-3 shadow-card",

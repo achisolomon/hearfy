@@ -1,7 +1,6 @@
 "use client";
 import { Mic, Video } from "lucide-react";
 import { Card } from "../../ui";
-import { cn } from "@/lib/cn";
 import { cma, patient } from "@/lib/mock-data";
 
 /**
@@ -11,23 +10,18 @@ import { cma, patient } from "@/lib/mock-data";
  * talk-back control — "I can hear it / I can't hear that one" flows both
  * ways, so her feedback lands mid-test, not after it.
  *
- * `hero` renders it as the dominant pane (the monitoring screen); the
- * default sidebar size keeps the room in view on every other screen of hers
- * until the session ends.
+ * ONE size on purpose: the feed renders inside `VideoSplit`'s fixed column
+ * with the same 4:3 pane as the CMA's view of her, so the call looks
+ * identical wherever it appears.
  */
-export function HomeFeed({ cmaName = cma.name, hero = false }:
-  { cmaName?: string; hero?: boolean }) {
+export function HomeFeed({ cmaName = cma.name }: { cmaName?: string }) {
   return (
     <Card className="overflow-hidden">
-      <div className={cn(
-        "relative grid place-items-center bg-gradient-to-br from-[#16426c] to-[#0c2340]",
-        hero ? "h-64 lg:h-[420px]" : "h-40")}>
-        <div className={cn("flex items-center", hero ? "gap-6 pb-10" : "gap-3 pb-8")}>
+      <div className="relative grid aspect-[4/3] place-items-center bg-gradient-to-br from-[#16426c] to-[#0c2340]">
+        <div className="flex items-center gap-5 pb-10">
           {[["ML", `CMA ${cmaName}`], ["AR", patient.name]].map(([initials, label]) => (
             <div key={label} className="text-center">
-              <span className={cn(
-                "mx-auto grid place-items-center rounded-full bg-white/90 font-extrabold text-brand-navy",
-                hero ? "h-16 w-16 text-xl lg:h-24 lg:w-24 lg:text-3xl" : "h-12 w-12 text-sm")}>
+              <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white/90 text-xl font-extrabold text-brand-navy">
                 {initials}
               </span>
               <span className="mt-1.5 block text-[10px] font-semibold text-white/75">{label}</span>
@@ -42,12 +36,10 @@ export function HomeFeed({ cmaName = cma.name, hero = false }:
         </span>
         {/* The patient's words land as live captions, the way a call renders speech. */}
         <div className="absolute inset-x-3 bottom-3 space-y-1 text-center">
-          <p className={cn("mx-auto w-fit max-w-full truncate rounded-full bg-black/55 px-3 py-1 text-white",
-            hero ? "text-xs" : "text-[10px]")}>
+          <p className="mx-auto w-fit max-w-full truncate rounded-full bg-black/55 px-3 py-1 text-xs text-white">
             <b>{patient.name}:</b> &ldquo;I can hear that one.&rdquo;
           </p>
-          <p className={cn("mx-auto w-fit max-w-full animate-pulse truncate rounded-full bg-black/55 px-3 py-1 text-white motion-reduce:animate-none",
-            hero ? "text-xs" : "text-[10px]")}>
+          <p className="mx-auto w-fit max-w-full animate-pulse truncate rounded-full bg-black/55 px-3 py-1 text-xs text-white motion-reduce:animate-none">
             <b>{patient.name}:</b> &ldquo;…I can&rsquo;t hear anything now.&rdquo;
           </p>
         </div>

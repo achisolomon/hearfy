@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { supervisionQueue, clinician } from "@/lib/mock-data";
 import { Audiogram } from "../../charts/audiogram";
 import { HomeFeed } from "./home-feed";
+import { VideoSplit } from "../video-split";
 
 /** Red flags first, then longest wait — the MRD prioritisation cues (spec §7). */
 function prioritised() {
@@ -108,11 +109,9 @@ export function AudMonitor({ next }: { next: () => void }) {
           <StatusPill tone="teal">Live</StatusPill>
         </header>
 
-        {/* Zoom-like (refined 2026-08-31): once the test starts the room IS
-           the screen — the video leads, the clinical data rides beside it. */}
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <HomeFeed hero cmaName={hero.cma} />
-
+        {/* The one shared video geometry (refined 2026-08-31): the room feed
+           sits where the call sits on every screen, clinical data beside it. */}
+        <VideoSplit video={<HomeFeed cmaName={hero.cma} />}>
           <div className="space-y-3">
             <Card className="p-4">
               <b className="text-sm">Thresholds arriving live</b>
@@ -130,7 +129,7 @@ export function AudMonitor({ next }: { next: () => void }) {
               <div className="mt-3"><PrimaryButton onClick={next}>Continue monitoring</PrimaryButton></div>
             </Card>
           </div>
-        </div>
+        </VideoSplit>
       </div>
     </div>
   );

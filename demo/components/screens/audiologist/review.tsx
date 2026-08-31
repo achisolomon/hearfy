@@ -5,6 +5,7 @@ import { Audiogram } from "../../charts/audiogram";
 import { createLatch } from "@/lib/latch";
 import { clinician, speech, otoscopy, patient } from "@/lib/mock-data";
 import { HomeFeed } from "./home-feed";
+import { VideoSplit } from "../video-split";
 
 /** Signing is irreversible, so the flag outlives the component. See lib/latch. */
 const signedLatch = createLatch();
@@ -18,16 +19,16 @@ export function AudReview({ next }: { next: () => void }) {
           <h1 className="mt-1 text-[28px] font-extrabold tracking-[-.02em]">{patient.name} — exam complete</h1>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        {/* The room stays on screen until the patient is fitted and happy
+           (refined 2026-08-31) — she reviews while still on the call, and the
+           video sits exactly where it sits on every other screen. */}
+        <VideoSplit video={<HomeFeed />}>
           <Card className="p-5">
             <b className="text-sm">Audiogram with bone conduction</b>
             <div className="mt-4"><Audiogram showBone /></div>
           </Card>
 
-          <div className="space-y-3">
-            {/* The room stays on screen until the patient is fitted and happy
-               (refined 2026-08-31) — she reviews while still on the call. */}
-            <HomeFeed />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Card className="p-4">
               <b className="text-sm">Speech recognition</b>
               <div className="mt-3 flex gap-6">
@@ -41,23 +42,23 @@ export function AudReview({ next }: { next: () => void }) {
               <p className="mt-1 text-xs leading-5 text-slate-500">L: {otoscopy.left.finding}</p>
             </Card>
           </div>
-        </div>
 
-        {/* Findings / interpretation / candidacy stay visibly distinct (MRD). */}
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {[
-            ["Findings", "Bilateral air thresholds 20–65 dB HL sloping. Bone thresholds 15–35 dB HL. Air–bone gap present."],
-            ["Interpretation", "Moderate mixed hearing loss, worse on the left. Speech recognition preserved."],
-            ["Candidacy", "Candidate for bilateral amplification. No red flags requiring referral."],
-          ].map(([h, body]) => (
-            <Card key={h} className="p-4">
-              <span className="text-[10px] font-extrabold uppercase tracking-[.18em] text-brand-teal">{h}</span>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
-            </Card>
-          ))}
-        </div>
+          {/* Findings / interpretation / candidacy stay visibly distinct (MRD). */}
+          <div className="mt-4 grid gap-3">
+            {[
+              ["Findings", "Bilateral air thresholds 20–65 dB HL sloping. Bone thresholds 15–35 dB HL. Air–bone gap present."],
+              ["Interpretation", "Moderate mixed hearing loss, worse on the left. Speech recognition preserved."],
+              ["Candidacy", "Candidate for bilateral amplification. No red flags requiring referral."],
+            ].map(([h, body]) => (
+              <Card key={h} className="p-4">
+                <span className="text-[10px] font-extrabold uppercase tracking-[.18em] text-brand-teal">{h}</span>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              </Card>
+            ))}
+          </div>
 
-        <div className="mt-5 max-w-sm"><PrimaryButton onClick={next}>Continue to signature</PrimaryButton></div>
+          <div className="mt-5 max-w-sm"><PrimaryButton onClick={next}>Continue to signature</PrimaryButton></div>
+        </VideoSplit>
       </div>
     </div>
   );
@@ -66,10 +67,10 @@ export function AudReview({ next }: { next: () => void }) {
 export function AudSign({ next }: { next: () => void }) {
   const signed = signedLatch.use();
   return (
-    <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
-      <div className="w-full max-w-lg space-y-4">
-      <HomeFeed />
-      <Card className="w-full p-7">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+      <div className="mx-auto max-w-5xl">
+      <VideoSplit video={<HomeFeed />}>
+      <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           {signed ? <Lock size={21} aria-hidden /> : <PenLine size={21} aria-hidden />}
         </span>
@@ -97,6 +98,7 @@ export function AudSign({ next }: { next: () => void }) {
             : <PrimaryButton onClick={signedLatch.set}>Sign &amp; release results</PrimaryButton>}
         </div>
       </Card>
+      </VideoSplit>
       </div>
     </div>
   );

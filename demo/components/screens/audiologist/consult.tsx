@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { devices, tiers, clinician, patient } from "@/lib/mock-data";
 import { HomeFeed } from "./home-feed";
+import { VideoSplit } from "../video-split";
 
 /**
  * Locking the prescription is a separate, irreversible commitment from signing
@@ -33,8 +34,20 @@ export function AudConsult({ next }: { next: () => void }) {
           </span>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div>
+        {/* She presents the shortlist INTO the room — the call carries the
+           consult until the patient is fitted, in the same place and size as
+           on every other screen (refined 2026-08-31). */}
+        <VideoSplit video={
+          <div className="space-y-3">
+            <HomeFeed />
+            <Card className="flex items-center gap-3 p-4">
+              <Video size={18} className="shrink-0 text-brand-teal" aria-hidden />
+              <p className="text-sm text-slate-500">
+                Recording is visible to the patient throughout, per their consent.
+              </p>
+            </Card>
+          </div>
+        }>
         <div className="space-y-3">
           {devices.map(d => {
             const isRec = recommended.includes(d.name);
@@ -87,20 +100,7 @@ export function AudConsult({ next }: { next: () => void }) {
             <p className="mt-2 text-xs text-[#9d6514]">Recommend at least one device to continue.</p>
           )}
         </div>
-        </div>
-
-        {/* She presents the shortlist INTO the room — the call carries the
-           consult until the patient is fitted (refined 2026-08-31). */}
-        <div className="space-y-3">
-          <HomeFeed />
-          <Card className="flex items-center gap-3 p-4">
-            <Video size={18} className="shrink-0 text-brand-teal" aria-hidden />
-            <p className="text-sm text-slate-500">
-              Recording is visible to the patient throughout, per their consent.
-            </p>
-          </Card>
-        </div>
-        </div>
+        </VideoSplit>
       </div>
     </div>
   );
@@ -109,10 +109,10 @@ export function AudConsult({ next }: { next: () => void }) {
 export function AudPrescription() {
   const locked = lockedLatch.use();
   return (
-    <div className="grid min-h-[100dvh] place-items-center bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
-      <div className="w-full max-w-lg space-y-4">
-      <HomeFeed />
-      <Card className="w-full p-7">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+      <div className="mx-auto max-w-5xl">
+      <VideoSplit video={<HomeFeed />}>
+      <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           <Lock size={21} aria-hidden />
         </span>
@@ -133,6 +133,7 @@ export function AudPrescription() {
           <div className="mt-6"><PrimaryButton onClick={lockedLatch.set}>Sign &amp; lock</PrimaryButton></div>
         )}
       </Card>
+      </VideoSplit>
       </div>
     </div>
   );

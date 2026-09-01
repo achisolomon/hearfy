@@ -128,7 +128,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
         </Card>
         <div className="mt-6">
           <PrimaryButton disabled={!gateOpen} onClick={next}>
-            {gateOpen ? "Patient has chosen" : "Record a try-on to continue"}
+            {gateOpen ? "Try-on recorded" : "Record a try-on to continue"}
           </PrimaryButton>
         </div>
       </CallSplit>

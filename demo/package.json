@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "mobile-sweep": "node scripts/mobile-sweep.mjs"
+    "mobile-sweep": "node scripts/mobile-sweep.mjs",
+    "role-lock-sweep": "node scripts/role-lock-sweep.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

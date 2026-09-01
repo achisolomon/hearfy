@@ -1692,8 +1692,15 @@ describe("back from We're here after delivery", () => {
     }
   });
 
+  // Uses whatever is genuinely off-script rather than naming one screen: when
+  // "intake-needs" was hard-coded here it silently became a live beat
+  // (2026-09-01) and this test was the only thing that noticed — which is the
+  // right alarm, but it should assert the -1 CONTRACT, not one screen's
+  // absence from the walk.
   it("still reports -1 for a screen outside the script", () => {
-    expect(beatForScreenNear("patient", "intake-needs", 3)).toBe(-1);
+    const offScript = screenOrder().filter(s => beatForScreen("patient", s) === -1);
+    expect(offScript.length, "no off-script screen left to test the contract").toBeGreaterThan(0);
+    for (const s of offScript) expect(beatForScreenNear("patient", s, 3)).toBe(-1);
   });
 });
 
@@ -2535,5 +2542,54 @@ describe("the pre-visit questionnaire's answers", () => {
       .toMatch(/nextDisabled/);
     expect(shared, "StepPage must be able to disable its primary action")
       .toMatch(/nextDisabled=\{?false|nextDisabled\?:\s*boolean/);
+  });
+});
+
+// Owner, 2026-09-01: "In order to get to that screen, I have to click on 'who
+// is the visit for' Continue. If I click Next, I don't see the screen."
+//
+// Two ways forward disagreed. The screen's own Continue button walked to the
+// questionnaire, but the walkthrough's Next had no beat for it and jumped
+// intake-for -> intake-medical, so the beat showing WHAT THE PATIENT NOTICES
+// — the reason for the entire visit — was invisible to anyone driving the
+// demo the way it is meant to be driven, including on prod.
+describe("the pre-visit questionnaire is in the guided walk", () => {
+  it("has a beat, so Next reaches it", () => {
+    expect(beatForScreen("patient", "intake-needs")).not.toBe(-1);
+  });
+
+  // The clinical order: who is this for, then what are you noticing, then the
+  // red-flag gate — so the safety questions read as a response to the
+  // symptoms rather than an unprompted interrogation.
+  it("sits between the fork and the safety gate", () => {
+    const forIdx = beatIndexById("intake-for");
+    const needs = beatIndexById("intake-needs");
+    const medical = beatIndexById("intake-medical");
+    expect(needs).toBeGreaterThan(forIdx);
+    expect(needs).toBeLessThan(medical);
+  });
+
+  // The specific broken step: one forward press from the fork must land on
+  // the questionnaire, not skip over it.
+  it("is the very next beat after the fork", () => {
+    expect(nextBeat(beatIndexById("intake-for"))).toBe(beatIndexById("intake-needs"));
+  });
+
+  // The patient leads their own intake; a beat led by another role would hand
+  // the persona away mid-questionnaire.
+  it("is led by the patient", () => {
+    expect(BEATS[beatIndexById("intake-needs")].lead).toBe("patient");
+  });
+
+  // Both routes forward must agree. The in-app Continue goes to
+  // intake-medical, and the walk's Next now goes to the same place from the
+  // same screen — that agreement is what was broken.
+  it("agrees with the screen's own Continue button", () => {
+    const intake = sourceOf("components/screens/patient/intake.tsx");
+    const needs = intake
+      .split(/(?=export function )/)
+      .find(s => s.startsWith("export function IntakeNeeds"));
+    expect(needs).toMatch(/go\("intake-medical"\)/);
+    expect(BEATS[nextBeat(beatIndexById("intake-needs"))].id).toBe("intake-medical");
   });
 });

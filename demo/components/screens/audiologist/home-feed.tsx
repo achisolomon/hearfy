@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
-import { Mic, Video, Volume2, VolumeX } from "lucide-react";
+import { Mic, Video } from "lucide-react";
 import { cma, patient } from "@/lib/mock-data";
 import { cn } from "@/lib/cn";
-import { RoomFeed, type RoomAudio } from "./room-feed";
+import { RoomFeed } from "./room-feed";
+import { SoundButton } from "../sound-button";
+import type { VideoSound } from "@/lib/use-video-sound";
 
 /**
  * The audiologist SEES and HEARS the room, from the first test until the
@@ -39,7 +41,7 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false }:
   // this tile's control row, so the feed reports its audio state up and the
   // tile draws the control — rather than a second cluster floating over the
   // picture.
-  const [audio, setAudio] = useState<RoomAudio | null>(null);
+  const [audio, setAudio] = useState<VideoSound | null>(null);
   return (
     <div className={cn(
       "overflow-hidden rounded-[28px] border bg-white shadow-card",
@@ -90,20 +92,7 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false }:
               that does anything, and it sits nearest the frame's edge where
               a call's volume control is expected. */}
           <span className="pointer-events-auto flex shrink-0 gap-2">
-            {audio?.hasAudio && (
-              <button
-                type="button"
-                onClick={audio.toggle}
-                aria-pressed={audio.sound}
-                aria-label={audio.sound ? "Mute the room" : "Hear the room"}
-                title={audio.sound ? "Mute the room" : "Hear the room"}
-                className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              >
-                {audio.sound
-                  ? <Volume2 size={15} aria-hidden />
-                  : <VolumeX size={15} aria-hidden />}
-              </button>
-            )}
+            {audio && <SoundButton audio={audio} />}
             {[Mic, Video].map((I, i) => (
               <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
             ))}

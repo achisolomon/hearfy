@@ -2080,33 +2080,58 @@ describe("the room's camera feed", () => {
   });
 
   // Owner, 2026-09-01: "The default should be on mute, but I want to be able
-  // to click and actually hear the videos."
+  // to click and actually hear the videos" — on ALL the screens, Dr. Reed's
+  // tile included, not just the room feed.
   //
-  // `muted` is not decoration here: a browser only grants autoplay to a muted
-  // video, so removing it to "enable sound" would stop the feed playing at
-  // all. The clip stays muted in markup and the control unmutes the live
-  // element on a real click, which is the gesture that earns audio.
+  // `muted` is not decoration: a browser grants autoplay only to muted video,
+  // so removing it to "enable sound" would stop the feed playing at all. The
+  // clip stays muted in markup and the control unmutes the live element on a
+  // real click, the gesture that earns audio.
   it("starts muted so it can autoplay, and unmutes on a click", () => {
-    expect(feed).toContain("muted");            // still muted in markup
-    expect(feed).toContain("v.muted = !next");  // flipped on the element
-    expect(home).toMatch(/aria-pressed=\{audio\.sound\}/);
-    expect(home).toContain("Hear the room");
-    expect(home).toContain("Mute the room");
+    const hook = sourceOf("lib/use-video-sound.ts");
+    expect(hook).toContain("v.muted = !next");
+    for (const f of [feed, sourceOf("components/screens/cma/reed-feed.tsx")]) {
+      expect(f).toContain("muted");                 // still muted in markup
+      expect(f).toContain("useVideoSound");
+      expect(f).toContain("onLoadedData");
+    }
   });
 
-  // A control that unmutes silence reads as broken. Dr. Reed's clips have no
-  // audio track at all, which is why her tile has no such button; this one
-  // only appears once the loaded clip is known to carry audio.
+  // Both call tiles must behave the same way, so the behaviour lives in ONE
+  // hook and ONE button rather than being copied into each feed — two sides
+  // of one call that mute differently is the drift this prevents.
+  it("shares one sound implementation across both call tiles", () => {
+    const btn = sourceOf("components/screens/sound-button.tsx");
+    expect(btn).toContain("aria-pressed={audio.sound}");
+    for (const tile of [home, sourceOf("components/screens/cma/call-tile.tsx")]) {
+      expect(tile).toContain("<SoundButton audio={audio} />");
+      // The nameplate band disables pointer events; the control row must
+      // re-enable them or the button renders but cannot be clicked.
+      expect(tile).toContain("pointer-events-auto flex shrink-0 gap-2");
+    }
+  });
+
+  // `CallSplit` renders the tile twice — a compact strip below `md` and the
+  // panel from `md` up — so two <video> elements exist at once. Sound state
+  // is per-instance (each has its own useVideoSound), which is what keeps
+  // unmuting the visible one from also unmuting the hidden one and playing
+  // the same voice twice, out of phase. Verified in the browser 2026-09-01.
+  it("keeps sound state per feed instance, not global", () => {
+    const hook = sourceOf("lib/use-video-sound.ts");
+    // State lives in the hook's own closure, never in a module-level
+    // variable that every mounted feed would share.
+    expect(hook).toMatch(/export function useVideoSound[\s\S]*?useState\(false\)/);
+    expect(hook).not.toMatch(/^(let|const) (sound|muted)\b/m);
+  });
+
+  // A control that unmutes silence reads as broken. Dr. Reed's `idle` loop is
+  // silent on purpose — it plays where the app is NOT showing the SPEAKING
+  // pill, so a voice there would contradict the interface — and the button
+  // hides itself rather than becoming dead.
   it("offers the sound control only when the clip has audio", () => {
-    expect(feed).toContain("hasAudio");
-    expect(home).toContain("audio?.hasAudio &&");
-  });
-
-  // The band is pointer-events-none so the nameplate cannot eat clicks meant
-  // for the video; the control row inside it must re-enable them or the
-  // button is visible but dead.
-  it("keeps the sound control clickable inside the nameplate band", () => {
-    expect(home).toContain("pointer-events-auto flex shrink-0 gap-2");
+    expect(sourceOf("components/screens/sound-button.tsx"))
+      .toContain("if (!audio.hasAudio) return null;");
+    expect(sourceOf("lib/use-video-sound.ts")).toContain("detectAudio");
   });
 
   // Owner, 2026-09-01: the feed shows the patient alone, not a two-shot with

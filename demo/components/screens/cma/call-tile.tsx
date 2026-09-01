@@ -1,9 +1,12 @@
 "use client";
+import { useState } from "react";
 import { Mic, Video } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clinician } from "@/lib/mock-data";
 import { VideoSplit } from "../video-split";
 import { ReedFeed } from "./reed-feed";
+import { SoundButton } from "../sound-button";
+import type { VideoSound } from "@/lib/use-video-sound";
 
 /**
  * The audiologist's live video presence on the CMA's screen (corrections
@@ -70,12 +73,15 @@ export function AudiologistStrip({ note, active = false, className }:
 }
 
 export function ZoomPanel({ note, active }: { note: string; active: boolean }) {
+  // The feed owns the <video>; this tile owns the chrome, so the sound
+  // control lives in the control row below rather than floating over her.
+  const [audio, setAudio] = useState<VideoSound | null>(null);
   return (
     <div className={cn(
       "overflow-hidden rounded-[28px] border bg-white shadow-card",
       active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]")}>
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <ReedFeed active={active} />
+        <ReedFeed active={active} onAudio={setAudio} />
 
         {/* Call chrome, anchored to the frame's own corners — never to the
             caption column, or it drifts down the feed as the note grows. */}
@@ -116,7 +122,11 @@ export function ZoomPanel({ note, active }: { note: string; active: boolean }) {
               Licensed Audiologist · {clinician.licenseState}
             </p>
           </div>
-          <span className="flex shrink-0 gap-2">
+          {/* The sound toggle leads the row: it is the only one of these that
+              does anything. `pointer-events-auto` because the nameplate band
+              above disables them, so the button would render but not click. */}
+          <span className="pointer-events-auto flex shrink-0 gap-2">
+            {audio && <SoundButton audio={audio} />}
             {[Mic, Video].map((I, i) => (
               <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
             ))}

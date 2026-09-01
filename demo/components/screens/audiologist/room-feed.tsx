@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { asset } from "@/lib/asset";
 import { cn } from "@/lib/cn";
+import { useVideoSound, type VideoSound } from "@/lib/use-video-sound";
 
 /**
  * The room's camera feed — the patient, alone, in his own home.
@@ -44,23 +45,16 @@ const CLIPS: Record<string, string> = {
 
 const POSTER = "/video/room-patient-poster.jpg";
 
-export interface RoomAudio {
-  /** True once the loaded clip is known to carry an audio track. */
-  hasAudio: boolean;
-  /** True when the viewer has turned sound on. */
-  sound: boolean;
-  toggle: () => void;
-}
-
 export function RoomFeed({ beat = "puretone", className, onAudio }:
   { beat?: string; className?: string;
     /** Lets the surrounding tile render the sound control in its own
         control row instead of the feed floating a second cluster over the
         picture. The feed owns the <video>; the tile owns the chrome. */
-    onAudio?: (a: RoomAudio) => void }) {
+    onAudio?: (a: VideoSound) => void }) {
   const reduced = usePrefersReducedMotion();
-  const ref = useRef<HTMLVideoElement>(null);
   const src = asset(CLIPS[beat] ?? PATIENT_CLIP);
+  const audio = useVideoSound(src);
+  const ref = audio.ref;
 
   // Same reason as ReedFeed: swapping `src` on a live element keeps the old
   // frame until the new one decodes, so reload and replay on change.
@@ -73,49 +67,13 @@ export function RoomFeed({ beat = "puretone", className, onAudio }:
 
   const label = "The patient on the live call";
 
-  // Muted until asked. `muted` is what lets the clip autoplay at all, so the
-  // toggle flips the element's own property on a user gesture rather than
-  // re-rendering with a different `muted` attribute, which browsers treat as
-  // a fresh autoplay attempt and can refuse.
-  const [sound, setSound] = useState(false);
-  const [hasAudio, setHasAudio] = useState(false);
-
-  const toggleSound = () => {
-    const v = ref.current;
-    if (!v) return;
-    const next = !sound;
-    v.muted = !next;
-    setSound(next);
-    // A muted autoplaying element may have been paused by the browser; the
-    // click is the gesture that lets it resume with sound.
-    if (next) void v.play().catch(() => {});
-  };
-
-  // Only offer the control when there is something to hear. Some clips in
-  // this set are silent, and a button that unmutes silence reads as broken.
-  const onLoaded = () => {
-    const v = ref.current as (HTMLVideoElement & {
-      mozHasAudio?: boolean;
-      webkitAudioDecodedByteCount?: number;
-      audioTracks?: { length: number };
-    }) | null;
-    if (!v) return;
-    setHasAudio(Boolean(
-      v.mozHasAudio
-      ?? (v.audioTracks ? v.audioTracks.length > 0 : undefined)
-      ?? (v.webkitAudioDecodedByteCount !== undefined
-        ? v.webkitAudioDecodedByteCount > 0
-        : false),
-    ));
-  };
-
   // Report audio state upward whenever it changes, so the tile's control row
   // can show (or hide) the toggle. Effect, not render-time, so the parent is
   // never asked to set state while this component is rendering.
   useEffect(() => {
-    onAudio?.({ hasAudio, sound, toggle: toggleSound });
+    onAudio?.(audio);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAudio, sound]);
+  }, [audio.hasAudio, audio.sound]);
 
   if (reduced) {
     return (
@@ -137,7 +95,7 @@ export function RoomFeed({ beat = "puretone", className, onAudio }:
         loop
         muted
         playsInline
-        onLoadedData={onLoaded}
+        onLoadedData={audio.onLoadedData}
         aria-label={label}
         className={cn("h-full w-full object-cover", className)}
       />

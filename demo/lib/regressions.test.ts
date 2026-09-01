@@ -2727,3 +2727,130 @@ describe("a click inside a device stays in that persona", () => {
     }
   });
 });
+
+describe("the patient's phone offers no button for someone else's clinical act", () => {
+  // Owner: "the customer on his phone can not do anything at this stage (the
+  // screens are at the CMA / audiolog)". Demo 2's exam and dispatch screens
+  // had a PrimaryButton driving the story forward ("Maya has arrived",
+  // "Start the visit", "Begin ear check", "Start middle ear check", "Start
+  // hearing test", "Complete test", "Finish consultation") for an act Maya or
+  // Dr. Reed performs, not Alex. Demo 1 (components/patient-app.tsx) is
+  // frozen and has no chrome Next, so the same components must keep
+  // rendering their button by default — the fix must be an opt-in prop, not
+  // a deletion.
+  const dispatch = sourceOf("components/screens/patient/dispatch.tsx");
+  const exam = sourceOf("components/screens/patient/exam.tsx");
+
+  // Split each file into per-component source blocks the same way
+  // patientNavigation() does, so an assertion about "Driving" can't
+  // accidentally match text living in "Arrived".
+  function blocksOf(src: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const part of src.split(/(?=export function )/)) {
+      const name = /export function (\w+)/.exec(part)?.[1];
+      if (name) out[name] = part;
+    }
+    return out;
+  }
+
+  const dispatchBlocks = blocksOf(dispatch);
+  const examBlocks = blocksOf(exam);
+
+  const CLINICAL: Array<{ file: string; blocks: Record<string, string>; name: string; label: string }> = [
+    { file: "dispatch.tsx", blocks: dispatchBlocks, name: "Driving", label: "Maya has arrived" },
+    { file: "dispatch.tsx", blocks: dispatchBlocks, name: "Arrived", label: "Start the visit" },
+    { file: "exam.tsx", blocks: examBlocks, name: "Setup", label: "Begin ear check" },
+    { file: "exam.tsx", blocks: examBlocks, name: "Otoscopy", label: "Start middle ear check" },
+    { file: "exam.tsx", blocks: examBlocks, name: "Tympanometry", label: "Start hearing test" },
+    { file: "exam.tsx", blocks: examBlocks, name: "Testing", label: "Complete test" },
+    { file: "exam.tsx", blocks: examBlocks, name: "Live", label: "Finish consultation" },
+  ];
+
+  it("still has today's clinical-act button in its source (sanity check for the table above)", () => {
+    for (const { file, blocks, name, label } of CLINICAL) {
+      const block = blocks[name];
+      expect(block, `${file}: could not find component ${name}`).toBeTruthy();
+      expect(block, `${file}: ${name} no longer contains "${label}" — update this test's table`).toContain(label);
+    }
+  });
+
+  // The real invariant: each of these seven components must accept an
+  // `observing` prop, and every PrimaryButton performing the clinical act
+  // must be conditioned on it (e.g. `{!observing && <PrimaryButton ...>}` or
+  // equivalent) so that omitting the prop — exactly what frozen
+  // patient-app.tsx does — renders unchanged.
+  it("gates each clinical-act PrimaryButton behind an opt-in `observing` prop", () => {
+    const offenders: string[] = [];
+    for (const { file, blocks, name, label } of CLINICAL) {
+      const block = blocks[name];
+      if (!block) continue;
+      const hasObservingProp = /\bobserving\b/.test(
+        (/export function \w+\(\{([^}]*)\}/.exec(block)?.[1]) ?? "",
+      );
+      if (!hasObservingProp) {
+        offenders.push(`${file} ${name}: does not destructure an \`observing\` prop`);
+        continue;
+      }
+      // The button (identified by its today's-label text) must sit inside
+      // source that is conditioned on `observing` being false — i.e. some
+      // `observing` check must appear between the component's opening brace
+      // and the button's label, on the same guarded branch. We assert the
+      // weaker, durable form: the literal unconditional JSX
+      // `<PrimaryButton onClick={...}>{label}` must NOT appear verbatim
+      // anywhere `observing` isn't also referenced nearby, i.e. the file
+      // must gate on `observing` at all near this button.
+      const labelIdx = block.indexOf(label);
+      const nearby = block.slice(Math.max(0, labelIdx - 400), labelIdx);
+      if (!/observing/.test(nearby)) {
+        offenders.push(`${file} ${name}: the "${label}" button is not conditioned on \`observing\` anywhere nearby`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // Pin default-false, opt-in: every one of these seven components must be
+  // safe to call with no `observing` argument at all (Demo 1's frozen
+  // callers never pass it) and still show today's button — i.e. the prop
+  // must default to false, not be required.
+  it("defaults `observing` to false, so Demo 1's frozen callers are unaffected", () => {
+    const offenders: string[] = [];
+    for (const { file, blocks, name } of CLINICAL) {
+      const block = blocks[name];
+      const sig = /export function \w+\(\{([^}]*)\}/.exec(block ?? "")?.[1] ?? "";
+      if (!/observing\s*=\s*false/.test(sig)) {
+        offenders.push(`${file} ${name}: \`observing\` must default to false in the destructured props`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The Live screen's red hang-up button ends Dr. Reed's own session
+  // (onClick={()=>go("review")}) — under observing it must not remain a
+  // live control that ends someone else's call.
+  it("makes the Live screen's hang-up control inert (or removes it) when observing", () => {
+    const live = examBlocks["Live"];
+    expect(live).toBeTruthy();
+    // The literal hang-up handler `onClick={()=>go("review")}` on the red
+    // phone button must not survive unconditionally — some `observing`
+    // branching must separate the hang-up affordance from the observing case.
+    const hangupIdx = live.indexOf('onClick={()=>go("review")}');
+    expect(hangupIdx, "could not find the hang-up button's onClick in Live").toBeGreaterThan(-1);
+    const nearby = live.slice(Math.max(0, hangupIdx - 400), hangupIdx);
+    expect(nearby, "the hang-up button is not conditioned on `observing` anywhere nearby").toMatch(/observing/);
+  });
+
+  // Demo 2 (patient-app-2.tsx) must actually turn the opt-in on; otherwise
+  // the prop existing is theatre and Demo 2 keeps the bug.
+  it("passes observing to the affected screens from Demo 2's patient app, and Demo 1 never does", () => {
+    const app2 = sourceOf("components/patient-app-2.tsx");
+    const app1 = sourceOf("components/patient-app.tsx");
+    for (const { name } of CLINICAL) {
+      const callSite = new RegExp(`<${name}\\b[^>]*/>`).exec(app2)?.[0];
+      expect(callSite, `patient-app-2.tsx: could not find <${name} .../> call site`).toBeTruthy();
+      expect(callSite, `patient-app-2.tsx: <${name}> must pass observing`).toMatch(/observing/);
+      expect(app1, "patient-app.tsx is frozen and must not pass observing").not.toMatch(
+        new RegExp(`<${name}\\b[^>]*observing`),
+      );
+    }
+  });
+});

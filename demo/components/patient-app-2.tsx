@@ -87,14 +87,20 @@ export function PatientApp2() {
     payment: <Payment go={go} back={back}/>,
     confirmed: <Confirmed go={go} back={back}/>,
     assigned: <Assigned go={go} back={back}/>,
-    driving: <Driving go={go} back={back}/>,
-    arrived: <Arrived go={go} back={back}/>,
+    // `observing`: these seven screens cover a clinical act someone else
+    // performs (Maya, then Dr. Reed) — Demo 2's patient is present and
+    // watching, not operating, so their action button is replaced with a
+    // status line and the chrome's Next carries the story forward instead.
+    // `Consent` deliberately keeps no `observing` prop: consent is the
+    // patient's own act.
+    driving: <Driving go={go} back={back} observing/>,
+    arrived: <Arrived go={go} back={back} observing/>,
     consent: <Consent go={go} back={back}/>,
-    setup: <Setup go={go} back={back}/>,
-    otoscopy: <Otoscopy go={go} back={back}/>,
-    tympanometry: <Tympanometry go={go} back={back}/>,
-    testing: <Testing go={go} back={back}/>,
-    live: <Live go={go} back={back}/>,
+    setup: <Setup go={go} back={back} observing/>,
+    otoscopy: <Otoscopy go={go} back={back} observing/>,
+    tympanometry: <Tympanometry go={go} back={back} observing/>,
+    testing: <Testing go={go} back={back} observing/>,
+    live: <Live go={go} back={back} observing/>,
     review: <Review go={go} back={back}/>,
     results: <Results go={go} back={back}/>,
     recommendation: <Recommendation go={go} back={back}/>,

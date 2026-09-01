@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Check,Home,MapPin,MessageCircle,Navigation,UserRound } from "lucide-react";
 import { TextSize } from "../a11y/text-size";
 import { PageHeader,PrimaryButton,Progress } from "../ui";
-import { SurfaceProvider } from "../surface";
+import { SurfaceProvider, useOnDark } from "../surface";
 import { cn } from "@/lib/cn";
 import { useStoryOptional } from "../shell/story-context";
 import { ScreenId } from "./registry";
@@ -90,6 +90,21 @@ export function RouteMap({moving=false}:{moving?:boolean}){
       className={`${marker} left-[33%] top-[63%] bg-brand-teal text-white`}><Navigation size={20}/></motion.div>
     <div className={`${marker} left-[92%] top-[14%] bg-white text-brand-navy`}><MapPin size={20}/></div>
   </div>;
+}
+/**
+ * A plain "who is acting now" line, for the moments a persona-lock removes a
+ * patient's action button but no live call panel is on screen yet to say it
+ * instead (see `AudiologistStrip` in cma/call-tile.tsx for the version that
+ * DOES accompany a live call — this is its lighter sibling for dispatch/setup
+ * screens, before the call has started).
+ *
+ * Reads the surface the same way PageHeader/PrimaryButton do (`useOnDark`)
+ * rather than taking a `dark` prop, so it drops into either a light or navy
+ * Shell without the caller having to say so twice.
+ */
+export function AudiologistStatusLine({children,className=""}:{children:React.ReactNode;className?:string}){
+  const dark=useOnDark();
+  return <div className={cn("rounded-2xl border px-4 py-3.5 text-sm font-semibold leading-6",dark?"border-white/15 bg-white/10 text-white/85":"border-[#e4eef0] bg-white text-brand-navy",className)}>{children}</div>;
 }
 export function DeviceVisual(){return <div className="flex h-52 items-center justify-center gap-5 bg-gradient-to-br from-[#e8f8f6] via-white to-[#edf3f8]"><div className="h-28 w-16 -rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/><div className="h-28 w-16 rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/></div>}
 // `useStoryOptional` returns null on Demo 1's frozen, provider-less

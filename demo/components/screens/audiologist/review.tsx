@@ -21,7 +21,7 @@ export function AudReview({ next }: { next: () => void }) {
         {/* The room stays on screen until the patient is fitted and happy
            (refined 2026-08-31) — she reviews while still on the call, and the
            video sits exactly where it sits on every other screen. */}
-        <VideoSplit video={<HomeFeed />}>
+        <VideoSplit video={<HomeFeed beat="listening" />}>
           <Card className="p-5">
             <b className="text-sm">Audiogram with bone conduction</b>
             <div className="mt-4"><Audiogram showBone /></div>
@@ -106,7 +106,7 @@ export function AudSign({ next }: { next: () => void }) {
       {/* Same page header as every other audiologist screen (consistency,
          Achi 2026-08-31) — the card below carries the state, not the title. */}
       <PageHeader eyebrow="Signature" title={`${patient.name} — sign the report`} />
-      <VideoSplit video={<HomeFeed />}>
+      <VideoSplit video={<HomeFeed beat="listening" />}>
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           {signed ? <Lock size={21} aria-hidden /> : <PenLine size={21} aria-hidden />}

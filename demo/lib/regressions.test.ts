@@ -2075,8 +2075,49 @@ describe("the room's camera feed", () => {
   // Only the pure-tone beat has footage so far. An unknown beat must fall
   // back to it rather than resolving to a missing file and rendering a black
   // pane — the remaining beats are still to be generated.
-  it("falls back to the one existing clip for a beat with no footage", () => {
-    expect(feed).toContain("CLIPS[beat] ?? PATIENT_CLIP");
+  // Owner, 2026-09-01: on the device shortlist "Alex is speaking, but here he
+  // should be nodding because he is listening to the audiologist. This is not
+  // the right video for this slide."
+  //
+  // One clip cannot be honest on every screen. Exam beats show him being
+  // tested — headphones, answering, his own voice on the track. Every other
+  // screen is Dr. Reed presenting or asking, so he attends to her: mouth
+  // closed and silent, because talking over her is the mismatch itself.
+  it("plays the listening clip wherever the patient is not being tested", () => {
+    expect(feed).toContain("room-listening.mp4");
+    expect(feed).toContain("TESTING_BEATS");
+    // Listening is the default: most screens carrying this feed are consult
+    // and review screens, so an unnamed beat must not imply an exam.
+    expect(feed).toMatch(/beat = "listening"/);
+  });
+
+  // The consult screens are Dr. Reed presenting and the patient responding to
+  // her — naming the beat is what keeps the clip and the captions on the same
+  // moment, so neither can drift back to the hearing test.
+  it("names a beat on every screen that carries the feed", () => {
+    for (const [file, beats] of [
+      ["components/screens/audiologist/consult.tsx", ["fitting", "listening"]],
+      ["components/screens/audiologist/review.tsx", ["listening"]],
+      ["components/screens/audiologist/supervision.tsx", ["puretone"]],
+    ] as const) {
+      const src = sourceOf(file);
+      // No call site may fall through to the default silently.
+      expect(src).not.toMatch(/<HomeFeed\s*\/>/);
+      for (const b of beats) expect(src).toContain(`beat="${b}"`);
+    }
+  });
+
+  // The captions were pinned to the hearing test, so the device shortlist
+  // showed the patient reporting he could NOT hear a tone while she presented
+  // devices — the wrong moment, and a negative line on a screen that should
+  // read as a good outcome.
+  it("matches the captions to the beat, with no leftover tone report", () => {
+    expect(home).toContain("const LINES");
+    expect(home).toMatch(/lines\[0\]/);
+    expect(home).toMatch(/lines\[1\]/);
+    // The old hard-coded pair must not survive anywhere.
+    expect(home).not.toContain("I can hear that one.&rdquo;");
+    expect(home).not.toContain("can&rsquo;t hear anything now");
   });
 
   // Owner, 2026-09-01: "The default should be on mute, but I want to be able

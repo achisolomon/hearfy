@@ -35,8 +35,29 @@ import type { VideoSound } from "@/lib/use-video-sound";
  * bottom or in the caption below the frame. The footage itself carries no
  * baked-in text — see `internal/docs/assets/room-video-prompts.md`.
  */
+/**
+ * What the patient is saying, per beat. Two lines: the settled one, then the
+ * live one that pulses.
+ *
+ * During the exam these are test responses. Everywhere else Dr. Reed is
+ * presenting or asking and he is answering her — so the lines are his side of
+ * that conversation, not a stray tone report.
+ */
+const LINES: Record<string, readonly [string, string]> = {
+  otoscopy:     ["That doesn't hurt at all.", "…I can stay still for that."],
+  tympanometry: ["A little pressure — that's fine.", "…I can feel it, but it's comfortable."],
+  puretone:     ["I can hear that one.", "…that one was very faint."],
+  speech:       ["Baseball. Hotdog.", "…that one sounded muffled."],
+  bone:         ["That feels different — behind the ear.", "…I can hear that one too."],
+  listening:    ["I follow — that makes sense.", "…and I'd hear conversations better?"],
+  fitting:      ["That one feels comfortable.", "…everything sounds clearer already."],
+};
+
+const DEFAULT_LINES = LINES.listening;
+
 export function HomeFeed({ cmaName = cma.name, beat, active = false }:
   { cmaName?: string; beat?: string; active?: boolean }) {
+  const lines = (beat && LINES[beat]) ?? DEFAULT_LINES;
   // The feed owns the audio (it owns the <video>), but the button belongs in
   // this tile's control row, so the feed reports its audio state up and the
   // tile draws the control — rather than a second cluster floating over the
@@ -110,16 +131,21 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false }:
           large the text — the tile simply gets taller. They also stop being
           white-on-video, so legibility no longer depends on whatever happens
           to be behind them; this is ordinary dark-on-light caption text
-          matched to the card, like hers. The live one keeps its pulse and the
-          teal treatment that ZoomPanel gives an `active` note. */}
+          matched to the card, like hers.
+
+          The lines follow the BEAT (owner, 2026-09-01). They were pinned to
+          the hearing test, so the device shortlist showed a patient reporting
+          he could not hear a tone while Dr. Reed was presenting devices —
+          the wrong moment, and a negative note in a screen that should read
+          as a good outcome. */}
       <div className="border-t border-[#e4eef0] bg-white px-4 py-3">
         <p className="text-sm leading-relaxed text-[#3f5061]">
           <b className="font-semibold text-brand-navy">{patient.name}:</b>{" "}
-          &ldquo;I can hear that one.&rdquo;
+          &ldquo;{lines[0]}&rdquo;
         </p>
         <p className="mt-1 animate-pulse text-sm font-semibold leading-relaxed text-brand-navy motion-reduce:animate-none">
           <b className="font-semibold">{patient.name}:</b>{" "}
-          &ldquo;…I can&rsquo;t hear anything now.&rdquo;
+          &ldquo;{lines[1]}&rdquo;
         </p>
       </div>
 

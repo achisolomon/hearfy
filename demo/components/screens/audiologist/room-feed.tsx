@@ -37,22 +37,38 @@ import { useVideoSound, type VideoSound } from "@/lib/use-video-sound";
  * button can never be a dead control (Dr. Reed's footage is silent, which is
  * why `ReedFeed` has no such button).
  */
-const PATIENT_CLIP = "/video/room-patient.mp4";
+/**
+ * Two moods, because one clip cannot be honest on every screen (owner,
+ * 2026-09-01: on the shortlist screen "Alex is speaking, but here he should be
+ * nodding because he is listening to the audiologist").
+ *
+ * - `testing` — mid exam: headphones on, answering, his own voice on the
+ *   track. Right where the app says he is being tested.
+ * - `listening` — Dr. Reed is presenting or asking, and he is attending to
+ *   her: mouth closed, warm and attentive, and SILENT, because talking over
+ *   her is exactly the mismatch this split fixes.
+ */
+const CLIPS = {
+  testing: { src: "/video/room-patient.mp4", poster: "/video/room-patient-poster.jpg" },
+  listening: { src: "/video/room-listening.mp4", poster: "/video/room-listening-poster.jpg" },
+} as const;
 
-const CLIPS: Record<string, string> = {
-  puretone: PATIENT_CLIP,
-};
+export type RoomBeat = keyof typeof CLIPS;
 
-const POSTER = "/video/room-patient-poster.jpg";
+/** Beats that are the patient being examined; everything else is listening. */
+const TESTING_BEATS = new Set(["puretone", "otoscopy", "tympanometry", "speech", "bone", "testing"]);
 
-export function RoomFeed({ beat = "puretone", className, onAudio }:
+export function RoomFeed({ beat = "listening", className, onAudio }:
   { beat?: string; className?: string;
     /** Lets the surrounding tile render the sound control in its own
         control row instead of the feed floating a second cluster over the
         picture. The feed owns the <video>; the tile owns the chrome. */
     onAudio?: (a: VideoSound) => void }) {
   const reduced = usePrefersReducedMotion();
-  const src = asset(CLIPS[beat] ?? PATIENT_CLIP);
+  // Default to listening: most screens carrying this feed are consult and
+  // review screens where Dr. Reed is doing the talking.
+  const clip = CLIPS[TESTING_BEATS.has(beat) ? "testing" : "listening"];
+  const src = asset(clip.src);
   const audio = useVideoSound(src);
   const ref = audio.ref;
 
@@ -66,6 +82,7 @@ export function RoomFeed({ beat = "puretone", className, onAudio }:
   }, [src]);
 
   const label = "The patient on the live call";
+  const poster = asset(clip.poster);
 
   // Report audio state upward whenever it changes, so the tile's control row
   // can show (or hide) the toggle. Effect, not render-time, so the parent is
@@ -78,7 +95,7 @@ export function RoomFeed({ beat = "puretone", className, onAudio }:
   if (reduced) {
     return (
       <img
-        src={asset(POSTER)}
+        src={poster}
         alt={label}
         className={cn("h-full w-full object-cover", className)}
       />
@@ -90,7 +107,7 @@ export function RoomFeed({ beat = "puretone", className, onAudio }:
       <video
         ref={ref}
         src={src}
-        poster={asset(POSTER)}
+        poster={poster}
         autoPlay
         loop
         muted

@@ -2165,6 +2165,29 @@ describe("the room's camera feed", () => {
     expect(hook).not.toMatch(/^(let|const) (sound|muted)\b/m);
   });
 
+  // Owner, 2026-09-01, on the signed shortlist: "just the loading video
+  // without the audio, because what she's saying is not making sense."
+  //
+  // The captions on these screens are written script — her air-bone-gap
+  // recommendation quoted verbatim, the patient's "That one feels
+  // comfortable" — and the generic takes are not saying those words. Sound is
+  // therefore opt-IN and off by default: hearing the wrong words is worse
+  // than hearing none. The picture still plays; only the offer is withheld.
+  it("offers sound only where a screen opts in", () => {
+    for (const f of ["components/screens/cma/reed-feed.tsx",
+                     "components/screens/audiologist/room-feed.tsx"]) {
+      expect(sourceOf(f)).toContain("mute = false");
+      // Muting must hide the control, not just silence it — a button that
+      // does nothing is worse than no button.
+      expect(sourceOf(f)).toContain("hasAudio: false");
+    }
+    for (const t of ["components/screens/cma/call-tile.tsx",
+                     "components/screens/audiologist/home-feed.tsx"]) {
+      expect(sourceOf(t)).toContain("sound = false");
+      expect(sourceOf(t)).toContain("mute={!sound}");
+    }
+  });
+
   // A control that unmutes silence reads as broken. Dr. Reed's `idle` loop is
   // silent on purpose — it plays where the app is NOT showing the SPEAKING
   // pill, so a voice there would contradict the interface — and the button

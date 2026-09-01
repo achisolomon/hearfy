@@ -26,9 +26,9 @@ import type { VideoSound } from "@/lib/use-video-sound";
  * listening otherwise. The LIVE/SPEAKING pills, call controls and caption
  * stay DOM overlays on top of the footage — never baked into the video.
  */
-export function AudiologistCallTile({ note, active = false }:
-  { note: string; active?: boolean }) {
-  return <AudiologistStrip note={note} active={active} />;
+export function AudiologistCallTile({ note, active = false, sound = false }:
+  { note: string; active?: boolean; sound?: boolean }) {
+  return <AudiologistStrip note={note} active={active} sound={sound} />;
 }
 
 /**
@@ -37,14 +37,14 @@ export function AudiologistCallTile({ note, active = false }:
  * call looks identical on every screen of both roles. Below `md` the
  * compact strip stands in. Children carry their own action button.
  */
-export function CallSplit({ note, active = false, children }:
-  { note: string; active?: boolean; children: React.ReactNode }) {
+export function CallSplit({ note, active = false, sound = false, children }:
+  { note: string; active?: boolean; sound?: boolean; children: React.ReactNode }) {
   return (
     <>
       {/* Below `md` the same panel stacks above the work; from `md` it moves
          into VideoSplit's column. One tile, one shape, every role. */}
-      <AudiologistStrip note={note} active={active} className="md:hidden" />
-      <VideoSplit hideVideoBelowMd video={<ZoomPanel note={note} active={active} />}>
+      <AudiologistStrip note={note} active={active} sound={sound} className="md:hidden" />
+      <VideoSplit hideVideoBelowMd video={<ZoomPanel note={note} active={active} sound={sound} />}>
         {children}
       </VideoSplit>
     </>
@@ -67,12 +67,24 @@ export function CallSplit({ note, active = false, children }:
  * stretched to the wide column and rendered 961px against the exam screens'
  * 457px, which is the same inconsistency in the other direction.
  */
-export function AudiologistStrip({ note, active = false, className }:
-  { note: string; active?: boolean; className?: string }) {
-  return <div className={cn("mb-4 w-full max-w-[380px]", className)}><ZoomPanel note={note} active={active} /></div>;
+export function AudiologistStrip({ note, active = false, sound = false, className }:
+  { note: string; active?: boolean; sound?: boolean; className?: string }) {
+  return <div className={cn("mb-4 w-full max-w-[380px]", className)}><ZoomPanel note={note} active={active} sound={sound} /></div>;
 }
 
-export function ZoomPanel({ note, active }: { note: string; active: boolean }) {
+/**
+ * `sound` is opt-IN, and off by default (owner, 2026-09-01: "just the loading
+ * video without the audio, because what she's saying is not making sense").
+ *
+ * The caption on these screens is either a verbatim clinical script — the
+ * signed shortlist quotes her air-bone-gap recommendation word for word — or
+ * third-person narration of what she is doing. The take's audio is neither,
+ * so offering sound invites the viewer to hear her say something other than
+ * what the screen says she is saying. The picture still plays; only the offer
+ * of sound is withheld, until footage exists whose words match the caption.
+ */
+export function ZoomPanel({ note, active, sound = false }:
+  { note: string; active: boolean; sound?: boolean }) {
   // The feed owns the <video>; this tile owns the chrome, so the sound
   // control lives in the control row below rather than floating over her.
   const [audio, setAudio] = useState<VideoSound | null>(null);
@@ -81,7 +93,7 @@ export function ZoomPanel({ note, active }: { note: string; active: boolean }) {
       "overflow-hidden rounded-[28px] border bg-white shadow-card",
       active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]")}>
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <ReedFeed active={active} onAudio={setAudio} />
+        <ReedFeed active={active} mute={!sound} onAudio={setAudio} />
 
         {/* Call chrome, anchored to the frame's own corners — never to the
             caption column, or it drifts down the feed as the note grows. */}

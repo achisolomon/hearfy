@@ -55,8 +55,17 @@ const LINES: Record<string, readonly [string, string]> = {
 
 const DEFAULT_LINES = LINES.listening;
 
-export function HomeFeed({ cmaName = cma.name, beat, active = false }:
-  { cmaName?: string; beat?: string; active?: boolean }) {
+/**
+ * `sound` is opt-IN and off by default, for the same reason as Dr. Reed's tile
+ * (owner, 2026-09-01): the captions below are a written script — "That one
+ * feels comfortable", "I can hear that one" — and the take's audio is not
+ * saying those words. Offering sound would invite the viewer to hear the
+ * patient say something other than what the screen quotes him saying. The
+ * picture plays either way; only the offer of sound waits for footage whose
+ * words match.
+ */
+export function HomeFeed({ cmaName = cma.name, beat, active = false, sound = false }:
+  { cmaName?: string; beat?: string; active?: boolean; sound?: boolean }) {
   const lines = (beat && LINES[beat]) ?? DEFAULT_LINES;
   // The feed owns the audio (it owns the <video>), but the button belongs in
   // this tile's control row, so the feed reports its audio state up and the
@@ -68,7 +77,7 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false }:
       "overflow-hidden rounded-[28px] border bg-white shadow-card",
       active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]")}>
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <RoomFeed beat={beat} onAudio={setAudio} />
+        <RoomFeed beat={beat} mute={!sound} onAudio={setAudio} />
 
         {/* Call chrome, anchored to the frame's own corners — never to the
             nameplate column, or it drifts down the feed as the names grow.

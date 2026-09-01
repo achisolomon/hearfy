@@ -21,16 +21,28 @@ import { useVideoSound, type VideoSound } from "@/lib/use-video-sound";
  * autoplay is granted only to muted video; the control flips it on the live
  * element inside a click.
  *
- * Only the `speaking` clip carries audio. `idle` is silent on purpose: it
- * plays wherever the app is NOT showing the SPEAKING pill, so a voice there
- * would contradict the interface. The control hides itself on a silent clip
- * rather than becoming a dead button.
+ * Only the `speaking` clip carries audio, and only where that audio matches
+ * what the caption says she is saying. `idle` is silent on purpose: it plays
+ * wherever the app is NOT showing the SPEAKING pill, so a voice there would
+ * contradict the interface.
+ *
+ * `mute` suppresses the sound control on screens whose caption is a specific
+ * clinical script the generic take cannot be saying — the signed shortlist
+ * quotes her air-bone-gap recommendation verbatim (owner, 2026-09-01: "just
+ * the loading video without the audio, because what she's saying is not
+ * making sense"). The picture still plays; only the offer of sound goes away,
+ * because hearing the wrong words is worse than hearing none.
+ *
+ * The control hides itself on a silent or muted clip rather than becoming a
+ * dead button.
  *
  * Under `prefers-reduced-motion` the video is never mounted — the poster frame
  * stands in, per the demo-wide reduced-motion contract.
  */
-export function ReedFeed({ active, className, onAudio }:
+export function ReedFeed({ active, className, onAudio, mute = false }:
   { active: boolean; className?: string;
+    /** Suppress sound where the caption is a script this take is not saying. */
+    mute?: boolean;
     /** Lets the surrounding tile render the sound control in its own control
         row, instead of this feed floating a second cluster over her face. */
     onAudio?: (a: VideoSound) => void }) {
@@ -51,9 +63,9 @@ export function ReedFeed({ active, className, onAudio }:
   // Report upward on change, in an effect, so the parent is never asked to
   // set state while this component is rendering.
   useEffect(() => {
-    onAudio?.(audio);
+    onAudio?.(mute ? { ...audio, hasAudio: false } : audio);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audio.hasAudio, audio.sound]);
+  }, [audio.hasAudio, audio.sound, mute]);
 
   if (reduced) {
     return (

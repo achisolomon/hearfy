@@ -58,12 +58,14 @@ export type RoomBeat = keyof typeof CLIPS;
 /** Beats that are the patient being examined; everything else is listening. */
 const TESTING_BEATS = new Set(["puretone", "otoscopy", "tympanometry", "speech", "bone", "testing"]);
 
-export function RoomFeed({ beat = "listening", className, onAudio }:
+export function RoomFeed({ beat = "listening", className, onAudio, mute = false }:
   { beat?: string; className?: string;
     /** Lets the surrounding tile render the sound control in its own
         control row instead of the feed floating a second cluster over the
         picture. The feed owns the <video>; the tile owns the chrome. */
-    onAudio?: (a: VideoSound) => void }) {
+    onAudio?: (a: VideoSound) => void;
+    /** Suppress sound where the caption is a script this take is not saying. */
+    mute?: boolean }) {
   const reduced = usePrefersReducedMotion();
   // Default to listening: most screens carrying this feed are consult and
   // review screens where Dr. Reed is doing the talking.
@@ -88,9 +90,9 @@ export function RoomFeed({ beat = "listening", className, onAudio }:
   // can show (or hide) the toggle. Effect, not render-time, so the parent is
   // never asked to set state while this component is rendering.
   useEffect(() => {
-    onAudio?.(audio);
+    onAudio?.(mute ? { ...audio, hasAudio: false } : audio);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audio.hasAudio, audio.sound]);
+  }, [audio.hasAudio, audio.sound, mute]);
 
   if (reduced) {
     return (

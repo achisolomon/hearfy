@@ -5,8 +5,8 @@ import { otoscopy } from "@/lib/mock-data";
 export type Framing = "patient" | "cma";
 
 /**
- * The scope view, tinted slightly differently per ear so the two captures read
- * as two.
+ * The scope view: a real otoscopy capture per ear, so the two read as two
+ * distinct captures rather than one picture used twice.
  *
  * Exported because the audiologist's clinical review shows the same captures
  * (persona spec §2: review carries "otoscopy imagery"). Drawing a second ear
@@ -14,23 +14,25 @@ export type Framing = "patient" | "cma";
  * product; the capture the CMA took is the capture she reads.
  */
 export function EarImage({ hue }: { hue: "warm" | "cool" }) {
-  const canal = hue === "warm"
-    ? "bg-[radial-gradient(circle_at_50%_50%,#c97b53_0,#8e4a35_32%,#3c1e21_58%,#111827_72%)]"
-    : "bg-[radial-gradient(circle_at_46%_54%,#c9825d_0,#95503a_34%,#42221f_60%,#111827_74%)]";
+  // cool = the patient's left ear (cerumen present), warm = the right (clear).
+  // Kept as a hue prop so both call sites — the exam step and the audiologist's
+  // clinical review — stay one component showing one set of captures.
+  const capture = hue === "cool"
+    ? { src: "/exam/ear-left-cerumen.jpg", alt: "Otoscopy capture, left ear: mild cerumen along the canal wall, tympanic membrane visible" }
+    : { src: "/exam/ear-right-clear.jpg", alt: "Otoscopy capture, right ear: clear canal with intact tympanic membrane" };
   return (
-    <div className="grid h-36 place-items-center bg-[#0c2340]">
-      <div className={`relative h-28 w-28 overflow-hidden rounded-full border-[9px] border-[#173a5b] ${canal}`}>
-        <div className="absolute inset-3.5 rounded-full border border-white/20" />
-        {/* The two captures carry different findings (mild cerumen on the left),
-           so they must not render as the same picture twice — on the clinical
-           review the image is the evidence for the text beside it. */}
-        {hue === "cool" && (
-          <span
-            aria-hidden
-            className="absolute -right-1 top-5 h-14 w-16 rotate-[18deg] rounded-[60%] bg-[#b98a52]/70 blur-[3px]"
-          />
-        )}
-      </div>
+    // Full-bleed capture. The navy ground still shows while the image decodes,
+    // so the card never flashes white against the Harbor Navy shell.
+    <div className="relative h-36 overflow-hidden bg-[#0c2340]">
+      <img
+        src={capture.src}
+        alt={capture.alt}
+        loading="lazy"
+        decoding="async"
+        // The assets are cut to this header's ratio with the whole otoscope
+        // disc fitted to height, so cover fills the card without clipping it.
+        className="h-full w-full object-cover"
+      />
     </div>
   );
 }

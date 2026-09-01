@@ -63,14 +63,27 @@ export const BEATS: Beat[] = [
     screens: { patient: "home", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
 
   // ---- Stage 2: Booking & intake ----
-  // Collapsed from nine beats to six (decided 2026-08-30). The guided story
-  // hits the fork, the safety gate, the visit slot, the money and the
-  // confirmation; the three skipped screens (intake-needs, intake-coverage,
-  // intake-plan) stay fully reachable by free navigation and in solo patient
-  // mode. Nothing is deleted — the guided path just stops narrating all nine
-  // before the four-role story starts.
+  // Collapsed from nine beats to six (decided 2026-08-30), then back to seven
+  // (2026-09-01). The guided story hits the fork, the SYMPTOMS, the safety
+  // gate, the visit slot, the money and the confirmation; the two still-
+  // skipped screens (intake-coverage, intake-plan) stay fully reachable by
+  // free navigation and in solo patient mode.
   { id: "intake-for", stage: 2, lead: "patient",
     screens: { patient: "intake-for", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // The pre-visit questionnaire earned a beat back (owner, 2026-09-01: "I have
+  // to click on 'who is the visit for' Continue... if I click Next, I don't
+  // see the screen"). Two ways forward disagreed: the screen's own Continue
+  // walked to it, while the walkthrough's Next jumped straight past it to the
+  // safety gate — so the one beat that shows WHAT THE PATIENT NOTICES, the
+  // reason for the whole visit, was invisible to anyone driving the demo the
+  // way it is meant to be driven.
+  //
+  // It sits BETWEEN the fork and the safety gate deliberately: "who is this
+  // for" then "what are you noticing" then "any red flags" is the clinical
+  // order, and the safety gate reads as a response to the symptoms rather
+  // than an unprompted interrogation.
+  { id: "intake-needs", stage: 2, lead: "patient",
+    screens: { patient: "intake-needs", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "intake-medical", stage: 2, lead: "patient",
     screens: { patient: "intake-medical", cma: "cma-day", audiologist: "aud-panel", operator: "op-dashboard" } },
   // Choosing the visit slot is the patient's decision. The guided walk went

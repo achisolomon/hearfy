@@ -1692,8 +1692,15 @@ describe("back from We're here after delivery", () => {
     }
   });
 
+  // Uses whatever is genuinely off-script rather than naming one screen: when
+  // "intake-needs" was hard-coded here it silently became a live beat
+  // (2026-09-01) and this test was the only thing that noticed — which is the
+  // right alarm, but it should assert the -1 CONTRACT, not one screen's
+  // absence from the walk.
   it("still reports -1 for a screen outside the script", () => {
-    expect(beatForScreenNear("patient", "intake-needs", 3)).toBe(-1);
+    const offScript = screenOrder().filter(s => beatForScreen("patient", s) === -1);
+    expect(offScript.length, "no off-script screen left to test the contract").toBeGreaterThan(0);
+    for (const s of offScript) expect(beatForScreenNear("patient", s, 3)).toBe(-1);
   });
 });
 
@@ -2062,14 +2069,147 @@ describe("the room's camera feed", () => {
   // The demo-wide contract: motion degrades to a still, never plays anyway.
   it("falls back to a poster still under prefers-reduced-motion", () => {
     expect(feed).toContain("prefers-reduced-motion: reduce");
-    expect(feed).toContain("room-puretone-poster.jpg");
+    expect(feed).toContain("room-patient-poster.jpg");
   });
 
   // Only the pure-tone beat has footage so far. An unknown beat must fall
   // back to it rather than resolving to a missing file and rendering a black
   // pane — the remaining beats are still to be generated.
-  it("falls back to the one existing clip for a beat with no footage", () => {
-    expect(feed).toContain("CLIPS[beat] ?? CLIPS.puretone");
+  // Owner, 2026-09-01: on the device shortlist "Alex is speaking, but here he
+  // should be nodding because he is listening to the audiologist. This is not
+  // the right video for this slide."
+  //
+  // One clip cannot be honest on every screen. Exam beats show him being
+  // tested — headphones, answering, his own voice on the track. Every other
+  // screen is Dr. Reed presenting or asking, so he attends to her: mouth
+  // closed and silent, because talking over her is the mismatch itself.
+  it("plays the listening clip wherever the patient is not being tested", () => {
+    expect(feed).toContain("room-listening.mp4");
+    expect(feed).toContain("TESTING_BEATS");
+    // Listening is the default: most screens carrying this feed are consult
+    // and review screens, so an unnamed beat must not imply an exam.
+    expect(feed).toMatch(/beat = "listening"/);
+  });
+
+  // The consult screens are Dr. Reed presenting and the patient responding to
+  // her — naming the beat is what keeps the clip and the captions on the same
+  // moment, so neither can drift back to the hearing test.
+  it("names a beat on every screen that carries the feed", () => {
+    for (const [file, beats] of [
+      ["components/screens/audiologist/consult.tsx", ["fitting", "listening"]],
+      ["components/screens/audiologist/review.tsx", ["listening"]],
+      ["components/screens/audiologist/supervision.tsx", ["puretone"]],
+    ] as const) {
+      const src = sourceOf(file);
+      // No call site may fall through to the default silently.
+      expect(src).not.toMatch(/<HomeFeed\s*\/>/);
+      for (const b of beats) expect(src).toContain(`beat="${b}"`);
+    }
+  });
+
+  // The captions were pinned to the hearing test, so the device shortlist
+  // showed the patient reporting he could NOT hear a tone while she presented
+  // devices — the wrong moment, and a negative line on a screen that should
+  // read as a good outcome.
+  it("matches the captions to the beat, with no leftover tone report", () => {
+    expect(home).toContain("const LINES");
+    expect(home).toMatch(/lines\[0\]/);
+    expect(home).toMatch(/lines\[1\]/);
+    // The old hard-coded pair must not survive anywhere.
+    expect(home).not.toContain("I can hear that one.&rdquo;");
+    expect(home).not.toContain("can&rsquo;t hear anything now");
+  });
+
+  // Owner, 2026-09-01: "The default should be on mute, but I want to be able
+  // to click and actually hear the videos" — on ALL the screens, Dr. Reed's
+  // tile included, not just the room feed.
+  //
+  // `muted` is not decoration: a browser grants autoplay only to muted video,
+  // so removing it to "enable sound" would stop the feed playing at all. The
+  // clip stays muted in markup and the control unmutes the live element on a
+  // real click, the gesture that earns audio.
+  it("starts muted so it can autoplay, and unmutes on a click", () => {
+    const hook = sourceOf("lib/use-video-sound.ts");
+    expect(hook).toContain("v.muted = !next");
+    for (const f of [feed, sourceOf("components/screens/cma/reed-feed.tsx")]) {
+      expect(f).toContain("muted");                 // still muted in markup
+      expect(f).toContain("useVideoSound");
+      expect(f).toContain("onLoadedData");
+    }
+  });
+
+  // Both call tiles must behave the same way, so the behaviour lives in ONE
+  // hook and ONE button rather than being copied into each feed — two sides
+  // of one call that mute differently is the drift this prevents.
+  it("shares one sound implementation across both call tiles", () => {
+    const btn = sourceOf("components/screens/sound-button.tsx");
+    expect(btn).toContain("aria-pressed={audio.sound}");
+    for (const tile of [home, sourceOf("components/screens/cma/call-tile.tsx")]) {
+      expect(tile).toContain("<SoundButton audio={audio} />");
+      // The nameplate band disables pointer events; the control row must
+      // re-enable them or the button renders but cannot be clicked.
+      expect(tile).toContain("pointer-events-auto flex shrink-0 gap-2");
+    }
+  });
+
+  // `CallSplit` renders the tile twice — a compact strip below `md` and the
+  // panel from `md` up — so two <video> elements exist at once. Sound state
+  // is per-instance (each has its own useVideoSound), which is what keeps
+  // unmuting the visible one from also unmuting the hidden one and playing
+  // the same voice twice, out of phase. Verified in the browser 2026-09-01.
+  it("keeps sound state per feed instance, not global", () => {
+    const hook = sourceOf("lib/use-video-sound.ts");
+    // State lives in the hook's own closure, never in a module-level
+    // variable that every mounted feed would share.
+    expect(hook).toMatch(/export function useVideoSound[\s\S]*?useState\(false\)/);
+    expect(hook).not.toMatch(/^(let|const) (sound|muted)\b/m);
+  });
+
+  // Owner, 2026-09-01, on the signed shortlist: "just the loading video
+  // without the audio, because what she's saying is not making sense."
+  //
+  // The captions on these screens are written script — her air-bone-gap
+  // recommendation quoted verbatim, the patient's "That one feels
+  // comfortable" — and the generic takes are not saying those words. Sound is
+  // therefore opt-IN and off by default: hearing the wrong words is worse
+  // than hearing none. The picture still plays; only the offer is withheld.
+  it("offers sound only where a screen opts in", () => {
+    for (const f of ["components/screens/cma/reed-feed.tsx",
+                     "components/screens/audiologist/room-feed.tsx"]) {
+      expect(sourceOf(f)).toContain("mute = false");
+      // Muting must hide the control, not just silence it — a button that
+      // does nothing is worse than no button.
+      expect(sourceOf(f)).toContain("hasAudio: false");
+    }
+    for (const t of ["components/screens/cma/call-tile.tsx",
+                     "components/screens/audiologist/home-feed.tsx"]) {
+      expect(sourceOf(t)).toContain("sound = false");
+      expect(sourceOf(t)).toContain("mute={!sound}");
+    }
+  });
+
+  // A control that unmutes silence reads as broken. Dr. Reed's `idle` loop is
+  // silent on purpose — it plays where the app is NOT showing the SPEAKING
+  // pill, so a voice there would contradict the interface — and the button
+  // hides itself rather than becoming dead.
+  it("offers the sound control only when the clip has audio", () => {
+    expect(sourceOf("components/screens/sound-button.tsx"))
+      .toContain("if (!audio.hasAudio) return null;");
+    expect(sourceOf("lib/use-video-sound.ts")).toContain("detectAudio");
+  });
+
+  // Owner, 2026-09-01: the feed shows the patient alone, not a two-shot with
+  // the CMA. A nameplate naming someone who is not in frame captions a person
+  // the viewer cannot see, and the old two-shot clip must not linger as a
+  // fallback for any beat.
+  it("shows the patient only, and names only the patient", () => {
+    expect(feed).toContain("room-patient.mp4");
+    expect(feed).not.toContain("room-puretone");
+    // The nameplate's own lines — the talk-back button below still names the
+    // CMA, correctly, because she is in the room even though off-camera.
+    const band = home.slice(home.indexOf("absolute inset-x-0 bottom-0"),
+                            home.indexOf("Mic, Video].map"));
+    expect(band).not.toContain("cmaName");
   });
 
   // The clip shows Alex in headphones with the response button: that is the
@@ -2852,5 +2992,54 @@ describe("the patient's phone offers no button for someone else's clinical act",
         new RegExp(`<${name}\\b[^>]*observing`),
       );
     }
+  });
+});
+
+// Owner, 2026-09-01: "In order to get to that screen, I have to click on 'who
+// is the visit for' Continue. If I click Next, I don't see the screen."
+//
+// Two ways forward disagreed. The screen's own Continue button walked to the
+// questionnaire, but the walkthrough's Next had no beat for it and jumped
+// intake-for -> intake-medical, so the beat showing WHAT THE PATIENT NOTICES
+// — the reason for the entire visit — was invisible to anyone driving the
+// demo the way it is meant to be driven, including on prod.
+describe("the pre-visit questionnaire is in the guided walk", () => {
+  it("has a beat, so Next reaches it", () => {
+    expect(beatForScreen("patient", "intake-needs")).not.toBe(-1);
+  });
+
+  // The clinical order: who is this for, then what are you noticing, then the
+  // red-flag gate — so the safety questions read as a response to the
+  // symptoms rather than an unprompted interrogation.
+  it("sits between the fork and the safety gate", () => {
+    const forIdx = beatIndexById("intake-for");
+    const needs = beatIndexById("intake-needs");
+    const medical = beatIndexById("intake-medical");
+    expect(needs).toBeGreaterThan(forIdx);
+    expect(needs).toBeLessThan(medical);
+  });
+
+  // The specific broken step: one forward press from the fork must land on
+  // the questionnaire, not skip over it.
+  it("is the very next beat after the fork", () => {
+    expect(nextBeat(beatIndexById("intake-for"))).toBe(beatIndexById("intake-needs"));
+  });
+
+  // The patient leads their own intake; a beat led by another role would hand
+  // the persona away mid-questionnaire.
+  it("is led by the patient", () => {
+    expect(BEATS[beatIndexById("intake-needs")].lead).toBe("patient");
+  });
+
+  // Both routes forward must agree. The in-app Continue goes to
+  // intake-medical, and the walk's Next now goes to the same place from the
+  // same screen — that agreement is what was broken.
+  it("agrees with the screen's own Continue button", () => {
+    const intake = sourceOf("components/screens/patient/intake.tsx");
+    const needs = intake
+      .split(/(?=export function )/)
+      .find(s => s.startsWith("export function IntakeNeeds"));
+    expect(needs).toMatch(/go\("intake-medical"\)/);
+    expect(BEATS[nextBeat(beatIndexById("intake-needs"))].id).toBe("intake-medical");
   });
 });

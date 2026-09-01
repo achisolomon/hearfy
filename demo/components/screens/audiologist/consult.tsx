@@ -46,7 +46,10 @@ export function AudConsult({ next }: { next: () => void }) {
            on every other screen (refined 2026-08-31). */}
         <VideoSplit video={
           <div className="space-y-3">
-            <HomeFeed />
+            {/* He is trying each one on and telling her how it sounds, so the
+               feed is him listening to her and the captions are his feedback
+               — not a tone report from the hearing test (owner, 2026-09-01). */}
+            <HomeFeed beat="fitting" />
             <Card className="flex items-center gap-3 p-4">
               <Video size={18} className="shrink-0 text-brand-teal" aria-hidden />
               <p className="text-sm text-slate-500">
@@ -136,7 +139,9 @@ export function AudPrescription() {
       {/* Same page header as every other audiologist screen (consistency,
          Achi 2026-08-31) — the card below carries the state, not the title. */}
       <PageHeader eyebrow="Prescription" title={`${patient.name} — sign & lock`} />
-      <VideoSplit video={<HomeFeed />}>
+      {/* Signing: she walks him through it and he is agreeing, so he listens
+         rather than reporting a tone. */}
+      <VideoSplit video={<HomeFeed beat="listening" />}>
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
           <Lock size={21} aria-hidden />

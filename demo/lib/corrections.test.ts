@@ -3,6 +3,8 @@ import { BEATS, beatIndexById } from "./story";
 import { EXAM_STEPS } from "./exam";
 import { compareCategories, devices, deviceDetail, tiers } from "./mock-data";
 import { componentFiles, sourceOf } from "./screens";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * One test per item on the corrections sheet (2026-08-31, owner Achi Solomon).
@@ -380,6 +382,44 @@ describe("audiologist critique 2026-08-31", () => {
     expect(src, "the captures themselves, not a description of them").toMatch(/<EarImage/);
     // One otoscopy view in the product: the review reuses the exam step's.
     expect(src).toMatch(/from "\.\.\/\.\.\/exam\/otoscopy-step"/);
+  });
+
+  // The otoscopy captures are real photographs, one per ear. The two must stay
+  // two distinct files: a single image reused for both ears would show the same
+  // organ twice under two different findings, and the review reads these as the
+  // evidence behind the text beside them.
+  it("renders a distinct otoscopy photograph per ear", () => {
+    const src = sourceOf("components/exam/otoscopy-step.tsx");
+    const srcs = [...src.matchAll(/\/exam\/(ear-[\w-]+\.jpg)/g)].map(m => m[1]);
+    expect(srcs.length, "one capture per ear").toBe(2);
+    expect(new Set(srcs).size, "the two ears must not share one image").toBe(2);
+
+    // Both files ship, so a rename cannot leave the exam rendering blank frames.
+    for (const file of srcs) {
+      expect(
+        existsSync(join(process.cwd(), "public/exam", file)),
+        `${file} must exist in public/exam`,
+      ).toBe(true);
+    }
+
+    // Captures carry alt text: the review is a clinical screen read by a
+    // clinician, and an unlabelled <img> tells a screen reader nothing.
+    expect(src).toMatch(/Otoscopy capture, left ear/);
+    expect(src).toMatch(/Otoscopy capture, right ear/);
+
+    // Every capture URL goes through asset(). Pages serves the demo under
+    // /hearfy/, and a raw <img src="/exam/..."> resolves against the domain
+    // root instead — which 404s in production while looking perfect on
+    // localhost. Shipped exactly that way once: the cards rendered as empty
+    // navy boxes on the deployed site because object-cover on a broken image
+    // still paints the container's background.
+    expect(src, "capture URLs must be basePath-aware").not.toMatch(
+      /src:\s*"\/exam\//,
+    );
+    for (const file of srcs) {
+      expect(src, `${file} must be wrapped in asset()`)
+        .toMatch(new RegExp(`asset\\("/exam/${file.replace(".", "\\.")}"\\)`));
+    }
   });
 
   // She authors the reasoning the patient later reads, so the consult has to

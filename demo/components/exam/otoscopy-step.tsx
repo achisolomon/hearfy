@@ -1,6 +1,7 @@
 "use client";
 import { Card, StatusPill } from "../ui";
 import { otoscopy } from "@/lib/mock-data";
+import { asset } from "@/lib/asset";
 
 export type Framing = "patient" | "cma";
 
@@ -18,8 +19,8 @@ export function EarImage({ hue }: { hue: "warm" | "cool" }) {
   // Kept as a hue prop so both call sites — the exam step and the audiologist's
   // clinical review — stay one component showing one set of captures.
   const capture = hue === "cool"
-    ? { src: "/exam/ear-left-cerumen.jpg", alt: "Otoscopy capture, left ear: mild cerumen along the canal wall, tympanic membrane visible" }
-    : { src: "/exam/ear-right-clear.jpg", alt: "Otoscopy capture, right ear: clear canal with intact tympanic membrane" };
+    ? { src: asset("/exam/ear-left-cerumen.jpg"), alt: "Otoscopy capture, left ear: mild cerumen along the canal wall, tympanic membrane visible" }
+    : { src: asset("/exam/ear-right-clear.jpg"), alt: "Otoscopy capture, right ear: clear canal with intact tympanic membrane" };
   return (
     // Full-bleed capture. The navy ground still shows while the image decodes,
     // so the card never flashes white against the Harbor Navy shell.

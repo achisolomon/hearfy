@@ -406,6 +406,20 @@ describe("audiologist critique 2026-08-31", () => {
     // clinician, and an unlabelled <img> tells a screen reader nothing.
     expect(src).toMatch(/Otoscopy capture, left ear/);
     expect(src).toMatch(/Otoscopy capture, right ear/);
+
+    // Every capture URL goes through asset(). Pages serves the demo under
+    // /hearfy/, and a raw <img src="/exam/..."> resolves against the domain
+    // root instead — which 404s in production while looking perfect on
+    // localhost. Shipped exactly that way once: the cards rendered as empty
+    // navy boxes on the deployed site because object-cover on a broken image
+    // still paints the container's background.
+    expect(src, "capture URLs must be basePath-aware").not.toMatch(
+      /src:\s*"\/exam\//,
+    );
+    for (const file of srcs) {
+      expect(src, `${file} must be wrapped in asset()`)
+        .toMatch(new RegExp(`asset\\("/exam/${file.replace(".", "\\.")}"\\)`));
+    }
   });
 
   // She authors the reasoning the patient later reads, so the consult has to

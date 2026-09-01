@@ -125,16 +125,30 @@ export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             <PenLine size={16}/> {canSign(s)?"Tap to sign":"Approve the three items above to sign"}
           </span>}
     </button>
-    {/* No forward button here (BUG 1, 2026-09-01): the only thing left after
-       signing is Maya fitting and activating the devices, which is her act,
-       not Alex's — this screen shows the completed signature and stops,
-       matching the established rule (exam.tsx). The chrome's Next carries
-       the story on to his own view of the fitting. */}
     <div className="mt-6">
       <AudiologistStatusLine>
         {s.signed?"Signed. Maya is preparing to fit and activate your devices.":"Approve each item above, then sign to continue."}
       </AudiologistStatusLine>
     </div>
+    {/* Acknowledging his own completed signature is Alex's act, on Alex's
+       phone (owner, 2026-09-01) — so this screen ends with a control, not a
+       dead stop. Two things constrain it, and both matter:
+
+       It is GATED on the signature. Before signing there is nothing to
+       acknowledge, and an open button would let him walk away from an
+       unsigned contract — the one thing this screen exists to prevent.
+
+       It goes to "fitting", his OWN next screen, and no further. The button
+       that used to live here (BUG 1, same day) jumped to stage 9 order
+       tracking, narrating Maya's fitting as though it had already happened
+       and skipping the part he actually sits and watches. "fitting" is the
+       next screen in registry order, so patient-app-2's `go` routes it
+       through `advanceInRole`: time moves, the persona does not. The fitting
+       screen itself then carries no button, because what happens there is
+       Maya's act — the chrome's Next takes it from there. */}
+    {s.signed&&<div className="mt-4">
+      <PrimaryButton onClick={()=>go("fitting")}>I&rsquo;m ready — fit my devices</PrimaryButton>
+    </div>}
   </Shell>;
 }
 
@@ -144,6 +158,9 @@ export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
  * sound — Alex is sitting there, not acting. His screen used to still be
  * "signing", whose forward button (see Signing above) jumped him straight to
  * stage 9 delivery tracking, skipping the fitting he actually watched happen.
+ *
+ * He now reaches it by his own hand: the signing screen's gated "I'm ready"
+ * button (see Signing above) advances his walk one beat, in his own persona.
  *
  * This is the patient's own side of the same moment CmaActivate
  * (cma/suitcase.tsx) shows Maya: "Devices paired and programmed", "Fit

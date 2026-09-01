@@ -3246,3 +3246,70 @@ describe("the fulfilment tracker tells the same-day in-home story honestly", () 
     expect(orderBlock).toMatch(/go\("support"\)/);
   });
 });
+
+/**
+ * BUG (owner, 2026-09-01): the signing screen ended with a signature and a
+ * status line and nothing to press. Alex had approved all three items and
+ * signed — he was finished and ready to move on — but his own device offered
+ * him no way to say so. "I think we need an action button here - that. alex
+ * is signed and ready to move forward."
+ *
+ * The earlier fix (BUG 1, same day) removed a forward button from this screen
+ * because the one that was there jumped him past the fitting to stage 9
+ * delivery tracking — an act of Maya's, on a screen of his. That removal was
+ * right about the DESTINATION and wrong to leave the screen with no control
+ * at all: acknowledging his own completed signature is Alex's act, on Alex's
+ * phone, and it belongs to him.
+ *
+ * The distinction this file must hold, so neither fix undoes the other:
+ *   - the control must NOT change persona (it advances in role), and
+ *   - it must land on the patient's OWN next screen — the fitting he watches
+ *     Maya perform — never on stage 9's order tracking, and
+ *   - it must not exist before the signature: an ungated button would let him
+ *     leave the contract unsigned, which is the whole point of the screen.
+ */
+describe("the patient can move on from their own signature", () => {
+  const signingBlock = sourceOf("components/screens/patient/commerce.tsx")
+    .split(/export function /)
+    .find(b => b.startsWith("Signing(")) ?? "";
+
+  it("has the signing screen's own source (guards the block extraction)", () => {
+    expect(signingBlock, "Signing block not found — the extraction above is stale").not.toBe("");
+    expect(signingBlock).toContain("SIGNING_ITEMS");
+  });
+
+  // The control exists, and it is the patient's own forward navigation —
+  // `go`, which patient-app-2 routes through `advanceInRole` for a
+  // next-in-order step. Not the context's `next`, which reassigns the role.
+  it("offers a forward control once the contract is signed", () => {
+    expect(signingBlock, "the signing screen must offer a forward control")
+      .toMatch(/go\(\s*"fitting"\s*\)/);
+  });
+
+  // The destination is the patient's own next screen, not the act Maya
+  // performs three beats later. This is the half of BUG 1 that must survive.
+  it("does not jump the patient to stage 9 order tracking", () => {
+    expect(signingBlock, 'signing must not skip ahead to "order" (BUG 1, 2026-09-01)')
+      .not.toMatch(/go\(\s*"order"\s*\)/);
+  });
+
+  // Gated on the signature: the button cannot be usable while unsigned.
+  it("gates the control on the signature actually being made", () => {
+    expect(signingBlock, "the forward control must be disabled or hidden until signed")
+      .toMatch(/s\.signed/);
+  });
+
+  // The script-level guarantee behind the button: advancing the patient's own
+  // walk from the signing beat lands on the fitting beat, showing HIS screen.
+  // If the beat script is ever reordered, this fails rather than the button
+  // silently sending him somewhere else.
+  it("lands on the patient's own fitting screen, one beat on", () => {
+    const signing = beatIndexById("signing");
+    const landing = nextBeatForRole(signing, "patient");
+    expect(landing).toBe(beatIndexById("activate"));
+    expect(screenFor(landing, "patient"), "must be the patient's own view of the fitting").toBe("fitting");
+    // And that beat is led by the CMA — Alex is watching her act, which is
+    // exactly why his screen there carries no clinical control of its own.
+    expect(BEATS[landing].lead).toBe("cma");
+  });
+});

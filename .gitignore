@@ -39,3 +39,7 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# ── Worktrees ────────────────────────────────────────────────────────
+# Isolated workspaces created per-feature live here; never committed.
+.claude/worktrees/

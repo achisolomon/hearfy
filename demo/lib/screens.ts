@@ -81,25 +81,31 @@ function stripComments(src: string): string {
 }
 
 /**
- * Components that call the shell's `next()` from inside a screen.
+ * Components outside the shell that pull `next` out of the story context.
  *
- * `next()` adopts the landing beat's lead role, so calling it from a control
- * drawn inside a persona's own device switches the viewer to someone else
- * mid-tap. In-screen controls must call `advanceInRole` instead.
+ * A screen prop happening to be NAMED `next` is not the danger — the shell
+ * hands every in-screen control `advanceInRole` through that same prop name,
+ * and that is correct: `CmaOtoscopy({ next })` calling `next()` just calls
+ * whatever forward function its caller gave it. The actual danger is a
+ * component reaching into `useStory()`/`useStoryOptional()` and destructuring
+ * the context's own `next`, which is the one function that reassigns `role` —
+ * so a screen that got hold of it, not the shell, could switch persona out
+ * from under itself no matter what its own props are called. `components/shell/`
+ * is the one legitimate place to hold that: it is the chrome, not a persona's
+ * device, so its own top nav is allowed to switch persona at a handoff.
  *
- * Returns `file -> [component names]` for every offender found.
+ * Returns `file -> [offending destructure lines]` for every offender found.
  */
-export function screensCallingNext(): Record<string, string[]> {
+export function screensReachingContextNext(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  for (const f of componentFiles("components/screens")) {
+  const DESTRUCTURE = /const\s*\{([^}]*)\}\s*=\s*useStory(?:Optional)?\(\)/g;
+  for (const f of componentFiles("components")) {
+    if (f.startsWith("components/shell/")) continue;
     const src = stripComments(sourceOf(f));
     const hits: string[] = [];
-    for (const part of src.split(/(?=export function )/)) {
-      const name = /export function (\w+)/.exec(part)?.[1];
-      if (!name) continue;
-      // `next` as a bare call or handler reference: onClick={next},
-      // onClick={() => next()}, onFoo={() => { ...; next(); }}
-      if (/\bnext\(\)/.test(part) || /=\{\s*next\s*\}/.test(part)) hits.push(name);
+    for (const m of src.matchAll(DESTRUCTURE)) {
+      const names = m[1].split(",").map(s => s.trim());
+      if (names.some(n => /^next$/.test(n.split(":")[0].trim()))) hits.push(m[0]);
     }
     if (hits.length) out[f] = hits;
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
-import { componentFiles, patientNavigation, screenOrder, screensCallingNext, sourceOf } from "./screens";
+import { componentFiles, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
 import { audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
@@ -2732,8 +2732,38 @@ describe("a click inside a device stays in that persona", () => {
   // persona, do not jump between persona." Tapping "Simulate visit day" on
   // Alex's phone rendered Maya's tablet, because the patient app's forward
   // step called the shell's `next()`, which adopts the landing beat's lead.
-  it("never calls the shell's next() from inside a screen", () => {
-    expect(screensCallingNext()).toEqual({});
+  //
+  // The first version of this guard asserted the wrong surface: it matched
+  // any screen with a prop literally named `next`. That is not the danger —
+  // CmaOtoscopy({ next }) calling next() just calls whatever forward
+  // function its caller handed it through that prop, and the shell now
+  // legitimately hands it `advanceInRole` (role-view.tsx). The screens
+  // wiring `next={next}` through to a child were flagged for their prop
+  // name, not for actually switching persona, so the guard could never go
+  // green even after the real bug was fixed everywhere.
+  //
+  // The real invariant: `next()` is the one function in the story context
+  // that reassigns `role` (story-context.tsx) — so the danger is a
+  // component reaching into `useStory()`/`useStoryOptional()` and pulling
+  // that `next` out directly, regardless of what it then names its own
+  // props. Only the shell (components/shell/) is allowed to hold it — it is
+  // the chrome, not a persona's device, so its own top nav legitimately
+  // switches persona at a handoff. No screen or device-level component may
+  // destructure `next` from the context itself.
+  it("never destructures the story context's next() outside the shell", () => {
+    expect(screensReachingContextNext()).toEqual({});
+  });
+
+  // The guard above passes if literally nobody wires anything — pin the
+  // positive side too, so a regression that quietly drops the wiring (or
+  // reverts role-view.tsx back to passing the chrome's own `next`) still
+  // fails here. role-view.tsx hands `advanceInRole`, never `next`, into
+  // every CMA/audiologist screen that takes a forward prop.
+  it("wires role-view.tsx's CMA and audiologist screens to advanceInRole, never to next", () => {
+    const roleView = sourceOf("components/shell/role-view.tsx");
+    expect(roleView).not.toMatch(/next=\{next\}/);
+    const wired = [...roleView.matchAll(/next=\{advanceInRole\}/g)];
+    expect(wired.length).toBeGreaterThanOrEqual(12);
   });
 
   // The specific tap the owner reported, asserted structurally: the beat

@@ -234,11 +234,15 @@ export function CmaActivate({ next }: { next: () => void }) {
 export function CmaCloseout() {
   const chosen = devices[0];
   /**
-   * "Back to today's visits" is navigation inside Maya's own shift, not a step
-   * of the pitch. `next()` would advance the beat and adopt the following
-   * beat's lead — patient — handing the viewer Alex's order screen under a
-   * button promising the CMA's queue. `goToScreen` moves the pointer without
-   * touching the role, so she lands on her day list still as the CMA.
+   * "Back to today's visits" is navigation inside Maya's own shift, and a
+   * BACKWARD one — her day list, not her next step — so it stays `goToScreen`
+   * rather than the forward `advanceInRole`.
+   *
+   * This was once a hand-rolled guard against the shell's `next()` adopting
+   * the landing beat's lead and handing the viewer Alex's order screen. No
+   * in-screen control calls the context's `next()` any more (see
+   * story-context.tsx and shell/role-view.tsx), so this is now simply the
+   * ordinary way to move within a persona.
    */
   const { goToScreen } = useStory();
   return (

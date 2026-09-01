@@ -70,6 +70,17 @@ export function screenOrder(): string[] {
 }
 
 /**
+ * Strips block comments (including JSDoc) and line comments from source, so
+ * prose mentioning code (e.g. a doc comment that explains what `next()` would
+ * do) can never be mistaken for a real call. A guard a comment can silence is
+ * not a guard: a later edit that merely rewords a comment must not turn a red
+ * test green, and a comment that documents `next()` must not trip it either.
+ */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+}
+
+/**
  * Components that call the shell's `next()` from inside a screen.
  *
  * `next()` adopts the landing beat's lead role, so calling it from a control
@@ -81,7 +92,7 @@ export function screenOrder(): string[] {
 export function screensCallingNext(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const f of componentFiles("components/screens")) {
-    const src = sourceOf(f);
+    const src = stripComments(sourceOf(f));
     const hits: string[] = [];
     for (const part of src.split(/(?=export function )/)) {
       const name = /export function (\w+)/.exec(part)?.[1];

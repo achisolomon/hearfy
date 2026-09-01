@@ -59,7 +59,15 @@ export function Avatar({large=false}:{large?:boolean}){return <div className={`$
 // draw the same circle. Square + `aria-pressed` is the multi-select pair;
 // round + `aria-checked`/`radio` stays the single-select one, so assistive
 // tech is told which list it is on rather than inferring it from the tick.
-export function Option({title,sub,active,onClick,icon:Icon,multi=false}:{title:string;sub?:string;active?:boolean;onClick?:()=>void;icon?:any;multi?:boolean}){return <button type="button" onClick={onClick} {...(multi?{"aria-pressed":!!active}:{role:"radio","aria-checked":!!active})} className={`flex w-full items-center gap-3 rounded-[20px] border p-4 text-left transition ${active?"border-brand-teal bg-[#edfbfa]":"border-[#dfeaec] bg-white"}`}>{Icon&&<span className={`grid h-11 w-11 place-items-center rounded-2xl ${active?"bg-brand-teal text-white":"bg-[#f0f6f6] text-brand-teal"}`}><Icon size={21}/></span>}<span className="flex-1"><b className="block text-[15px]">{title}</b>{sub&&<span className="mt-1 block text-xs leading-5 text-slate-500">{sub}</span>}</span><span className={`grid h-5 w-5 shrink-0 place-items-center border ${multi?"rounded-md":"rounded-full"} ${active?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>{active&&<Check size={13}/>}</span></button>}
+// Teal Ink, not Vital Teal, for both the icon tile and the tick (2026-09-01).
+// #12AAA5 behind a white glyph is 2.87:1, and the inactive icon on the #f0f6f6
+// tile was 2.63:1 — DESIGN.md forbids both, and ui.tsx fixed the same fault for
+// PrimaryButton once already, but the guard meant to stop it coming back only
+// ever looked at the audiologist's screens. Teal Ink puts the white glyph at
+// 4.97:1 and the inactive icon at 4.55:1, with no change of shape.
+// The tick matters most for the patient persona: the border and tint say
+// something here is active, but the tick is what says THIS one.
+export function Option({title,sub,active,onClick,icon:Icon,multi=false}:{title:string;sub?:string;active?:boolean;onClick?:()=>void;icon?:any;multi?:boolean}){return <button type="button" onClick={onClick} {...(multi?{"aria-pressed":!!active}:{role:"radio","aria-checked":!!active})} className={`flex w-full items-center gap-3 rounded-[20px] border p-4 text-left transition ${active?"border-brand-teal bg-[#edfbfa]":"border-[#dfeaec] bg-white"}`}>{Icon&&<span className={`grid h-11 w-11 place-items-center rounded-2xl ${active?"bg-teal-ink text-white":"bg-[#f0f6f6] text-teal-ink"}`}><Icon size={21}/></span>}<span className="flex-1"><b className="block text-[15px]">{title}</b>{sub&&<span className="mt-1 block text-xs leading-5 text-slate-500">{sub}</span>}</span><span className={`grid h-5 w-5 shrink-0 place-items-center border ${multi?"rounded-md":"rounded-full"} ${active?"border-teal-ink bg-teal-ink text-white":"border-slate-300"}`}>{active&&<Check size={13}/>}</span></button>}
 // `nextDisabled` is opt-in and defaults to false: every step that preselects
 // an answer (IntakeFor, IntakeCoverage, BookTime) can always continue, exactly
 // as before. Only the multi-select needs step starts genuinely empty, and an

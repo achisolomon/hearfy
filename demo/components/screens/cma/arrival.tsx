@@ -78,7 +78,7 @@ export function CmaArrival({ next }: { next: () => void }) {
       <button onClick={() => setSsnOk(v => !v)}
         className="mt-4 flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
         <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-          ssnOk ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+          ssnOk ? "border-teal-ink bg-teal-ink text-white" : "border-slate-300"}`}>
           {ssnOk && <Check size={15} />}
         </span>
         <span className="text-sm leading-6 text-slate-600">
@@ -122,7 +122,7 @@ export function CmaConsent({ next }: { next: () => void }) {
           <button key={k} onClick={() => setGranted(g => ({ ...g, [k]: !g[k] }))}
             className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
             <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-              granted[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+              granted[k] ? "border-teal-ink bg-teal-ink text-white" : "border-slate-300"}`}>
               {granted[k] && <Check size={15} />}
             </span>
             <span className="text-sm leading-6 text-slate-600">{label}</span>

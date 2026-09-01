@@ -407,3 +407,44 @@ describe("home hero polarity", () => {
     expect(home()).not.toMatch(/text-white\/\d+/);
   });
 });
+
+/**
+ * Vital Teal never sits behind a white glyph, anywhere in the tree.
+ *
+ * corrections.test.ts already banned `bg-brand-teal text-white`, but only
+ * inside components/screens/audiologist/, so nine instances lived on outside
+ * that folder: the patient's Option tile and tick, the consent tick, the CMA's
+ * arrival and suitcase checks, the commerce signing and order steps, and the
+ * shell timeline's current-stage number. White on #12AAA5 is 2.87:1; the
+ * timeline's was real 11px text, the rest were checkmarks, and a checkmark is
+ * exactly what a low-vision patient needs in order to see which row is theirs.
+ *
+ * Scoped by what the class DOES rather than where it lives, so a new screen in
+ * any role is covered the day it is written.
+ */
+describe("Vital Teal behind white", () => {
+  it("is never used as a fill under white content, in any role", () => {
+    const offenders: string[] = [];
+    for (const file of componentFiles()) {
+      for (const cls of codeOf(file).match(/"[^"]*bg-brand-teal[^"]*"/g) ?? []) {
+        // The one legitimate case: a marker on the route map, which is a 20px
+        // pin on the map's own ground inside a 4px white ring, not a control
+        // and not a tick. Excluded by the shape it is built from, not by
+        // filename, so it cannot silently cover a real offender elsewhere.
+        if (cls.includes("${marker}")) continue;
+        if (/text-white/.test(cls)) offenders.push(`${file}: ${cls}`);
+      }
+    }
+    expect(
+      offenders,
+      `Vital Teal behind white is 2.87:1 — use Teal Ink (4.97:1).\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("agrees with the arithmetic that made Teal Ink the answer", () => {
+    expect(contrastRatio("#FFFFFF", "#12AAA5")).toBeLessThan(BODY);
+    expect(contrastRatio("#FFFFFF", "#087D7A")).toBeGreaterThanOrEqual(BODY);
+    // The inactive Option icon sits on the #f0f6f6 tile, not on white.
+    expect(contrastRatio("#087D7A", "#F0F6F6")).toBeGreaterThanOrEqual(BODY);
+  });
+});

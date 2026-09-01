@@ -95,7 +95,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
                 className={cn("flex w-full items-center gap-3 rounded-2xl border p-4 text-left",
                   on ? "border-brand-teal bg-[#edfbfa]" : "border-[#dfeaec] bg-white")}>
                 <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full",
-                  on ? "bg-brand-teal text-white" : "bg-[#f1f5f6] text-slate-300")}>
+                  on ? "bg-teal-ink text-white" : "bg-[#f1f5f6] text-slate-300")}>
                   <Check size={15} />
                 </span>
                 <span className="flex-1">
@@ -161,7 +161,7 @@ export function CmaSigning({ next }: { next: () => void }) {
           {SIGNING_ITEMS.map(([k, label]) => (
             <div key={k} className="flex w-full items-start gap-3 rounded-2xl bg-white p-4">
               <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-                s[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+                s[k] ? "border-teal-ink bg-teal-ink text-white" : "border-slate-300"}`}>
                 {s[k] && <Check size={15} />}
               </span>
               <span className="min-w-0 flex-1 text-sm leading-6 text-slate-600">

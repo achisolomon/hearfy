@@ -1,7 +1,7 @@
 "use client";
 import { Mic, Video } from "lucide-react";
-import { Card } from "../../ui";
 import { cma, patient } from "@/lib/mock-data";
+import { cn } from "@/lib/cn";
 import { RoomFeed } from "./room-feed";
 
 /**
@@ -14,56 +14,100 @@ import { RoomFeed } from "./room-feed";
  * ONE size on purpose: the feed renders inside `VideoSplit`'s fixed column
  * with the same 4:3 pane as the CMA's view of her, so the call looks
  * identical wherever it appears.
+ *
+ * And ONE styling, not just one size (owner, 2026-09-01: "Use the video
+ * styling of Dr. Susan with all the videos of Alex and Maya. It needs to
+ * look the same. No text on the picture itself."). This tile is the mirror
+ * of `ZoomPanel` in `cma/call-tile.tsx` — same rounded shell, same corner
+ * pills, same bottom-anchored nameplate band with the call controls in it,
+ * and the speech BELOW the frame rather than over it. The two sides of one
+ * call cannot be styled differently without looking like two products.
+ *
+ * Nothing is drawn over the picture except the two corner pills, which sit
+ * in the corners by design; every word lives in the gradient band at the
+ * bottom or in the caption below the frame. The footage itself carries no
+ * baked-in text — see `internal/docs/assets/room-video-prompts.md`.
  */
-export function HomeFeed({ cmaName = cma.name, beat }: { cmaName?: string; beat?: string }) {
+export function HomeFeed({ cmaName = cma.name, beat, active = false }:
+  { cmaName?: string; beat?: string; active?: boolean }) {
   return (
-    <Card className="overflow-hidden">
+    <div className={cn(
+      "overflow-hidden rounded-[28px] border bg-white shadow-card",
+      active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]")}>
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        {/* The room itself, replacing the "ML" / "AR" initials circles
-            (2026-09-01). The gradient stays behind it as the ground the
-            poster frame sits on, so the tile still reads as the same call
-            surface it always was. */}
         <RoomFeed beat={beat} />
-        <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Live
-        </span>
-        <span className="absolute right-3 top-3 flex gap-1.5 text-white drop-shadow">
-          <Mic size={12} /> <Video size={12} />
-        </span>
-        {/* Who is in the room — the names the initials circles used to carry.
-            Kept as a small nameplate so the feed still identifies the pair,
-            and truncating rather than wrapping so it cannot grow over the
-            faces at a large rem base (same reasoning as ZoomPanel's). */}
-        <span className="pointer-events-none absolute left-3 top-11 max-w-[calc(100%-1.5rem)] truncate rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-semibold text-white">
-          CMA {cmaName} · {patient.name}
-        </span>
-        {/* The patient's words land as live captions, the way a call renders speech.
 
-            These wrap rather than `truncate`. With the in-app text control at
-            its largest step AND the phone's own font enlarged, the two
-            multiply to a ~28.6px rem base and the longer line lost 28% of
-            itself — "…I can't hear anyth…" is the exact quote a viewer needs
-            whole, since it is the moment the threshold is found. A caption is
-            speech, and clipped speech says nothing; the bubbles are anchored
-            to the bottom of the frame, so a second line grows downward within
-            the pane rather than over the two-shot. `rounded-2xl`, not
-            `rounded-full`, because a pill shape only reads correctly on a
-            single line. */}
-        <div className="absolute inset-x-3 bottom-3 space-y-1 text-center">
-          <p className="mx-auto w-fit max-w-full rounded-2xl bg-black/55 px-3 py-1 text-xs leading-snug text-white">
-            <b>{patient.name}:</b> &ldquo;I can hear that one.&rdquo;
-          </p>
-          <p className="mx-auto w-fit max-w-full animate-pulse rounded-2xl bg-black/55 px-3 py-1 text-xs leading-snug text-white motion-reduce:animate-none">
-            <b>{patient.name}:</b> &ldquo;…I can&rsquo;t hear anything now.&rdquo;
-          </p>
+        {/* Call chrome, anchored to the frame's own corners — never to the
+            nameplate column, or it drifts down the feed as the names grow.
+            Same geometry and type scale as ZoomPanel's. */}
+        <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-[#dc2626] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Live
+        </span>
+        {active && (
+          <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-teal-ink px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Speaking
+          </span>
+        )}
+
+        {/* Nameplate, anchored to the bottom of the frame, exactly as on Dr.
+            Reed's tile: who is in the room on the left, the call controls on
+            the right, both sitting in a gradient that fades up into the
+            picture. This replaces the small pill that used to float over
+            Maya's face — the names now read against the gradient instead of
+            against her, and the band's own height absorbs a larger rem base
+            by growing downward. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-4 pb-3 pt-12">
+          <div className="min-w-0">
+            {/* Mirrors ZoomPanel's two lines: who this is on top, their
+                standing underneath. Hers reads "Dr. Susan Reed, Au.D." /
+                "Licensed Audiologist · Florida"; the room's names the pair
+                on the call and where they are. Both wrap rather than
+                truncate — the band is bottom-anchored, so a second line
+                grows down into the gradient, never up over a face. */}
+            <p className="text-[15px] font-extrabold leading-tight text-white">
+              {patient.name} · CMA {cmaName}
+            </p>
+            <p className="mt-0.5 text-xs leading-tight text-white/75">
+              Patient &amp; CMA · {patient.city}
+            </p>
+          </div>
+          <span className="flex shrink-0 gap-2">
+            {[Mic, Video].map((I, i) => (
+              <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
+            ))}
+          </span>
         </div>
       </div>
+
+      {/* The patient's words, BELOW the frame — the same move made on Dr.
+          Reed's tile (owner, 2026-09-01: "there is a text on the video on the
+          phone. Maybe put the text below the video"), for the same reason and
+          now for the same reason again on this side: bubbles floating over
+          the two-shot sat squarely on Maya's face.
+
+          Below the frame they cannot cover anyone, however long the line or
+          large the text — the tile simply gets taller. They also stop being
+          white-on-video, so legibility no longer depends on whatever happens
+          to be behind them; this is ordinary dark-on-light caption text
+          matched to the card, like hers. The live one keeps its pulse and the
+          teal treatment that ZoomPanel gives an `active` note. */}
+      <div className="border-t border-[#e4eef0] bg-white px-4 py-3">
+        <p className="text-sm leading-relaxed text-[#3f5061]">
+          <b className="font-semibold text-brand-navy">{patient.name}:</b>{" "}
+          &ldquo;I can hear that one.&rdquo;
+        </p>
+        <p className="mt-1 animate-pulse text-sm font-semibold leading-relaxed text-brand-navy motion-reduce:animate-none">
+          <b className="font-semibold">{patient.name}:</b>{" "}
+          &ldquo;…I can&rsquo;t hear anything now.&rdquo;
+        </p>
+      </div>
+
       <button className="flex w-full items-center gap-2 border-t border-[#eef4f5] p-3 text-left">
         <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-navy text-white"><Mic size={13} /></span>
         <span className="text-[11px] font-bold text-brand-navy">
           Talk to the room — {cmaName.split(" ")[0]} and {patient.name} hear you
         </span>
       </button>
-    </Card>
+    </div>
   );
 }

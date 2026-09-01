@@ -68,3 +68,29 @@ export function screenOrder(): string[] {
   if (!list) throw new Error("could not read `order` from screens/registry.tsx");
   return [...list[1].matchAll(/"([a-z-]+)"/g)].map(m => m[1]);
 }
+
+/**
+ * Components that call the shell's `next()` from inside a screen.
+ *
+ * `next()` adopts the landing beat's lead role, so calling it from a control
+ * drawn inside a persona's own device switches the viewer to someone else
+ * mid-tap. In-screen controls must call `advanceInRole` instead.
+ *
+ * Returns `file -> [component names]` for every offender found.
+ */
+export function screensCallingNext(): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const f of componentFiles("components/screens")) {
+    const src = sourceOf(f);
+    const hits: string[] = [];
+    for (const part of src.split(/(?=export function )/)) {
+      const name = /export function (\w+)/.exec(part)?.[1];
+      if (!name) continue;
+      // `next` as a bare call or handler reference: onClick={next},
+      // onClick={() => next()}, onFoo={() => { ...; next(); }}
+      if (/\bnext\(\)/.test(part) || /=\{\s*next\s*\}/.test(part)) hits.push(name);
+    }
+    if (hits.length) out[f] = hits;
+  }
+  return out;
+}

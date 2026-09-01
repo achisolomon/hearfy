@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, prevBeat, screenFor, type Role } from "./story";
-import { componentFiles, patientNavigation, screenOrder, sourceOf } from "./screens";
+import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
+import { componentFiles, patientNavigation, screenOrder, screensCallingNext, sourceOf } from "./screens";
 import { audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
@@ -2535,5 +2535,45 @@ describe("the pre-visit questionnaire's answers", () => {
       .toMatch(/nextDisabled/);
     expect(shared, "StepPage must be able to disable its primary action")
       .toMatch(/nextDisabled=\{?false|nextDisabled\?:\s*boolean/);
+  });
+});
+
+describe("a click inside a device stays in that persona", () => {
+  // Owner, 2026-09-01: "if I click inside a screen I stay with the same
+  // persona, do not jump between persona." Tapping "Simulate visit day" on
+  // Alex's phone rendered Maya's tablet, because the patient app's forward
+  // step called the shell's `next()`, which adopts the landing beat's lead.
+  it("never calls the shell's next() from inside a screen", () => {
+    expect(screensCallingNext()).toEqual({});
+  });
+
+  // The specific tap the owner reported, asserted structurally: the beat
+  // after the patient's own "assigned" screen must still be a beat the
+  // patient has a screen on, reached without adopting another role.
+  it("keeps the patient on their own phone across the visit-day skip", () => {
+    const assigned = beatForScreen("patient", "assigned");
+    expect(assigned).toBeGreaterThan(-1);
+    const landing = nextBeatForRole(assigned, "patient");
+    // Time moved forward...
+    expect(landing).toBeGreaterThan(assigned);
+    // ...onto a screen that is the patient's, not the CMA's.
+    expect(screenFor(landing, "patient")).toBe("driving");
+    // The beat's lead is the CMA here — which is exactly why calling the
+    // chrome's `next()` from Alex's phone was wrong.
+    expect(BEATS[landing].lead).toBe("cma");
+  });
+
+  it("advances every role without ever changing which role is walking", () => {
+    for (const role of ROLES) {
+      for (let i = 0; i < BEATS.length; i++) {
+        const landing = nextBeatForRole(i, role);
+        // The walk is defined by this role's own screen changes, so the
+        // landing beat always has a screen for this role and never implies
+        // adopting another persona.
+        expect(screenFor(landing, role)).toBeTruthy();
+        expect(landing).toBeGreaterThanOrEqual(0);
+        expect(landing).toBeLessThan(BEATS.length);
+      }
+    }
   });
 });

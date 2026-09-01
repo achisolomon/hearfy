@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
+import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
 import { audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
@@ -3008,5 +3008,104 @@ describe("the patient's phone offers no button for someone else's clinical act",
       expect(callSite, `patient-app-2.tsx: could not find <${name} .../> call site`).toBeTruthy();
       expect(callSite, `patient-app-2.tsx: <${name}> must not pass observing`).not.toMatch(/observing/);
     }
+  });
+});
+
+/**
+ * Owner, reviewing "You're all set!" (Confirmed, booking.tsx): tapped "Add to
+ * calendar" and landed back on "Review your visit" — the payment screen. The
+ * button was wired to `back`, the same handler as the screen's actual Back
+ * control, so a label promising a calendar add silently rewound the booking.
+ */
+describe("Add to calendar does not navigate backwards", () => {
+  const booking = sourceOf("components/screens/patient/booking.tsx");
+  const confirmed = booking
+    .split(/(?=export function )/)
+    .find(s => s.startsWith("export function Confirmed"));
+
+  it("finds the Confirmed component", () => {
+    expect(confirmed, "Confirmed not found in booking.tsx").toBeTruthy();
+  });
+
+  // The exact bug: the calendar button called `back`, which is `Confirmed`'s
+  // own onBack/back handler — the same one that returns to payment.
+  it("never wires 'Add to calendar' to the screen's back handler", () => {
+    const calendarButton = /<SecondaryButton onClick=\{[^}]*\}>Add to calendar<\/SecondaryButton>/.exec(confirmed!)?.[0];
+    expect(calendarButton, "could not find the 'Add to calendar' button").toBeTruthy();
+    expect(calendarButton, "'Add to calendar' must not call back()").not.toMatch(/onClick=\{back\}/);
+  });
+});
+
+/**
+ * Owner, reviewing Stage 8 (Sale): entered as Maya (CMA) via the cover's
+ * "enter as one persona" and walked her day forward with the chrome's own
+ * Next. Her solo walk skips straight from "tryon" to "signing" (her own
+ * screen is unchanged across choose/checkout, both patient-led), and later,
+ * switching to Alex's (patient) role tab left the shared beat pointer wherever
+ * it already was — past the signing beat — so the patient's "Sign &
+ * authorize" screen (the one place the spec is explicit Alex signs on his own
+ * phone) was never shown for either persona.
+ *
+ * `setRole` (story-context.tsx) reassigns `role` on a tab click but never
+ * touches `beat`, so a switch after the pointer has moved past a role's own
+ * beats strands that role's story behind the viewer with no cue to step back.
+ */
+describe("switching roles does not skip a beat that role has not been shown yet", () => {
+  // Solo-walking the CMA with the chrome's own Next lands ON the signing
+  // beat (her own screen there is "cma-signing", unchanged since tryon) and
+  // then carries straight past it to "activate" on the very next press —
+  // screenFor(signingBeat, "cma") is never the patient's screen, so nothing
+  // in the CMA's own walk ever shows Alex's "Sign & authorize".
+  it("confirms the CMA's own walk never shows the patient's screen at the signing beat", () => {
+    const tryon = beatIndexById("tryon");
+    const signing = beatIndexById("signing");
+    const landing = nextBeatForRole(tryon, "cma");
+    expect(landing).toBe(signing);
+    expect(screenFor(landing, "cma")).toBe("cma-signing");
+    // Continuing the CMA's own walk from there moves past signing entirely.
+    expect(nextBeatForRole(landing, "cma")).toBeGreaterThan(signing);
+  });
+
+  // The actual bug: after that skip, switching the role tab to "patient"
+  // must land on (at least) the signing beat — not silently stay wherever
+  // the CMA's walk had already carried the pointer past it.
+  it("lands on the patient's signing beat when switching to patient after the CMA has passed it", () => {
+    const closeout = beatIndexById("closeout");
+    const signing = beatIndexById("signing");
+    expect(closeout).toBeGreaterThan(signing);
+    const landing = beatForRoleSwitch("patient", closeout);
+    expect(screenFor(landing, "patient"), "must show the patient's own screen").toBe("signing");
+    expect(landing, "must not stay past the beat the patient has not been shown yet").toBeLessThanOrEqual(closeout);
+    expect(landing).toBe(signing);
+  });
+
+  // The rewind must never overshoot into showing FUTURE content either. A
+  // first pass at this fix jumped to a role's FIRST led beat when it had led
+  // none yet at-or-before `from`, which sent an early switch racing ahead —
+  // e.g. tapping the CMA tab on the very first ("welcome") beat jumped
+  // straight to "cma-enroute", ten beats into the story she has not reached.
+  // Switching roles must only ever rewind (or stay put), never spoil ahead.
+  it("never moves the pointer forward past where the viewer already is", () => {
+    const offenders: string[] = [];
+    for (let from = 0; from < BEATS.length; from++) {
+      for (const role of ROLES) {
+        const landing = beatForRoleSwitch(role, from);
+        if (landing > from) offenders.push(`${role} from beat ${from} (${BEATS[from].id}) -> ${landing} (${BEATS[landing].id})`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // And switching to the role already driving the current beat must be a
+  // true no-op — the pointer sits at a beat that role leads, so there is
+  // nothing to rewind to.
+  it("is a no-op when switching to the role already leading the current beat", () => {
+    const offenders: string[] = [];
+    for (let i = 0; i < BEATS.length; i++) {
+      const lead = BEATS[i].lead;
+      const landing = beatForRoleSwitch(lead, i);
+      if (landing !== i) offenders.push(`${lead} at beat ${i} (${BEATS[i].id}) moved to ${landing}`);
+    }
+    expect(offenders).toEqual([]);
   });
 });

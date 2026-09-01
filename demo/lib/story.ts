@@ -251,6 +251,38 @@ export function beatForScreenNear(role: Role, screen: AnyScreenId, from: number)
 }
 
 /**
+ * The beat to land on when the CHROME switches the viewer to a role (a role
+ * tab or the mobile sheet — the one legitimate cross-persona control besides
+ * guided Next/Back).
+ *
+ * `setRole` used to leave the shared beat pointer untouched. That is fine
+ * while walking forward together, but a role can also get AHEAD of another:
+ * solo-walking the CMA with the chrome's own Next reaches "closeout" without
+ * ever landing on "signing" (her own screen is unchanged across
+ * choose/checkout, both patient-led — see `nextBeatForRole`). Switching to
+ * the patient's tab from there left the pointer at "closeout", so the
+ * patient's "Sign & authorize" — the one beat the spec is explicit Alex signs
+ * on his own phone — was never shown for either persona (owner, 2026-09-01).
+ *
+ * The fix: land on the LATEST beat this role leads that is at-or-before the
+ * current position — i.e. where this role's own story currently stands, so a
+ * switch can never skip a beat that role has not been shown yet. This only
+ * ever moves the pointer BACKWARD (or leaves it put): before this role has
+ * led anything yet, there is nothing to catch up on, so the pointer stays at
+ * `from` rather than jumping ahead to this role's first led beat — jumping
+ * forward would spoil beats the guided story has not reached yet (e.g.
+ * switching to the CMA at the very first beat must show her day as it is
+ * now, not fast-forward to "cma-enroute"). A role that leads nothing (the
+ * operator, by design) also leaves the pointer where it is.
+ */
+export function beatForRoleSwitch(role: Role, from: number): number {
+  const atOrBefore = BEATS
+    .map((b, i) => ({ b, i }))
+    .filter(x => x.b.lead === role && x.i <= from);
+  return atOrBefore.length ? atOrBefore[atOrBefore.length - 1].i : from;
+}
+
+/**
  * SOLO MODE — per-persona entry.
  *
  * Beats where this role's screen actually changes. Walking these lets a viewer

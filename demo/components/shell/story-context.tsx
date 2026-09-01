@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import {
   BEATS,
+  beatForRoleSwitch,
   beatForScreenNear,
   beatsForRole,
   firstBeatOfStage,
@@ -78,9 +79,19 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
    * persona and then deliberately switched is browsing, not walking that
    * persona's story — staying in solo would strand them in a mode whose
    * Next walks a different role's beats than the one on screen.
+   *
+   * The beat pointer moves too, via `beatForRoleSwitch`: a role's own solo
+   * walk can get ahead of another role's story (e.g. the CMA's own beats
+   * skip straight past the patient-led "signing" beat — see that function's
+   * doc comment), so switching to a role must never leave the pointer past a
+   * beat that role has not been shown yet. Guided mode walking forward
+   * together is unaffected — the pointer is already at a beat this role
+   * leads whenever guided `next()`/`back()` hand off, so the switch is a
+   * no-op then.
    */
   const setRole = useCallback((r: Role) => {
     setRoleState(r);
+    setBeat(b => beatForRoleSwitch(r, b));
     setMode("guided");
     setHandoff(null);
   }, []);

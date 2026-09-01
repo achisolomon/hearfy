@@ -45,6 +45,15 @@ interface StoryValue {
   /** Guided "Next": advances one beat and follows the lead role at handoffs. */
   next: () => void;
   back: () => void;
+  /**
+   * In-screen forward: a button on the persona's OWN device.
+   *
+   * Moves along this role's own walk and never assigns `role`, in BOTH modes.
+   * The chrome's `next()` owns handoffs; a click inside a device must not
+   * change who the viewer is (owner, 2026-09-01: tapping "Simulate visit day"
+   * on Alex's phone rendered Maya's tablet).
+   */
+  advanceInRole: () => void;
   /** Free navigation inside a role — moves the shared pointer to that screen's beat. */
   goToScreen: (screen: AnyScreenId) => void;
   start: () => void;
@@ -137,6 +146,10 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     setBeat(i);
   }, [beat, mode, role]);
 
+  const advanceInRole = useCallback(() => {
+    setBeat(nextBeatForRole(beat, role));
+  }, [beat, role]);
+
   const goToScreen = useCallback((screen: AnyScreenId) => {
     // Nearest role-led occurrence, not first-in-script: Back from the
     // patient's Support screen must land on the order beat, not the CMA-led
@@ -186,13 +199,14 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     goToStage,
     next,
     back,
+    advanceInRole,
     goToScreen,
     start,
     startAs,
     restart,
     exploreFreely,
     clearHandoff,
-  }), [beat, role, phase, mode, handoff, setRole, goToStage, next, back, goToScreen, start, startAs, restart, exploreFreely, clearHandoff]);
+  }), [beat, role, phase, mode, handoff, setRole, goToStage, next, back, advanceInRole, goToScreen, start, startAs, restart, exploreFreely, clearHandoff]);
 
   return <StoryContext.Provider value={value}>{children}</StoryContext.Provider>;
 }

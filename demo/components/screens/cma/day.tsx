@@ -31,7 +31,16 @@ export function CmaDay({ next }: { next: () => void }) {
           <p className="text-xs text-slate-500">Calibration current · due {kit.calibrationDue}</p>
         </div>
       </Card>
-      <div className="mt-6"><PrimaryButton onClick={next}>Start next visit</PrimaryButton></div>
+      {/* Maya's day list is beat 0; her next screen is the drive, after the
+          patient's whole booking stretch. A button that crosses dead time
+          says so — the same contract as the patient's "Simulate visit day".
+          The time comes from `cmaDay` rather than a literal, so it cannot
+          drift from the row shown directly above it. */}
+      <div className="mt-6">
+        <PrimaryButton onClick={next}>
+          Start the {cmaDay.find(v => v.status === "next")?.time ?? "next"} visit
+        </PrimaryButton>
+      </div>
     </Shell>
   );
 }

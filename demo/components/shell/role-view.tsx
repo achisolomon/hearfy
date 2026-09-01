@@ -63,7 +63,7 @@ export function RoleView() {
 
   if (role === "audiologist") {
     switch (id) {
-      case "aud-panel": return <AudPanel next={advanceInRole} />;
+      case "aud-panel": return <AudPanel />;
       case "aud-monitor": return <AudMonitor next={advanceInRole} />;
       case "aud-review": return <AudReview next={advanceInRole} />;
       case "aud-sign": return <AudSign next={advanceInRole} />;

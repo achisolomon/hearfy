@@ -91,7 +91,7 @@ function Tile({ e, waitMins, acknowledged, onOpen }: {
   );
 }
 
-export function AudPanel({ next }: { next: () => void }) {
+export function AudPanel() {
   const [acked, setAcked] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const waits = useTickingWaits();
@@ -123,7 +123,10 @@ export function AudPanel({ next }: { next: () => void }) {
           exam={open}
           acknowledged={!!(open && acked[open.id])}
           onAcknowledge={() => { if (open) setAcked(a => ({ ...a, [open.id]: true })); setOpenId(null); }}
-          onOpenMonitoring={() => { setOpenId(null); next(); }}
+          /* No monitoring button while she is idle: her panel sits at the first
+             beat for eighteen beats, so one click would jump four stages into a
+             case that has not started. She is waiting — the chrome's Next and
+             the timeline move her when the visit reaches her. */
           onClose={() => setOpenId(null)}
         />
 

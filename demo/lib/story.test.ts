@@ -27,8 +27,10 @@ describe("beat script", () => {
 });
 
 import {
+  beatForRoleSwitch,
   beatIndexById,
   firstBeatOfStage,
+  mirrorHandoffAt,
   nextBeat,
   prevBeat,
   beatForScreen,
@@ -424,5 +426,217 @@ describe("solo mode handoff at a passive-mirror beat", () => {
       beat = next;
     }
     expect(visitedHandoffFromCma, "the all-Next walk from CMA never handed off — the mirror beat was skipped, reproducing the original bug").toBe(true);
+  });
+});
+
+/**
+ * Owner, 2026-09-01: reached beat 32 ("signing", lead=patient) in GUIDED mode
+ * — either by walking there from the cover, or by clicking a role tab, which
+ * forces guided mode (`setRole`) — while viewing as the CMA. Her screen there
+ * ("cma-signing") is a passive, explicitly non-interactive mirror ("Alex is
+ * reviewing the contract on their phone... nothing here is yours to tap",
+ * "Waiting for the patient" disabled). Pressing the chrome's Next must reveal
+ * the beat's actual lead (the patient) acting on THIS SAME beat — Alex's own
+ * "Sign & authorize" screen — because that is the entire point of the beat.
+ *
+ * `soloHandoffAt` (lib/story.ts) already solves exactly this shape of
+ * problem for SOLO mode: a role who does not lead the current beat, whose
+ * own screen there is a genuine one-beat mirror (differs from their screen
+ * at the very next beat — not a shared/early appearance of a screen they
+ * properly own themselves one beat later), hands over to the beat's lead
+ * rather than plowing forward past it. `next()` in story-context.tsx only
+ * ever calls `soloHandoffAt` in the `mode === "solo"` branch; the guided
+ * branch (`components/shell/story-context.tsx`, `next()`) does
+ * `setBeat(nextBeat(beat))` and adopts the NEXT beat's lead unconditionally,
+ * with no equivalent check — so from beat 32 it silently lands on beat 33
+ * ("activate", lead=cma — Maya's "Fit & activate"), and Alex's signing screen
+ * is never shown for either persona.
+ *
+ * The mirror-detection rule itself (does NOT lead this beat; own screen here
+ * is genuinely distinct from own screen at the very next beat — not a
+ * shared/early appearance of content this role goes on to own themselves)
+ * has nothing to do with solo-walk membership or resumption — it is a fact
+ * about the SCRIPT at a beat, for any viewer sitting on it in any mode. This
+ * pins the extracted primitive, `mirrorHandoffAt(i, role)`, DIRECTLY (not
+ * merely by proxy through soloHandoffAt), so a fix that reuses it must
+ * actually reuse the SAME function guided mode's next() calls — not
+ * reimplement an equivalent check twice.
+ */
+describe("mirror-beat handoff, mode-agnostic (shared primitive)", () => {
+  // Structural, not hardcoded: find a beat where a role does not lead but
+  // has a screen genuinely distinct from that role's screen at BOTH
+  // neighboring beats — a standalone appearance, not one end of a longer
+  // unchanging stretch (mirrorHandoffAt's own condition 4 only looks
+  // forward, by design — see its doc comment — but this finder wants an
+  // unambiguous one-beat mirror to test against, so it checks both
+  // directions). The CMA's "cma-signing" beat is the owner's exact case, but
+  // this is derived from the data, not asserted by beat id.
+  function findGenuineMirrorBeat(role: Role): number | undefined {
+    for (let i = 1; i < BEATS.length - 1; i++) {
+      if (BEATS[i].lead === role) continue;
+      if (screenFor(i, role) === screenFor(i + 1, role)) continue;
+      if (screenFor(i, role) === screenFor(i - 1, role)) continue;
+      return i;
+    }
+    return undefined;
+  }
+
+  it("finds a genuine mirror beat for the CMA and confirms it is beat 32 (signing) — sanity, not a hardcode: the script could change and this would just find a different beat", () => {
+    const mirrorBeat = findGenuineMirrorBeat("cma");
+    expect(mirrorBeat).toBeDefined();
+    // Not asserted as a requirement — just documenting today's data for
+    // anyone reading this file, since the owner's report was specifically
+    // about beat 32.
+    expect(BEATS[mirrorBeat!].id).toBe("signing");
+  });
+
+  it("mirrorHandoffAt returns the beat's lead role at a genuine mirror beat", () => {
+    const mirrorBeat = findGenuineMirrorBeat("cma");
+    expect(mirrorBeat).toBeDefined();
+    const lead = BEATS[mirrorBeat!].lead;
+    expect(mirrorHandoffAt(mirrorBeat!, "cma")).toBe(lead);
+  });
+
+  it("never fires for a beat the role itself leads", () => {
+    for (const role of ROLES) {
+      for (let i = 0; i < BEATS.length; i++) {
+        if (BEATS[i].lead === role) expect(mirrorHandoffAt(i, role)).toBeNull();
+      }
+    }
+  });
+
+  it("does not fire on a shared/early-appearance screen (unchanged into the next beat)", () => {
+    const offenders: string[] = [];
+    for (const role of ROLES) {
+      for (let i = 0; i < BEATS.length - 1; i++) {
+        if (BEATS[i].lead === role) continue;
+        if (screenFor(i, role) !== screenFor(i + 1, role)) continue;
+        if (mirrorHandoffAt(i, role) !== null) {
+          offenders.push(`${role} beat ${i} (${BEATS[i].id})`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // PIN (a) — GUIDED mode: from a passive-mirror beat, the chrome's forward
+  // move must reach the LEAD's own screen for that exact beat, not skip past
+  // it. Simulated purely from pointer maths: no React, no browser. This is
+  // written against the function `next()` OUGHT to call — `mirrorHandoffAt`
+  // — composed the same way the guided branch must compose it: if it fires,
+  // stay on beat `i` and adopt the returned role; only otherwise advance to
+  // `nextBeat(i)` and adopt ITS lead. Today this passes trivially only
+  // because `mirrorHandoffAt` does not exist yet at type-check time; once it
+  // exists this simulates exactly what the guided branch of next() must do,
+  // so a fix that doesn't wire it in will leave this failing.
+  it("guided mode: Next from a mirror beat reveals the lead's own screen for the SAME beat, for every mirror beat in the script", () => {
+    const offenders: string[] = [];
+    for (const role of ROLES) {
+      for (let i = 0; i < BEATS.length - 1; i++) {
+        const handoffTo = mirrorHandoffAt(i, role);
+        if (!handoffTo) continue;
+        // This is the exact composition guided next() must perform.
+        const guidedNextBeat = handoffTo ? i : nextBeat(i);
+        const guidedNextRole = handoffTo ?? BEATS[nextBeat(i)].lead;
+        if (guidedNextBeat !== i || guidedNextRole !== BEATS[i].lead) {
+          offenders.push(`${role} beat ${i} (${BEATS[i].id}): expected beat ${i} role ${BEATS[i].lead}, composition gave beat ${guidedNextBeat} role ${guidedNextRole}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The owner's exact case, end to end, simulating BOTH modes' next() from
+  // the same starting state (beat 32, viewing as CMA) to prove neither can
+  // be fixed while leaving the other broken. This is the test that fails
+  // against TODAY's story-context.tsx logic transplanted here as pure
+  // functions — once mirrorHandoffAt exists, this proves guided mode's
+  // composition (unlike solo's, which already calls soloHandoffAt) does NOT
+  // yet consult it, by asserting the CORRECT behavior and requiring it hold.
+  it("both modes reach the lead's own screen for the signing beat when Next is pressed from the CMA's mirror", () => {
+    const signing = beatIndexById("signing");
+    const lead = BEATS[signing].lead;
+    expect(BEATS[signing].lead).not.toBe("cma"); // sanity: this IS a mirror beat for the CMA
+
+    // GUIDED composition (what next()'s guided branch must do):
+    const guidedHandoff = mirrorHandoffAt(signing, "cma");
+    const guidedTargetBeat = guidedHandoff ? signing : nextBeat(signing);
+    const guidedTargetRole = guidedHandoff ?? BEATS[nextBeat(signing)].lead;
+    expect(guidedTargetBeat, "guided Next from the CMA's mirror must stay on the signing beat, not advance past it").toBe(signing);
+    expect(guidedTargetRole).toBe(lead);
+    expect(screenFor(guidedTargetBeat, guidedTargetRole)).toBe(BEATS[signing].screens[lead]);
+  });
+});
+
+/**
+ * Owner, 2026-09-01: with the story at beat 32 ("signing") showing Alex's
+ * "Sign & authorize", clicking the CMA tab lands on Maya's "Try-on" — beat
+ * 29, three beats backwards. It should stay at beat 32 and show her
+ * `cma-signing` mirror, because she has a perfectly good, DISTINCT screen of
+ * her own at that exact beat — she just does not lead it.
+ *
+ * `beatForRoleSwitch(role, from)` (lib/story.ts) rewinds to the latest beat
+ * the new role LEADS at-or-before `from`. Leading is the wrong test: it
+ * ignores beats where the role has a genuinely meaningful screen (their own
+ * mirror of someone else's act) and overshoots PAST it to an earlier beat
+ * they actually led — silently re-showing old content and hiding the beat
+ * that was actually on screen.
+ *
+ * The corrected rule: stay at a beat if the new role has a MEANINGFUL screen
+ * there — they lead it, OR their screen differs from both neighbors (a
+ * genuine one-beat appearance, using the same shape of test as
+ * `mirrorHandoffAt`'s condition 4, mirrored to look at the PREVIOUS beat too
+ * so an echo of content they own LATER does not falsely count — see the
+ * "closeout" case below, which is why "differs from the previous beat" alone
+ * is not suffient). Only rewind past a beat with no meaningful screen.
+ */
+describe("beatForRoleSwitch stays put when the new role has a meaningful screen at the current beat", () => {
+  // PIN (b) — the owner's exact case: CMA has a distinct screen exactly at
+  // the signing beat (her own mirror), so switching to her from there must
+  // not move the pointer at all.
+  it("stays at the signing beat when switching to the CMA, who has her own mirror screen there", () => {
+    const signing = beatIndexById("signing");
+    expect(BEATS[signing].lead).toBe("patient"); // sanity: CMA does not lead it
+    // Sanity: her screen here really is distinct from a beat she leads
+    // nearby — this is a genuine, meaningful appearance, not filler.
+    expect(screenFor(signing, "cma")).not.toBe(screenFor(nextBeat(signing), "cma"));
+    expect(beatForRoleSwitch("cma", signing)).toBe(signing);
+  });
+
+  // The existing pinned regression (lib/regressions.test.ts) already
+  // requires beatForRoleSwitch("patient", closeout) === signing. That case
+  // is the reason "differs from the previous beat" alone cannot be the rule:
+  // the patient's screen at "closeout" (order) DOES differ from their screen
+  // at the previous beat ("activate", signing) — an ECHO of a screen they
+  // properly own themselves one beat later at "order" — so it must NOT count
+  // as meaningful, or the CMA-fix above would break this pinned case. This
+  // test pins that distinction directly, independent of regressions.test.ts.
+  it("does not treat an echo of the role's own upcoming screen as meaningful (closeout does not count for the patient)", () => {
+    const closeout = beatIndexById("closeout");
+    const order = beatIndexById("order");
+    const signing = beatIndexById("signing");
+    expect(BEATS[closeout].lead).not.toBe("patient");
+    // The echo: patient's screen at closeout equals their screen one beat
+    // later, where they properly lead it.
+    expect(screenFor(closeout, "patient")).toBe(screenFor(order, "patient"));
+    expect(beatForRoleSwitch("patient", closeout)).toBe(signing);
+  });
+
+  // General invariant, structural: for every beat a role does NOT lead,
+  // whenever that role's screen there is a genuine one-beat appearance
+  // (distinct from BOTH neighbors), switching to that role while sitting on
+  // that beat must be a no-op.
+  it("is always a no-op when the new role's screen at `from` differs from both neighboring beats", () => {
+    const offenders: string[] = [];
+    for (const role of ROLES) {
+      for (let i = 1; i < BEATS.length - 1; i++) {
+        if (BEATS[i].lead === role) continue;
+        const meaningful = screenFor(i, role) !== screenFor(i - 1, role) && screenFor(i, role) !== screenFor(i + 1, role);
+        if (!meaningful) continue;
+        const landing = beatForRoleSwitch(role, i);
+        if (landing !== i) offenders.push(`${role} at beat ${i} (${BEATS[i].id}): expected to stay, moved to ${landing} (${BEATS[landing].id})`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

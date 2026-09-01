@@ -7,6 +7,7 @@ import {
   beatsForRole,
   firstBeatOfStage,
   isLastBeat,
+  mirrorHandoffAt,
   nextBeat,
   nextBeatForRole,
   prevBeat,
@@ -133,6 +134,24 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setBeat(nextBeatForRole(beat, role));
+      return;
+    }
+    // Guided mode normally walks role in lockstep with each beat's lead, so
+    // this only ever matters right after a role-tab click (`setRole`) leaves
+    // `role` behind the CURRENT beat's lead: `beatForRoleSwitch` may land on
+    // a beat this role does not lead but does have a meaningful screen at
+    // (e.g. the CMA's own mirror at the patient-led "signing" beat). From
+    // there, Next must reveal the lead's own screen for THIS SAME beat
+    // before moving the pointer on — exactly the same passive-mirror rule
+    // solo mode uses (`mirrorHandoffAt`, lib/story.ts) — rather than
+    // advancing straight to the NEXT beat's lead and skipping past what the
+    // viewer's current beat was actually mirroring (owner, 2026-09-01: from
+    // Maya's "signing" mirror, guided Next skipped straight to her own
+    // "Fit & activate" beat, and Alex's "Sign & authorize" was never shown).
+    const mirrorLead = mirrorHandoffAt(beat, role);
+    if (mirrorLead) {
+      setHandoff(mirrorLead);
+      setRoleState(mirrorLead);
       return;
     }
     if (isLastBeat(beat)) {

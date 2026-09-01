@@ -251,6 +251,34 @@ export function beatForScreenNear(role: Role, screen: AnyScreenId, from: number)
 }
 
 /**
+ * Whether beat `i` is a screen a role should be treated as "on" in its own
+ * right — either they lead it, or their screen there is a genuine one-beat
+ * appearance: distinct from their screen at BOTH the beat immediately before
+ * and immediately after. That second half matters because a screen can
+ * legitimately echo without being meaningful HERE: the patient's "compare"
+ * screen shows up one beat before the CMA-led "choose" where the patient
+ * takes over — an early, shared appearance, not a beat of its own — and
+ * symmetrically the patient's "order" screen already shows at the CMA-led
+ * "closeout" one beat before the patient properly leads "order" themselves.
+ * Checking only "differs from the previous beat" catches the second shape
+ * (closeout's "order" differs from the prior beat's "signing") but wrongly
+ * calls it meaningful; checking both neighbors rules it out, because "order"
+ * is unchanged into the very next beat, where it is genuinely theirs.
+ *
+ * Mirrors the shape of `mirrorHandoffAt`'s own distinctness check (which
+ * looks only forward, at `i + 1`, since it is deciding whether to reveal
+ * something NEW): here the question is "is `i` already the right beat for
+ * this role", so both directions matter — the same content already showing
+ * one step earlier or about to show one step later both mean `i` is not the
+ * beat's own distinct home for this role.
+ */
+function hasMeaningfulScreenAt(i: number, role: Role): boolean {
+  const beat = BEATS[clamp(i)];
+  if (beat.lead === role) return true;
+  return screenFor(i, role) !== screenFor(i - 1, role) && screenFor(i, role) !== screenFor(i + 1, role);
+}
+
+/**
  * The beat to land on when the CHROME switches the viewer to a role (a role
  * tab or the mobile sheet — the one legitimate cross-persona control besides
  * guided Next/Back).
@@ -264,22 +292,32 @@ export function beatForScreenNear(role: Role, screen: AnyScreenId, from: number)
  * patient's "Sign & authorize" — the one beat the spec is explicit Alex signs
  * on his own phone — was never shown for either persona (owner, 2026-09-01).
  *
- * The fix: land on the LATEST beat this role leads that is at-or-before the
- * current position — i.e. where this role's own story currently stands, so a
- * switch can never skip a beat that role has not been shown yet. This only
- * ever moves the pointer BACKWARD (or leaves it put): before this role has
- * led anything yet, there is nothing to catch up on, so the pointer stays at
- * `from` rather than jumping ahead to this role's first led beat — jumping
- * forward would spoil beats the guided story has not reached yet (e.g.
- * switching to the CMA at the very first beat must show her day as it is
- * now, not fast-forward to "cma-enroute"). A role that leads nothing (the
- * operator, by design) also leaves the pointer where it is.
+ * A first fix landed on the LATEST beat this role LEADS at-or-before the
+ * current position. That solved the case above, but "leads" is too strict a
+ * test: the CMA has a perfectly good screen of her own at the patient-led
+ * "signing" beat (the contract mirror) — she just does not lead it. Rewinding
+ * past a beat where the new role already has a meaningful screen overshoots:
+ * clicking the CMA tab while sitting on "signing" landed on "tryon", three
+ * beats back, hiding the very mirror she was just shown (owner, 2026-09-01).
+ *
+ * The corrected rule: land on the LATEST beat at-or-before `from` where this
+ * role has a MEANINGFUL screen (`hasMeaningfulScreenAt`) — they lead it, or
+ * their own screen there is a genuine one-beat appearance, not shared/early
+ * content they own themselves elsewhere. This still only ever moves the
+ * pointer BACKWARD (or leaves it put): before this role has anything
+ * meaningful yet, there is nothing to catch up on, so the pointer stays at
+ * `from` rather than jumping ahead — jumping forward would spoil beats the
+ * guided story has not reached yet (e.g. switching to the CMA at the very
+ * first beat must show her day as it is now, not fast-forward to
+ * "cma-enroute"). A role with nothing meaningful anywhere (the operator, by
+ * design — his one dashboard screen never counts as distinct from its
+ * neighbors) also leaves the pointer where it is.
  */
 export function beatForRoleSwitch(role: Role, from: number): number {
-  const atOrBefore = BEATS
-    .map((b, i) => ({ b, i }))
-    .filter(x => x.b.lead === role && x.i <= from);
-  return atOrBefore.length ? atOrBefore[atOrBefore.length - 1].i : from;
+  for (let i = from; i >= 0; i--) {
+    if (hasMeaningfulScreenAt(i, role)) return i;
+  }
+  return from;
 }
 
 /**
@@ -330,6 +368,44 @@ export function prevBeatForRole(i: number, role: Role): number {
 }
 
 /**
+ * Whether beat `i` is a passive-mirror hand-over point for `role`: `role`
+ * does not lead it, but the beat is worth pausing on because `role`'s own
+ * screen there is a genuine one-beat appearance of someone else's act — not
+ * a beat `role` merely passes through unchanged. Two conditions, and BOTH
+ * must hold:
+ *
+ *   1. `role` does not lead beat `i` — someone else does, so `role`'s own
+ *      screen there is necessarily a mirror of their act, not `role`'s own.
+ *   2. `role`'s own screen at `i` differs from `role`'s own screen at the
+ *      very next FULL beat (`i + 1`). This is what separates a genuinely
+ *      distinct, one-beat-only mirror (the contract signing: `cma-signing`
+ *      appears at exactly this beat, then moves on to `cma-activate`) from a
+ *      beat whose screen for `role` is really just an early, shared
+ *      appearance of the SAME screen `role` properly owns one beat later
+ *      (e.g. the CMA's device shortlist screen already shows while the
+ *      audiologist nominally still leads, then stays on screen, unchanged,
+ *      once the CMA's own lead beat begins) — firing on the shared-screen
+ *      case would hand off before `role` ever reaches their own later beats.
+ *
+ * This is a fact about the SCRIPT at a beat, for any viewer sitting on it —
+ * nothing here depends on solo-walk membership or which mode the viewer is
+ * in, so it is the one shared primitive both `soloHandoffAt` (below, which
+ * layers two more solo-walk-specific conditions on top) and guided mode's
+ * own `next()` (`story-context.tsx`) consult, rather than each re-deriving
+ * an equivalent check.
+ *
+ * Returns the beat's lead role to hand over to, landing on the SAME beat
+ * index `i`, or `null` when there is nothing to hand over.
+ */
+export function mirrorHandoffAt(i: number, role: Role): Role | null {
+  const beat = BEATS[clamp(i)];
+  const lead = beat.lead;
+  if (lead === role) return null;
+  if (screenFor(i, role) === screenFor(i + 1, role)) return null;
+  return lead;
+}
+
+/**
  * Whether the chrome's solo-mode Next should HAND OVER to another persona
  * at beat `i`, rather than continue walking `role`'s own beats.
  *
@@ -343,15 +419,15 @@ export function prevBeatForRole(i: number, role: Role): number {
  * was never shown to either persona (`nextBeatForRole` alone cannot know
  * this; it only ever walks `role`'s own screen changes).
  *
- * `i` is a hand-over point for `role` when ALL of:
- *   1. `role` does not lead beat `i` — someone else does, so `role`'s own
- *      screen there is necessarily a mirror of their act, not `role`'s own.
- *   2. `i` is not `role`'s walk-start (`beatsForRole(role)[0]`, always beat
+ * `i` is a hand-over point for `role` when `mirrorHandoffAt(i, role)` fires
+ * (role does not lead `i`, and their screen there is a genuine one-beat
+ * appearance — see that function), AND, specific to a SOLO walk:
+ *   3. `i` is not `role`'s walk-start (`beatsForRole(role)[0]`, always beat
  *      0). At the very start `role` has not begun their story yet, so there
  *      is nothing of theirs to "resume" — firing here would eject a viewer
  *      who just chose to enter as this persona before their walk even
  *      begins, breaking the per-persona solo walk entirely.
- *   3. `role`'s OWN next walk-stop after `i` is led by `role` again. This is
+ *   4. `role`'s OWN next walk-stop after `i` is led by `role` again. This is
  *      what separates a single sandwiched aside (hand over: role has
  *      nothing further to do right here, and is about to resume leading
  *      right after) from an extended passive stretch where role legitimately
@@ -360,18 +436,6 @@ export function prevBeatForRole(i: number, role: Role): number {
  *      phone, beat after beat. That must stay a normal, uninterrupted solo
  *      walk: a cascade of handoffs there would eject the viewer from the
  *      persona they chose after a single press.
- *   4. `role`'s own screen at `i` differs from `role`'s own screen at the
- *      very next FULL beat (`i + 1`, not role's own skip target). This is
- *      what separates a genuinely distinct, one-beat-only mirror (the
- *      contract signing: `cma-signing` appears at exactly this beat, then
- *      moves on to `cma-activate`) from a beat whose screen for `role` is
- *      really just an early, shared appearance of the SAME screen `role`
- *      properly owns one beat later (e.g. the CMA's device shortlist screen
- *      already shows while the audiologist nominally still leads, then
- *      stays on screen, unchanged, once the CMA's own lead beat begins) —
- *      condition 3 alone cannot tell these apart, and firing on the shared-
- *      screen case hands off before `role` ever reaches their own later
- *      beats, silently truncating the rest of their walk.
  *
  * Returns the beat's lead role to hand over to, landing on the SAME beat
  * index `i` — the lead's own screen for the beat already on display, not a
@@ -382,13 +446,11 @@ export function prevBeatForRole(i: number, role: Role): number {
  * change rather than let it happen silently.
  */
 export function soloHandoffAt(i: number, role: Role): Role | null {
-  const beat = BEATS[clamp(i)];
-  const lead = beat.lead;
-  if (lead === role) return null;
+  const lead = mirrorHandoffAt(i, role);
+  if (!lead) return null;
   const walk = beatsForRole(role);
   if (walk[0] === i || !walk.includes(i)) return null;
   const resumed = nextBeatForRole(i, role);
   if (resumed === i || BEATS[resumed].lead !== role) return null;
-  if (screenFor(i, role) === screenFor(i + 1, role)) return null;
   return lead;
 }

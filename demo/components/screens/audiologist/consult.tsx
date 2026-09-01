@@ -51,7 +51,7 @@ export function AudConsult({ next }: { next: () => void }) {
                — not a tone report from the hearing test (owner, 2026-09-01). */}
             <HomeFeed beat="fitting" />
             <Card className="flex items-center gap-3 p-4">
-              <Video size={18} className="shrink-0 text-brand-teal" aria-hidden />
+              <Video size={18} className="shrink-0 text-teal-ink" aria-hidden />
               <p className="text-sm text-slate-500">
                 Recording is visible to the patient throughout, per their consent.
               </p>
@@ -143,7 +143,7 @@ export function AudPrescription() {
          rather than reporting a tone. */}
       <VideoSplit video={<HomeFeed beat="listening" />}>
       <Card className="w-full max-w-lg p-7">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-teal-ink">
           <Lock size={21} aria-hidden />
         </span>
         <h2 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">

@@ -534,3 +534,123 @@ describe("dark panels on light screens", () => {
     expect(contrastRatio("#FFFFFF", "#16426C")).toBeGreaterThanOrEqual(7);
   });
 });
+
+/**
+ * Vital Teal is a fill and a stroke, not an ink.
+ *
+ * Owner, 2026-09-01, pointing at the support screen: "what about these
+ * buttons?" The buttons were fine — all SecondaryButton, navy on white. The
+ * icons beside them were not: Vital Teal on a white card is 2.87:1, and on
+ * Harbor Ground 2.68:1, so they miss even WCAG's 3:1 floor for non-text UI
+ * components. This is not a judgment call about decoration.
+ *
+ * Sweeping for it found ten more across every role — the CMA's kit and day
+ * lists, the audiologist's consult and review, the operator's eyebrow, the
+ * patient's own screens — plus two genuine small-text cases (an 11px
+ * "Approved" at 2.68:1 and a 10px operator eyebrow) that DESIGN.md's existing
+ * "no Vital Teal below 18px on white" rule already forbade but nothing
+ * enforced. One of them, "Waiting", was slate-300 at 1.48:1.
+ *
+ * Vital Teal keeps every job where it is a shape rather than an ink: the route
+ * line, progress bars, status dots, the brand soundwave, the courier marker,
+ * and any label on the navy chrome, where it measures 5.51:1.
+ */
+describe("Vital Teal as an ink", () => {
+  const LIGHT = ["#FFFFFF", "#F4F8F8"] as const;
+
+  it("misses the non-text floor on both light grounds, which is why icons moved", () => {
+    for (const ground of LIGHT) {
+      expect(contrastRatio("#12AAA5", ground)).toBeLessThan(LARGE);
+      expect(contrastRatio("#087D7A", ground)).toBeGreaterThanOrEqual(BODY);
+    }
+  });
+
+  it("is never the colour of a standalone icon on a light ground", () => {
+    const offenders: string[] = [];
+    for (const file of componentFiles()) {
+      // The demo shell's interstitial and role chrome sit on bg-brand-navy,
+      // where Vital Teal measures 5.51:1 and is correct.
+      const src = codeOf(file);
+      for (const m of src.match(/className="[^"]*text-brand-teal[^"]*"/g) ?? []) {
+        // An icon's class list carries no text size and paints no ground of its
+        // own — it is layout and colour only ("shrink-0 text-brand-teal",
+        // "mt-0.5 shrink-0 text-brand-teal"), so it inherits whatever card it
+        // is dropped on, and every card in this app is light.
+        //
+        // Matching only an exactly-lone class missed `shrink-0 text-brand-teal`
+        // when this was first written, which is the shape half of them use.
+        if (/text-\[\d+px\]|text-(xs|sm|base|lg|xl)\b/.test(m)) continue;   // text, not an icon
+        if (/bg-brand-navy|bg-\[#0|bg-\[#1[0-6]/.test(m)) continue;          // paints its own dark ground
+        offenders.push(`${file}: ${m}`);
+      }
+    }
+    expect(
+      offenders,
+      `Vital Teal icons on a light card measure 2.87:1 — use text-teal-ink:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("is never the colour of small text on a light ground", () => {
+    const offenders: string[] = [];
+    for (const file of componentFiles()) {
+      const src = codeOf(file);
+      const lines = src.split("\n");
+      lines.forEach((line, i) => {
+        if (!line.includes("text-brand-teal")) return;
+        // Only lines that also set a text size are text at all.
+        const sized = /text-\[\d+px\]|text-(xs|sm|base)\b/.test(line);
+        if (!sized) return;
+        // The ground is often declared on a PARENT element, several lines up —
+        // the interstitial's teal label sits inside a bg-brand-navy/95 overlay
+        // opened four lines earlier, where Vital Teal measures 5.51:1 and is
+        // right. So look back over the enclosing markup, not just this line.
+        const context = lines.slice(Math.max(0, i - 8), i + 1).join(" ");
+        const onDark = /bg-brand-navy(\/\d+)?|text-white|white\/\d/.test(context);
+        if (!onDark) offenders.push(`${file}: ${line.trim().slice(0, 100)}`);
+      });
+    }
+    expect(
+      offenders,
+      `Vital Teal below 18px on a light ground is 2.68:1 — use text-teal-ink:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+});
+
+/**
+ * Every screen names one thing to do.
+ *
+ * DESIGN.md asks for one primary action per screen and PRODUCT.md's fifth
+ * principle asks each screen to land its point in a walkthrough without
+ * narration. The support screen had five SecondaryButtons and no primary one
+ * (owner, 2026-09-01), so "Start calibration" — the screen's actual task —
+ * looked exactly like "Return home", the exit, which sat at the bottom where
+ * the eye lands last.
+ *
+ * The rule is not "every screen has a PrimaryButton": several deliberately do
+ * not, because the patient is watching someone else act (the `observing`
+ * screens) or the screen is a menu. The rule is that a screen which HAS a task
+ * must not bury it at the same weight as its exit.
+ */
+describe("the support screen leads with its task", () => {
+  const support = () => codeOf("components/screens/patient/support.tsx");
+
+  it("promotes Start calibration, the one thing the screen is for", () => {
+    // Not `<PrimaryButton[^>]*>`: the onClick holds an arrow function, so the
+    // class would stop at the `>` of `=>` and never reach the label.
+    expect(support()).toMatch(/<PrimaryButton[\s\S]*?>Start calibration<\/PrimaryButton>/);
+  });
+
+  it("leaves the exit secondary, because leaving is not the task", () => {
+    const src = support();
+    expect(src).toMatch(/<SecondaryButton onClick=\{\(\)=>go\("home"\)\}>Return home<\/SecondaryButton>/);
+  });
+
+  it("keeps the mid-run steps secondary, so the screen has one lead and not three", () => {
+    const src = support();
+    // "Run again" repeats a finished job; the per-step buttons continue an act
+    // already under way. Neither is the screen's lead.
+    expect(src).toMatch(/<SecondaryButton onClick=\{\(\) => setStep\(0\)\}>Run again<\/SecondaryButton>/);
+    expect((src.match(/<PrimaryButton/g) ?? []).length,
+      "exactly one primary action on this screen").toBe(1);
+  });
+});

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Bluetooth, CalendarDays, Check, ChevronRight, FileCheck, Headphones, LifeBuoy, MessageCircle, SlidersHorizontal, Video } from "lucide-react";
-import { Card, PageHeader, SecondaryButton, SecureFooter, StatusPill } from "../../ui";
+import { Card, PageHeader, PrimaryButton, SecondaryButton, SecureFooter, StatusPill } from "../../ui";
 import { BRAND_NAME, audiogram, devices, deviceDetail, serials, signedDocuments, visitHistory } from "@/lib/mock-data";
 import { lossBand, pta } from "@/lib/exam";
 import { tierFor } from "@/lib/commerce";
@@ -35,7 +35,7 @@ function CalibrationCard() {
           return (
             <div key={title} className="flex items-center gap-3">
               <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${
-                done ? "bg-[#dcf5ef] text-emerald-600" : current ? "bg-[#e8f9f8] text-brand-teal" : "bg-[#f1f5f6] text-slate-300"}`}>
+                done ? "bg-[#dcf5ef] text-emerald-600" : current ? "bg-[#e8f9f8] text-teal-ink" : "bg-[#f1f5f6] text-slate-400"}`}>
                 {done ? <Check size={15} /> : <I size={15} />}
               </span>
               <div className="min-w-0 flex-1">
@@ -47,11 +47,11 @@ function CalibrationCard() {
         })}
       </div>
       <div className="mt-4">
-        {step < steps.length
-          ? <SecondaryButton onClick={() => setStep(s => s + 1)}>
-              {step === 0 ? "Start calibration" : steps[step].title}
-            </SecondaryButton>
-          : <SecondaryButton onClick={() => setStep(0)}>Run again</SecondaryButton>}
+        {step === 0
+          ? <PrimaryButton onClick={() => setStep(s => s + 1)}>Start calibration</PrimaryButton>
+          : step < steps.length
+            ? <SecondaryButton onClick={() => setStep(s => s + 1)}>{steps[step].title}</SecondaryButton>
+            : <SecondaryButton onClick={() => setStep(0)}>Run again</SecondaryButton>}
       </div>
     </Card>
   );
@@ -132,7 +132,7 @@ function CareRecord({ go }: { go: (s: ScreenId) => void }) {
         <div className="mt-3 space-y-2.5">
           {signedDocuments.map(d => (
             <div key={d.name} className="flex items-center gap-3">
-              <FileCheck size={16} className="shrink-0 text-brand-teal" />
+              <FileCheck size={16} className="shrink-0 text-teal-ink" />
               <span className="min-w-0 flex-1 text-sm text-slate-600">{d.name}</span>
               <span className="text-[11px] text-slate-400">{d.signed}</span>
             </div>
@@ -143,7 +143,7 @@ function CareRecord({ go }: { go: (s: ScreenId) => void }) {
   );
 }
 
-export function Support({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="We’re here after delivery" subtitle={`Your ${BRAND_NAME} care team stays with you through setup and adjustment.`} onBack={back} eyebrow="Ongoing care"/><Card className="overflow-hidden bg-gradient-to-br from-[#e5f8f6] to-white p-5"><LifeBuoy className="text-brand-teal" size={30}/><h2 className="mt-5 text-2xl font-extrabold">Your 30-day support plan</h2><p className="mt-2 text-sm leading-6 text-slate-500">Guided setup, remote adjustments, and a follow-up hearing check are included.</p></Card>
+export function Support({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="We’re here after delivery" subtitle={`Your ${BRAND_NAME} care team stays with you through setup and adjustment.`} onBack={back} eyebrow="Ongoing care"/><Card className="overflow-hidden bg-gradient-to-br from-[#e5f8f6] to-white p-5"><LifeBuoy className="text-teal-ink" size={30}/><h2 className="mt-5 text-2xl font-extrabold">Your 30-day support plan</h2><p className="mt-2 text-sm leading-6 text-slate-500">Guided setup, remote adjustments, and a follow-up hearing check are included.</p></Card>
 <CareRecord go={go}/>
 <CalibrationCard/>
-<div className="mt-4 grid grid-cols-2 gap-3">{[[MessageCircle,"Message care team"],[Video,"Video support"],[CalendarDays,"Book follow-up"],[Headphones,"Device tutorials"]].map(([I,t]:any)=><button key={t} className="rounded-[22px] bg-white p-4 text-left shadow-card"><I className="text-brand-teal"/><b className="mt-5 block text-sm">{t}</b></button>)}</div><Card className="mt-4 flex items-center gap-3 p-4"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#e9f8f7] text-brand-teal"><MessageCircle/></span><div className="flex-1"><b className="text-sm">{BRAND_NAME} Care</b><p className="text-xs text-slate-500">Typical reply in under 2 minutes</p></div><ChevronRight/></Card><div className="mt-6"><SecondaryButton onClick={()=>go("home")}>Return home</SecondaryButton></div><SecureFooter/></Shell>}
+<div className="mt-4 grid grid-cols-2 gap-3">{[[MessageCircle,"Message care team"],[Video,"Video support"],[CalendarDays,"Book follow-up"],[Headphones,"Device tutorials"]].map(([I,t]:any)=><button key={t} className="rounded-[22px] bg-white p-4 text-left shadow-card"><I className="text-teal-ink"/><b className="mt-5 block text-sm">{t}</b></button>)}</div><Card className="mt-4 flex items-center gap-3 p-4"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#e9f8f7] text-teal-ink"><MessageCircle/></span><div className="flex-1"><b className="text-sm">{BRAND_NAME} Care</b><p className="text-xs text-slate-500">Typical reply in under 2 minutes</p></div><ChevronRight/></Card><div className="mt-6"><SecondaryButton onClick={()=>go("home")}>Return home</SecondaryButton></div><SecureFooter/></Shell>}

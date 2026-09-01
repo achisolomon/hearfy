@@ -23,7 +23,7 @@ export function CmaArrival({ next }: { next: () => void }) {
       <PageHeader title="Confirm the visit" subtitle="Verify who you are treating before anything begins." eyebrow="Identity" />
       <Card className="p-5">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#edf8f7] text-teal-ink">
             <ShieldCheck size={20} />
           </span>
           <div>

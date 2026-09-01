@@ -2,7 +2,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Card } from "../../ui";
 import { cn } from "@/lib/cn";
-import { exceptions } from "@/lib/mock-data";
+import type { OperatorState } from "@/lib/operator-state";
 
 const TONE = {
   high: "border-l-red-500 bg-red-50/40",
@@ -11,9 +11,9 @@ const TONE = {
 } as const;
 
 /** Exception-first: the operator works this list, not the happy path. */
-export function Exceptions() {
+export function Exceptions({ state }: { state: OperatorState }) {
   const order = { high: 0, medium: 1, low: 2 } as const;
-  const sorted = [...exceptions].sort((a, b) => order[a.severity] - order[b.severity]);
+  const sorted = [...state.exceptions].sort((a, b) => order[a.severity] - order[b.severity]);
 
   return (
     <Card className="p-5">

@@ -65,6 +65,13 @@ export function IntakeNeeds({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     </p>
   </StepPage>;
 }
+const NONE_APPLY = "None of these apply to me";
+const SYMPTOMS = [
+  "Sudden hearing loss in the last 72 hours",
+  "Pain, drainage or bleeding from an ear",
+  "Dizziness or spinning",
+  "Ringing in one ear only",
+];
 export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   // Tracks an explicit "go back" on this mount, so the still-set latch (which
   // survives a remount on purpose) doesn't override a deliberate dismissal.
@@ -76,15 +83,39 @@ export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const everFlagged = redFlagLatch.use();
   const showDiversion = showsDiversion({everFlagged,dismissed});
 
-  const selectSymptom = ()=>{redFlagLatch.set();setDismissed(false);};
-  const symptoms = [
-    "Sudden hearing loss in the last 72 hours",
-    "Pain, drainage or bleeding from an ear",
-    "Dizziness or spinning",
-    "Ringing in one ear only",
-  ];
+  // Same shape as IntakeNeeds: a Set of chosen titles, keyed by title (not
+  // index) so reordering the symptom list can never re-map an existing
+  // answer onto a different one. Nothing preselected — the owner's bug was
+  // exactly a preselected "None of these apply to me".
+  const [chosen,setChosen] = useState<Set<string>>(new Set());
+  // A patient may genuinely have several symptoms (dizziness AND ringing),
+  // so ticking a symptom toggles it into the set alongside any others — but
+  // "None of these apply to me" is mutually exclusive with all of them:
+  // choosing it clears any ticked symptoms, and choosing any symptom clears
+  // it. A new Set every call: mutating the held one keeps the same
+  // reference, so React would bail out of the re-render and the tick would
+  // not appear.
+  const toggleSymptom = (title:string)=>setChosen(prev=>{
+    const next = new Set(prev.has(NONE_APPLY)?[]:prev);
+    if(!next.delete(title)) next.add(title);
+    return next;
+  });
+  const noneChosen = chosen.has(NONE_APPLY);
+  const toggleNone = ()=>setChosen(prev=>prev.has(NONE_APPLY)?new Set():new Set([NONE_APPLY]));
+  const count = chosen.size;
 
   const goBack = ()=>setDismissed(true);
+
+  // The diversion is a fresh answer, decided on Continue rather than on tap:
+  // a patient must be able to tick a symptom, change their mind, and tick
+  // "None of these" instead without diverting mid-thought. Only committing
+  // with Continue raises the latch.
+  const onContinue = ()=>{
+    if(count===0) return;
+    if(noneChosen){ go("intake-coverage"); return; }
+    redFlagLatch.set();
+    setDismissed(false);
+  };
 
   if(showDiversion) return <Shell>
     <PageHeader title="Let's get this looked at first" subtitle="Booking is paused while a clinician reviews your answer." onBack={goBack} eyebrow="Routed to review"/>
@@ -103,18 +134,24 @@ export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     <div className="mt-6"><SecondaryButton onClick={goBack}>Go back and change my answer</SecondaryButton></div>
   </Shell>;
 
-  return <Shell>
-    <PageHeader title="A few safety questions" subtitle="These help us route you to the right care." onBack={back} eyebrow="Medical safety"/>
-    <div className="space-y-3">
-      {symptoms.map(s=><Option key={s} title={s} onClick={selectSymptom}/>)}
-      <Option title="None of these apply to me" onClick={()=>go("intake-coverage")} active/>
+  return <StepPage
+    title="A few safety questions"
+    subtitle="These help us route you to the right care. Choose everything that applies."
+    step={3} onBack={back}
+    onNext={onContinue}
+    nextDisabled={count===0}
+    next={count>1?`Continue with ${count} answers`:"Continue"}>
+    <div role="group" aria-label="A few safety questions. Choose all that apply." className="space-y-3">
+      {SYMPTOMS.map(s=><Option key={s} title={s} multi
+        active={chosen.has(s)} onClick={()=>toggleSymptom(s)}/>)}
+      <Option title={NONE_APPLY} multi active={noneChosen} onClick={toggleNone}/>
     </div>
     <Card className="mt-4 p-4">
       <p className="text-sm leading-6 text-slate-500">
         {`${BRAND_NAME} does not replace emergency or ENT care. Red flags are reviewed before scheduling.`}
       </p>
     </Card>
-  </Shell>;
+  </StepPage>;
 }
 export function IntakeCoverage({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [a,setA]=useState(0);return <StepPage title="How will you pay?" subtitle="Your $99 visit is self-pay. We can help you request reimbursement." step={4} onBack={back} onNext={()=>go("intake-plan")}><Option title="Use my insurance benefits" sub="We’ll create a personalized Superbill" icon={ShieldCheck} active={a===0} onClick={()=>setA(0)}/><Option title="Self-pay only" sub="No insurance paperwork needed" icon={WalletCards} active={a===1} onClick={()=>setA(1)}/><Option title="I’m not sure yet" sub="You can decide after the visit" icon={CreditCard} active={a===2} onClick={()=>setA(2)}/></StepPage>}
 export function IntakePlan({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <StepPage title="Your personalized plan" subtitle="Based on your answers, an at-home diagnostic visit is a good fit." step={5} onBack={back} onNext={()=>go("book-date")} next="Choose a visit"><Card className="overflow-hidden"><div className="bg-[#e7f8f7] p-5"><StatusPill>Good match</StatusPill><h2 className="mt-4 text-2xl font-extrabold">At-home hearing diagnostic</h2><p className="mt-2 text-sm leading-6 text-slate-600">A CMA brings the clinical kit. A licensed audiologist joins remotely.</p></div><div className="space-y-4 p-5">{[[Home,"Home visit"],[Activity,"Clinical-grade testing"],[Video,"Audiologist review"],[FileHeart,"Results and care plan"]].map(([Icon,t]:any)=><div key={t} className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f1f7f7] text-brand-teal"><Icon size={19}/></span><b className="text-sm">{t}</b></div>)}</div></Card><div className="rounded-2xl bg-brand-navy p-4 text-white"><span className="text-xs text-white/60">Estimated visit price</span><div className="mt-1 flex items-end justify-between"><b className="text-3xl">$99</b><span className="text-xs text-white/70">Superbill available</span></div></div></StepPage>}

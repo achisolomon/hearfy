@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Check,Home,MapPin,MessageCircle,Navigation,UserRound } from "lucide-react";
 import { TextSize } from "../a11y/text-size";
 import { PageHeader,PrimaryButton,Progress } from "../ui";
-import { SurfaceProvider, useOnDark } from "../surface";
 import { cn } from "@/lib/cn";
 import { useStoryOptional } from "../shell/story-context";
 import { ScreenId } from "./registry";
@@ -41,13 +40,17 @@ export { Audiogram } from "../charts/audiogram";
 // screen carried the full comparison table beside the 380px call column, a
 // 4xl cap left the table's four columns about 490px to share, wrapping every
 // cell to three lines. Only the xl step is new; md and lg are unchanged.
-// `dark` is published through SurfaceProvider (components/surface.tsx) rather
-// than only setting classes here: PageHeader's title and PrimaryButton's fill
-// are both navy, so on the four navy screens (assigned, driving, arrived,
-// live) the heading rendered navy-on-navy — invisible — and the primary
-// action was a navy button on a navy ground. Those components now read the
-// surface instead of each dark screen having to override them by hand.
-export function Shell({children,dark=false,wide=false,tablet=false}:{children:React.ReactNode;dark?:boolean;wide?:boolean;tablet?:boolean}){return <SurfaceProvider value={dark?"dark":"light"}><div className={dark?"min-h-[800px] bg-brand-navy text-white":"min-h-[800px] bg-brand-bg text-brand-navy"}><div className={cn("mx-auto px-5 pb-40 pt-6 md:pb-24",tablet?"max-w-md md:max-w-3xl lg:max-w-4xl xl:max-w-6xl":wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div></SurfaceProvider>}
+// One ground. Shell used to take a `dark` prop and publish it through a
+// SurfaceProvider, so PageHeader and PrimaryButton could swap ink and fill on
+// the four navy screens (assigned, driving, arrived, live) where a navy title
+// and a navy button would both have been invisible.
+//
+// Those screens went light on 2026-09-01, because a navy ground was the only
+// thing forcing the primary action to wear a second colour, and that second
+// colour was teal — which DESIGN.md's Selection Rule now reserves for what the
+// viewer has chosen. Nothing renders dark any more, so the prop, the provider
+// and the whole surface module are gone rather than left as dead branches.
+export function Shell({children,wide=false,tablet=false}:{children:React.ReactNode;wide?:boolean;tablet?:boolean}){return <div className="min-h-[800px] bg-brand-bg text-brand-navy"><div className={cn("mx-auto px-5 pb-40 pt-6 md:pb-24",tablet?"max-w-md md:max-w-3xl lg:max-w-4xl xl:max-w-6xl":wide?"max-w-md lg:max-w-4xl":"max-w-md")}><div className="mb-3 flex justify-end"><TextSize /></div>{children}</div></div>}
 export function Avatar({large=false}:{large?:boolean}){return <div className={`${large?"h-20 w-20 text-xl":"h-12 w-12 text-sm"} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-[#c7eeec] to-[#edf8f8] font-extrabold text-brand-navy shadow-soft`}>ML</div>}
 // `multi` is opt-in and defaults to false, so every single-answer screen
 // (IntakeFor, IntakeCoverage, BookTime, the medical-safety list) renders
@@ -105,14 +108,9 @@ export function RouteMap({moving=false}:{moving?:boolean}){
  * instead (see `AudiologistStrip` in cma/call-tile.tsx for the version that
  * DOES accompany a live call — this is its lighter sibling for dispatch/setup
  * screens, before the call has started).
- *
- * Reads the surface the same way PageHeader/PrimaryButton do (`useOnDark`)
- * rather than taking a `dark` prop, so it drops into either a light or navy
- * Shell without the caller having to say so twice.
  */
 export function AudiologistStatusLine({children,className=""}:{children:React.ReactNode;className?:string}){
-  const dark=useOnDark();
-  return <div className={cn("rounded-2xl border px-4 py-3.5 text-sm font-semibold leading-6",dark?"border-white/15 bg-white/10 text-white/85":"border-[#e4eef0] bg-white text-brand-navy",className)}>{children}</div>;
+  return <div className={cn("rounded-2xl border border-[#e4eef0] bg-white px-4 py-3.5 text-sm font-semibold leading-6 text-brand-navy",className)}>{children}</div>;
 }
 export function DeviceVisual(){return <div className="flex h-52 items-center justify-center gap-5 bg-gradient-to-br from-[#e8f8f6] via-white to-[#edf3f8]"><div className="h-28 w-16 -rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/><div className="h-28 w-16 rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/></div>}
 // `useStoryOptional` returns null on Demo 1's frozen, provider-less

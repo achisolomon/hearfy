@@ -133,67 +133,100 @@ describe("teal is only used as text where it can be read", () => {
   });
 });
 
-describe("the navy Shell publishes its surface, so shared components can adapt", () => {
+/**
+ * There is one ground, so the action needs only one colour.
+ *
+ * History: four screens (assigned, driving, arrived, live) used a navy Shell.
+ * PageHeader's title and PrimaryButton's fill were both navy, so on those
+ * screens the heading rendered navy-on-navy and the button was invisible at
+ * 1.14:1. The fix at the time was a surface context: the components read
+ * whether they sat on navy and switched ink and fill, the button taking Teal
+ * Ink there.
+ *
+ * That became wrong when teal came to mean "chosen" (the Selection Rule): the
+ * same action read navy on most screens and teal on those four, and on the
+ * dispatch screen the teal button sat next to a teal route line that really
+ * did mean live state. Owner, 2026-09-01: "it would be better to invert the
+ * background and the buttons, text, etc. to match our design rules."
+ *
+ * So the four screens went light, which removed the ground that forced the
+ * exception, and with it the whole dark branch — Shell's `dark` prop, the
+ * SurfaceProvider, useOnDark, and components/surface.tsx.
+ *
+ * These tests pin the ABSENCE, because a dead branch grows back quietly: the
+ * moment something renders navy again, the fork returns and the action has two
+ * colours once more.
+ */
+describe("one ground, one action colour", () => {
   const ui = sourceOf("components/ui.tsx");
   const shared = sourceOf("components/screens/shared.tsx");
 
-  // The bug: PageHeader hardcoded text-brand-navy, so on `<Shell dark>` the
-  // title of assigned / driving / arrived / live rendered navy on navy.
-  it("wraps Shell's children in a SurfaceProvider carrying the dark flag", () => {
-    expect(shared).toContain("SurfaceProvider");
-    expect(shared).toMatch(/SurfaceProvider value=\{dark\s*\?\s*"dark"\s*:\s*"light"\}/);
+  it("has no dark Shell left anywhere, so no screen can need a second fill", () => {
+    const offenders: string[] = [];
+    for (const file of componentFiles()) {
+      const src = codeOf(file);
+      if (/<Shell\s+dark/.test(src)) offenders.push(file);
+    }
+    expect(offenders, `Shell has no dark mode; these still ask for one:\n${offenders.join("\n")}`).toEqual([]);
+    expect(codeOf("components/screens/shared.tsx")).not.toMatch(/dark\?:boolean/);
   });
 
-  it("makes PageHeader choose its title ink from the surface, not a constant", () => {
-    const header = ui.split("export function PageHeader")[1]?.split("export function")[0] ?? "";
-    expect(header).toContain("useOnDark()");
-    // The title must have a light-ground and a dark-ground ink, not one colour.
-    expect(header).toMatch(/dark\s*\?\s*"text-white"\s*:\s*"text-brand-navy"/);
-  });
-
-  it("makes PrimaryButton choose its fill from the surface", () => {
+  it("gives PrimaryButton a single navy fill, with no surface branch", () => {
     const button = ui.split("export function PrimaryButton")[1]?.split("export function")[0] ?? "";
-    expect(button).toContain("useOnDark()");
     expect(button).toMatch(/bg-brand-navy/);
-    expect(button).toMatch(/bg-\[#087d7a\]/);
+    expect(button, "the button must not fork on the surface").not.toContain("useOnDark");
+    expect(button, "Teal Ink is the chosen-colour family; the action is navy").not.toMatch(/bg-\[#087d7a\]/i);
+    expect(button, "and never Vital Teal behind the white label").not.toMatch(/bg-brand-teal/);
   });
 
-  it("gives the dark-ground button a label that clears the body floor", () => {
-    expect(contrastRatio("#FFFFFF", "#087D7A")).toBeGreaterThanOrEqual(BODY);
+  it("gives PageHeader a single navy title, with no surface branch", () => {
+    const header = ui.split("export function PageHeader")[1]?.split("export function")[0] ?? "";
+    expect(header).toMatch(/text-brand-navy/);
+    expect(header).not.toContain("useOnDark");
+    expect(header, "no white heading, because no screen is dark").not.toMatch(/text-white"/);
   });
 
-  // "Hover deepens, never lightens" (DESIGN.md). The first fix lightened it,
-  // which dropped the white label to 3.95:1.
-  it("deepens the dark-ground button on hover rather than lightening it", () => {
+  // DESIGN.md's "hover deepens, never lightens" was written for the teal fill,
+  // where a lighter hover cost real contrast. Harbor Navy is already near-black,
+  // so its hover step (#102D51) is necessarily LIGHTER against white — asserting
+  // otherwise would be asserting the palette is wrong. What protects the user
+  // here is that the white label stays far above the floor through the whole
+  // interaction, which 13.9:1 does with room to spare.
+  it("keeps the hover state's label far above the contrast floor", () => {
     const button = ui.split("export function PrimaryButton")[1]?.split("export function")[0] ?? "";
-    const hover = /hover:bg-\[(#[0-9a-fA-F]{6})\][^"]*"\s*:\s*"bg-brand-navy/.exec(button)
-      ?? /dark\?"bg-\[#087d7a\] hover:bg-\[(#[0-9a-fA-F]{6})\]/.exec(button);
-    expect(hover, "could not read the dark hover fill").toBeTruthy();
-    const hovered = hover![1];
-    // Deeper than the resting fill means a HIGHER ratio against white.
-    expect(contrastRatio("#FFFFFF", hovered)).toBeGreaterThan(contrastRatio("#FFFFFF", "#087D7A"));
+    const hover = /hover:bg-\[(#[0-9a-fA-F]{6})\]/.exec(button);
+    expect(hover, "could not read the hover fill").toBeTruthy();
+    expect(contrastRatio("#FFFFFF", hover![1])).toBeGreaterThanOrEqual(7);
   });
 
-  // The four screens that were broken. Named here so that if one stops using
-  // the dark Shell, the test says so rather than passing vacuously.
-  it("still renders the four dark screens through Shell dark", () => {
-    const dispatch = sourceOf("components/screens/patient/dispatch.tsx");
-    const exam = sourceOf("components/screens/patient/exam.tsx");
-    expect(dispatch.match(/<Shell dark>/g)?.length).toBe(3); // assigned, driving, arrived
-    expect(exam).toContain("<Shell dark>"); // live
+  it("puts the white label far above the floor, which is why navy keeps it", () => {
+    expect(contrastRatio("#FFFFFF", "#0B2340")).toBeGreaterThanOrEqual(7);
   });
 
-  // Those screens used to force `className="bg-brand-teal"` to escape the
-  // invisible navy button. That override is white-on-#12AAA5 at 2.87:1, so it
-  // must not come back now that the surface picks an accessible fill.
-  it("leaves the dark screens' primary buttons unstyled, so they inherit the accessible fill", () => {
-    for (const file of ["components/screens/patient/dispatch.tsx", "components/screens/patient/exam.tsx"]) {
-      expect(codeOf(file), file).not.toMatch(/PrimaryButton[^>]*className="bg-brand-teal"/);
+  it("carries the four inverted screens on the light ground", () => {
+    const dispatch = codeOf("components/screens/patient/dispatch.tsx");
+    const exam = codeOf("components/screens/patient/exam.tsx");
+    // Named so that a screen quietly going dark again fails here.
+    expect(dispatch.match(/<Shell>/g)?.length).toBe(3); // assigned, driving, arrived
+    expect(exam).toContain("<Shell>");                  // live
+    for (const src of [dispatch, exam]) {
+      expect(src).not.toMatch(/PrimaryButton[^>]*className="bg-brand-teal"/);
     }
   });
 
-  it("keeps Vital Teal legible on the navy ground, where it is still used", () => {
-    expect(contrastRatio("#12AAA5", DARK_GROUND)).toBeGreaterThanOrEqual(LARGE);
+  it("keeps the surface module deleted rather than dormant", () => {
+    // codeOf, not the raw file: shared.tsx's comment explains what the provider
+    // used to do and why it went, and that prose is worth keeping.
+    expect(codeOf("components/screens/shared.tsx")).not.toContain("SurfaceProvider");
+    expect(codeOf("components/ui.tsx")).not.toContain("useOnDark");
+    expect(() => sourceOf("components/surface.tsx")).toThrow();
+  });
+
+  // Vital Teal still marks live state on light grounds, where the route line
+  // and status dots live. It is legible there; it just is not the action.
+  it("keeps Vital Teal legible where it still marks live state", () => {
+    expect(contrastRatio("#12AAA5", "#FFFFFF")).toBeGreaterThanOrEqual(2.8);
+    expect(contrastRatio("#087D7A", "#F4F8F8")).toBeGreaterThanOrEqual(BODY);
   });
 });
 
@@ -446,5 +479,58 @@ describe("Vital Teal behind white", () => {
     expect(contrastRatio("#FFFFFF", "#087D7A")).toBeGreaterThanOrEqual(BODY);
     // The inactive Option icon sits on the #f0f6f6 tile, not on white.
     expect(contrastRatio("#087D7A", "#F0F6F6")).toBeGreaterThanOrEqual(BODY);
+  });
+});
+
+/**
+ * A dark panel must carry its own ink, not borrow the screen's.
+ *
+ * Caught by eye on 2026-09-01, right after the four dispatch screens went
+ * light: Arrived's visitor-identity panel keeps a navy gradient on purpose (it
+ * is the security check the patient reads before opening the door, and on a
+ * light screen it should be the one thing that pulls the eye). Its "Welcome
+ * Maya" heading had no colour of its own — it inherited `text-white` from
+ * `<Shell dark>`. When the Shell stopped being dark the heading turned navy on
+ * navy and effectively vanished, while the paragraph under it, which sets
+ * `text-white/65` explicitly, was unaffected.
+ *
+ * That is the same fault the deleted surface context was built to prevent, in
+ * a place the context never covered: this panel is markup inside one screen,
+ * not a shared component. So the invariant is stated directly — any element
+ * that paints a dark background must also name the ink that goes on it, and
+ * never rely on an ancestor for it.
+ */
+describe("dark panels on light screens", () => {
+  /** Backgrounds dark enough that inherited navy ink would disappear. */
+  const DARK_BG = /bg-(?:brand-navy|gradient-to-\w+ from-\[#(?:0|1)[0-9a-f]{5}\])/;
+
+  it("names its own ink wherever it paints a dark ground", () => {
+    const offenders: string[] = [];
+    for (const file of componentFiles()) {
+      for (const cls of codeOf(file).match(/className="[^"]*"/g) ?? []) {
+        if (!DARK_BG.test(cls)) continue;
+        // A fill with no text in it needs no ink: map markers, bars, dots and
+        // the progress rail are shapes, identified by having a size but no
+        // padding, which is what a text-bearing panel always has.
+        const bearsText = /\bp-\d|\bpx-\d|\bpy-\d|\bp-\[/.test(cls);
+        if (!bearsText) continue;
+        if (!/text-white|text-\[#f|text-\[#e/i.test(cls)) offenders.push(`${file}: ${cls}`);
+      }
+    }
+    expect(
+      offenders,
+      `A dark panel must set its own ink — inheriting it breaks the moment the screen around it changes:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("keeps Arrived's identity panel legible, the case that failed", () => {
+    const dispatch = codeOf("components/screens/patient/dispatch.tsx");
+    const panel = /className="rounded-\[28px\] bg-gradient-to-br[^"]*"/.exec(dispatch)?.[0] ?? "";
+    expect(panel, "identity panel not found").toBeTruthy();
+    expect(panel, "the panel must state its own white ink").toMatch(/text-white/);
+    // White on the panel's darkest stop.
+    expect(contrastRatio("#FFFFFF", "#0C2340")).toBeGreaterThanOrEqual(7);
+    // And on its lightest stop, where white has the least to work with.
+    expect(contrastRatio("#FFFFFF", "#16426C")).toBeGreaterThanOrEqual(7);
   });
 });

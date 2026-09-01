@@ -2919,14 +2919,13 @@ describe("a click inside a device stays in that persona", () => {
 
 describe("the patient's phone offers no button for someone else's clinical act", () => {
   // Owner: "the customer on his phone can not do anything at this stage (the
-  // screens are at the CMA / audiolog)". Demo 2's exam and dispatch screens
-  // had a PrimaryButton driving the story forward ("Maya has arrived",
-  // "Start the visit", "Begin ear check", "Start middle ear check", "Start
-  // hearing test", "Complete test", "Finish consultation") for an act Maya or
-  // Dr. Reed performs, not Alex. Demo 1 (components/patient-app.tsx) is
-  // frozen and has no chrome Next, so the same components must keep
-  // rendering their button by default — the fix must be an opt-in prop, not
-  // a deletion.
+  // screens are at the CMA / audiolog)". The exam and dispatch screens had a
+  // PrimaryButton driving the story forward ("Maya has arrived", "Start the
+  // visit", "Begin ear check", "Start middle ear check", "Start hearing
+  // test", "Complete test", "Finish consultation") for an act Maya or
+  // Dr. Reed performs, not Alex. The patient's screen must carry no button
+  // for a clinical act someone else performs; the chrome's Next advances the
+  // story instead.
   const dispatch = sourceOf("components/screens/patient/dispatch.tsx");
   const exam = sourceOf("components/screens/patient/exam.tsx");
 
@@ -2955,91 +2954,59 @@ describe("the patient's phone offers no button for someone else's clinical act",
     { file: "exam.tsx", blocks: examBlocks, name: "Live", label: "Finish consultation" },
   ];
 
-  it("still has today's clinical-act button in its source (sanity check for the table above)", () => {
+  // The real invariant, pinned directly now that there is no `observing`
+  // prop to gate on: none of these seven components may contain the label
+  // of the clinical-act button they used to show. The behaviour is
+  // unconditional, so the absence must be unconditional too — not "gated
+  // off by default", just gone from source entirely.
+  it("never shows the clinical-act button's label — the behaviour is unconditional now", () => {
+    const offenders: string[] = [];
     for (const { file, blocks, name, label } of CLINICAL) {
       const block = blocks[name];
       expect(block, `${file}: could not find component ${name}`).toBeTruthy();
-      expect(block, `${file}: ${name} no longer contains "${label}" — update this test's table`).toContain(label);
-    }
-  });
-
-  // The real invariant: each of these seven components must accept an
-  // `observing` prop, and every PrimaryButton performing the clinical act
-  // must be conditioned on it (e.g. `{!observing && <PrimaryButton ...>}` or
-  // equivalent) so that omitting the prop — exactly what frozen
-  // patient-app.tsx does — renders unchanged.
-  it("gates each clinical-act PrimaryButton behind an opt-in `observing` prop", () => {
-    const offenders: string[] = [];
-    for (const { file, blocks, name, label } of CLINICAL) {
-      const block = blocks[name];
-      if (!block) continue;
-      const hasObservingProp = /\bobserving\b/.test(
-        (/export function \w+\(\{([^}]*)\}/.exec(block)?.[1]) ?? "",
-      );
-      if (!hasObservingProp) {
-        offenders.push(`${file} ${name}: does not destructure an \`observing\` prop`);
-        continue;
-      }
-      // The button (identified by its today's-label text) must sit inside
-      // source that is conditioned on `observing` being false — i.e. some
-      // `observing` check must appear between the component's opening brace
-      // and the button's label, on the same guarded branch. We assert the
-      // weaker, durable form: the literal unconditional JSX
-      // `<PrimaryButton onClick={...}>{label}` must NOT appear verbatim
-      // anywhere `observing` isn't also referenced nearby, i.e. the file
-      // must gate on `observing` at all near this button.
-      const labelIdx = block.indexOf(label);
-      const nearby = block.slice(Math.max(0, labelIdx - 400), labelIdx);
-      if (!/observing/.test(nearby)) {
-        offenders.push(`${file} ${name}: the "${label}" button is not conditioned on \`observing\` anywhere nearby`);
+      if (block && block.includes(label)) {
+        offenders.push(`${file} ${name}: still contains "${label}" — the patient's screen must carry no button for this clinical act`);
       }
     }
     expect(offenders).toEqual([]);
   });
 
-  // Pin default-false, opt-in: every one of these seven components must be
-  // safe to call with no `observing` argument at all (Demo 1's frozen
-  // callers never pass it) and still show today's button — i.e. the prop
-  // must default to false, not be required.
-  it("defaults `observing` to false, so Demo 1's frozen callers are unaffected", () => {
+  // The prop itself must be gone too — its removal is the point of this
+  // change, not just the buttons it used to gate.
+  it("no longer has an `observing` prop anywhere in these components", () => {
     const offenders: string[] = [];
     for (const { file, blocks, name } of CLINICAL) {
       const block = blocks[name];
-      const sig = /export function \w+\(\{([^}]*)\}/.exec(block ?? "")?.[1] ?? "";
-      if (!/observing\s*=\s*false/.test(sig)) {
-        offenders.push(`${file} ${name}: \`observing\` must default to false in the destructured props`);
+      if (block && /\bobserving\b/.test(block)) {
+        offenders.push(`${file} ${name}: still references \`observing\``);
       }
     }
     expect(offenders).toEqual([]);
   });
 
-  // The Live screen's red hang-up button ends Dr. Reed's own session
-  // (onClick={()=>go("review")}) — under observing it must not remain a
-  // live control that ends someone else's call.
-  it("makes the Live screen's hang-up control inert (or removes it) when observing", () => {
+  // The Live screen's red hang-up button ends Dr. Reed's own session — it
+  // must never carry a live handler that lets Alex's phone end her call, and
+  // must always render as visibly inert (aria-disabled, dimmed, no hover).
+  it("keeps the Live screen's hang-up control permanently inert", () => {
     const live = examBlocks["Live"];
     expect(live).toBeTruthy();
-    // The literal hang-up handler `onClick={()=>go("review")}` on the red
-    // phone button must not survive unconditionally — some `observing`
-    // branching must separate the hang-up affordance from the observing case.
-    const hangupIdx = live.indexOf('onClick={()=>go("review")}');
-    expect(hangupIdx, "could not find the hang-up button's onClick in Live").toBeGreaterThan(-1);
-    const nearby = live.slice(Math.max(0, hangupIdx - 400), hangupIdx);
-    expect(nearby, "the hang-up button is not conditioned on `observing` anywhere nearby").toMatch(/observing/);
+    // The hang-up handler must never be wired to end the call.
+    expect(live, "the hang-up button must not call go(\"review\")").not.toContain('onClick={()=>go("review")}');
+    // The button must still be present and marked inert, not silently removed.
+    const phoneIdx = live!.indexOf("rotate-[135deg]");
+    expect(phoneIdx, "could not find the hang-up (phone) icon in Live").toBeGreaterThan(-1);
+    const nearby = live!.slice(Math.max(0, phoneIdx - 200), phoneIdx);
+    expect(nearby, "the hang-up button must carry aria-disabled").toMatch(/aria-disabled/);
   });
 
-  // Demo 2 (patient-app-2.tsx) must actually turn the opt-in on; otherwise
-  // the prop existing is theatre and Demo 2 keeps the bug.
-  it("passes observing to the affected screens from Demo 2's patient app, and Demo 1 never does", () => {
-    const app2 = sourceOf("components/patient-app-2.tsx");
-    const app1 = sourceOf("components/patient-app.tsx");
+  // Demo 2's patient app is the only caller of these seven components — pin
+  // that the call sites stayed clean (no stray `observing` prop left behind).
+  it("calls these seven screens with no `observing` prop from the patient app", () => {
+    const app = sourceOf("components/patient-app-2.tsx");
     for (const { name } of CLINICAL) {
-      const callSite = new RegExp(`<${name}\\b[^>]*/>`).exec(app2)?.[0];
+      const callSite = new RegExp(`<${name}\\b[^>]*/>`).exec(app)?.[0];
       expect(callSite, `patient-app-2.tsx: could not find <${name} .../> call site`).toBeTruthy();
-      expect(callSite, `patient-app-2.tsx: <${name}> must pass observing`).toMatch(/observing/);
-      expect(app1, "patient-app.tsx is frozen and must not pass observing").not.toMatch(
-        new RegExp(`<${name}\\b[^>]*observing`),
-      );
+      expect(callSite, `patient-app-2.tsx: <${name}> must not pass observing`).not.toMatch(/observing/);
     }
   });
 });

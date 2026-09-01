@@ -5,8 +5,8 @@ import { devices } from "./mock-data";
  * The patient's chosen device on Compare, held outside React.
  *
  * Compare and Checkout are separate screens rendered inside
- * `<motion.div key={current}>` (patient-app.tsx and patient-app-2.tsx), so
- * the whole component tree unmounts and remounts on every navigation. A
+ * `<motion.div key={current}>` (patient-app-2.tsx), so the whole component
+ * tree unmounts and remounts on every navigation. A
  * choice held in `useState` on Compare would be gone by the time Checkout
  * mounts — which is exactly how the comparison became theatre: the CTA and
  * Checkout both fell back to a hardcoded `devices[0]` because there was

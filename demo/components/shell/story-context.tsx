@@ -219,8 +219,7 @@ export function useStory(): StoryValue {
 
 /**
  * Non-throwing variant of `useStory`, for components mounted on trees that
- * are not always beneath `<StoryProvider>` (e.g. `Shell`, which Demo 1's
- * frozen, provider-less `patient-app.tsx` also renders). Returns `null`
+ * are not always beneath `<StoryProvider>` (e.g. `Shell`). Returns `null`
  * instead of throwing when there is no provider above.
  */
 export function useStoryOptional(): StoryValue | null {

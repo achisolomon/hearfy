@@ -102,12 +102,12 @@ export function TextSize() {
   // The server render and the client's first paint must agree, and a fresh
   // page always starts at the standard size.
   const i = useSyncExternalStore(subscribe, getIndex, () => 0);
-  // `Shell` (which mounts this) is also rendered by Demo 1's frozen,
-  // provider-less patient-app.tsx — there `story` is null and this stays
-  // patient-facing as before. Under Demo 2's <StoryProvider>, which hosts
-  // both the patient app and the CMA screens through the same `Shell`, this
-  // must render only for the patient role (patient persona §2) — the CMA is
-  // a working professional on their own device, not this control's audience.
+  // `Shell` (which mounts this) hosts both the patient app and the CMA
+  // screens under the same `<StoryProvider>`, so this must render only for
+  // the patient role (patient persona §2) — the CMA is a working
+  // professional on their own device, not this control's audience.
+  // `useStoryOptional` covers `Shell` being mounted with no provider above
+  // it at all, in which case this stays patient-facing by default.
   const story = useStoryOptional();
   const hidden = story !== null && story.role !== "patient";
 

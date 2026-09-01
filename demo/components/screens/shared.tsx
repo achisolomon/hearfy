@@ -107,15 +107,14 @@ export function AudiologistStatusLine({children,className=""}:{children:React.Re
   return <div className={cn("rounded-2xl border px-4 py-3.5 text-sm font-semibold leading-6",dark?"border-white/15 bg-white/10 text-white/85":"border-[#e4eef0] bg-white text-brand-navy",className)}>{children}</div>;
 }
 export function DeviceVisual(){return <div className="flex h-52 items-center justify-center gap-5 bg-gradient-to-br from-[#e8f8f6] via-white to-[#edf3f8]"><div className="h-28 w-16 -rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/><div className="h-28 w-16 rotate-6 rounded-[42px] bg-gradient-to-b from-[#ded7ca] to-[#9f978b] shadow-card"/></div>}
-// `useStoryOptional` returns null on Demo 1's frozen, provider-less
-// patient-app.tsx (see text-size.tsx for the same pattern) — there BottomNav
-// keeps its original bottom-0 position untouched. Under Demo 2's
-// <StoryProvider>, the phone-docked demo control bar (demo-shell.tsx) also
+// Under <StoryProvider>, the phone-docked demo control bar (demo-shell.tsx)
 // wants bottom-0, so BottomNav stacks flush above it instead — bottom-14
 // (== the control bar's h-14) on phone, reverting to bottom-0 on md: where
-// that bar is md:hidden. This is a positioning change only: BottomNav's own
-// items, height, and behavior are unchanged, and Demo 1 never sees a story,
-// so it renders exactly as before.
+// that bar is md:hidden. `useStoryOptional` returns null if `Shell` is ever
+// mounted with no provider above it (see text-size.tsx for the same
+// pattern) — there BottomNav keeps its original bottom-0 position. This is a
+// positioning change only: BottomNav's own items, height, and behavior are
+// unchanged either way.
 export function BottomNav({current,go}:{current:ScreenId;go:(s:ScreenId)=>void}){if(["welcome","signin"].includes(current))return null;const story=useStoryOptional();const items:[[string,any,ScreenId],[string,any,ScreenId],[string,any,ScreenId],[string,any,ScreenId]]=[["Home",Home,"home"],["Journey",Navigation,"assigned"],["Messages",MessageCircle,"support"],["Profile",UserRound,"intake-for"]];return <div className={cn("fixed inset-x-0 z-30 border-t border-[#dce7e9] bg-white/95 backdrop-blur",story?"bottom-14 md:bottom-0":"bottom-0")}>{/* The tab label is the only thing naming each destination, so it is held
     to the same 4.5:1 floor as body text, not treated as decorative chrome:
     the active tab was Vital Teal (2.86:1 at 10px) and the rest slate-400

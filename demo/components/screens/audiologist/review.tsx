@@ -6,7 +6,7 @@ import { EarImage } from "../../exam/otoscopy-step";
 import { createLatch } from "@/lib/latch";
 import { clinician, speech, otoscopy, tympanometry, patient } from "@/lib/mock-data";
 import { HomeFeed } from "./home-feed";
-import { VideoSplit } from "../video-split";
+import { VideoSplit, CallShell } from "../video-split";
 import { ConfirmButton } from "./confirm-button";
 
 /** Signing is irreversible, so the flag outlives the component. See lib/latch. */
@@ -14,9 +14,7 @@ const signedLatch = createLatch();
 
 export function AudReview({ next }: { next: () => void }) {
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
-      <div className="mx-auto max-w-5xl">
-        <PageHeader eyebrow="Clinical review" title={`${patient.name} — exam complete`} />
+    <CallShell header={<PageHeader eyebrow="Clinical review" title={`${patient.name} — exam complete`} />}>
 
         {/* The room stays on screen until the patient is fitted and happy
            (refined 2026-08-31) — she reviews while still on the call, and the
@@ -93,19 +91,16 @@ export function AudReview({ next }: { next: () => void }) {
 
           <div className="mt-5 max-w-sm"><PrimaryButton onClick={next}>Continue to signature</PrimaryButton></div>
         </VideoSplit>
-      </div>
-    </div>
+    </CallShell>
   );
 }
 
 export function AudSign({ next }: { next: () => void }) {
   const signed = signedLatch.use();
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
-      <div className="mx-auto max-w-5xl">
-      {/* Same page header as every other audiologist screen (consistency,
-         Achi 2026-08-31) — the card below carries the state, not the title. */}
-      <PageHeader eyebrow="Signature" title={`${patient.name} — sign the report`} />
+    // Same page header as every other audiologist screen (consistency,
+    // Achi 2026-08-31) — the card below carries the state, not the title.
+    <CallShell header={<PageHeader eyebrow="Signature" title={`${patient.name} — sign the report`} />}>
       <VideoSplit video={<HomeFeed beat="listening" />}>
       <Card className="w-full max-w-lg p-7">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-teal-ink">
@@ -141,7 +136,6 @@ export function AudSign({ next }: { next: () => void }) {
         </div>
       </Card>
       </VideoSplit>
-      </div>
-    </div>
+    </CallShell>
   );
 }

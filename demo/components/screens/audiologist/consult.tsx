@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { devices, deviceDetail, tiers, clinician, patient } from "@/lib/mock-data";
 import { HomeFeed } from "./home-feed";
-import { VideoSplit } from "../video-split";
+import { VideoSplit, CallShell } from "../video-split";
 import { ConfirmButton } from "./confirm-button";
 
 /**
@@ -26,20 +26,20 @@ export function AudConsult({ next }: { next: () => void }) {
   const excluded = devices[2].name;
 
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <PageHeader eyebrow="Recorded consult" title={`Device shortlist for ${patient.name}`} />
-          </div>
-          {/* #b91c1c on #fef2f2 is 6.05:1; the shipped red-600 measured 4.41:1
-             at this 12px size, just under the floor PRODUCT.md sets. */}
-          <span className="mt-1 flex shrink-0 items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-[#b91c1c]">
-            <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
-            <span aria-hidden>REC</span>
-            <span className="sr-only">This consult is being recorded</span>
-          </span>
+    <CallShell header={
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <PageHeader eyebrow="Recorded consult" title={`Device shortlist for ${patient.name}`} />
         </div>
+        {/* #b91c1c on #fef2f2 is 6.05:1; the shipped red-600 measured 4.41:1
+           at this 12px size, just under the floor PRODUCT.md sets. */}
+        <span className="mt-1 flex shrink-0 items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-[#b91c1c]">
+          <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
+          <span aria-hidden>REC</span>
+          <span className="sr-only">This consult is being recorded</span>
+        </span>
+      </div>
+    }>
 
         {/* She presents the shortlist INTO the room — the call carries the
            consult until the patient is fitted, in the same place and size as
@@ -126,19 +126,16 @@ export function AudConsult({ next }: { next: () => void }) {
           )}
         </div>
         </VideoSplit>
-      </div>
-    </div>
+    </CallShell>
   );
 }
 
 export function AudPrescription() {
   const locked = lockedLatch.use();
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
-      <div className="mx-auto max-w-5xl">
-      {/* Same page header as every other audiologist screen (consistency,
-         Achi 2026-08-31) — the card below carries the state, not the title. */}
-      <PageHeader eyebrow="Prescription" title={`${patient.name} — sign & lock`} />
+    // Same page header as every other audiologist screen (consistency,
+    // Achi 2026-08-31) — the card below carries the state, not the title.
+    <CallShell header={<PageHeader eyebrow="Prescription" title={`${patient.name} — sign & lock`} />}>
       {/* Signing: she walks him through it and he is agreeing, so he listens
          rather than reporting a tone. */}
       <VideoSplit video={<HomeFeed beat="listening" />}>
@@ -171,7 +168,6 @@ export function AudPrescription() {
         )}
       </Card>
       </VideoSplit>
-      </div>
-    </div>
+    </CallShell>
   );
 }

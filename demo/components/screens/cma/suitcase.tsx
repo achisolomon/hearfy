@@ -5,6 +5,7 @@ import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
 import { createLatch } from "@/lib/latch";
 import { Shell } from "../shared";
+import { CallShell } from "../video-split";
 import { CallSplit } from "./call-tile";
 import { devices, deviceDetail, identity, patient, serials, compareRecommendation, tryOnTalk } from "@/lib/mock-data";
 import { CompareTable } from "../compare-table";
@@ -24,8 +25,7 @@ const triedLatch = createLatch();
 export function CmaStock({ next }: { next: () => void }) {
   const shortlist = devices.slice(0, 3);
   return (
-    <Shell tablet>
-      <PageHeader title="Signed shortlist" subtitle="Open the case. The patient tries what is here." eyebrow="Prescription locked" />
+    <CallShell header={<PageHeader title="Signed shortlist" subtitle="Open the case. The patient tries what is here." eyebrow="Prescription locked" />}>
       <CallSplit active note={compareRecommendation.note}>
         {/* The same comparison the patient is reading, read-only: the CMA
            follows the conversation without being able to choose or sell. */}
@@ -69,7 +69,7 @@ export function CmaStock({ next }: { next: () => void }) {
         </Card>
         <div className="mt-6"><PrimaryButton onClick={next}>Start try-on</PrimaryButton></div>
       </CallSplit>
-    </Shell>
+    </CallShell>
   );
 }
 
@@ -81,8 +81,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
   const everTried = triedLatch.use();
   const gateOpen = tried.length > 0 || everTried;
   return (
-    <Shell tablet>
-      <PageHeader title="Try-on" subtitle="Fit each device. The patient tells Dr. Reed how it feels and what they hear." eyebrow="In the home" />
+    <CallShell header={<PageHeader title="Try-on" subtitle="Fit each device. The patient tells Dr. Reed how it feels and what they hear." eyebrow="In the home" />}>
       <CallSplit active note="Asking how each one sounds — comfort and retention are hers to judge with the patient.">
         <div className="space-y-3">
           {inCase.map(d => {
@@ -132,7 +131,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
           </PrimaryButton>
         </div>
       </CallSplit>
-    </Shell>
+    </CallShell>
   );
 }
 
@@ -148,8 +147,7 @@ export function CmaSigning({ next }: { next: () => void }) {
   const s = useSigning();
 
   return (
-    <Shell tablet>
-      <PageHeader title="Patient is signing" subtitle={`${chosen.name} · ${tier.name} membership — on the patient's phone`} eyebrow="Contract" />
+    <CallShell header={<PageHeader title="Patient is signing" subtitle={`${chosen.name} · ${tier.name} membership — on the patient's phone`} eyebrow="Contract" />}>
       <CallSplit active note="Walking the patient through each item on the call — the approvals below are the patient's own.">
         <Card className="p-4">
           <p className="text-sm leading-6 text-slate-500">
@@ -193,7 +191,7 @@ export function CmaSigning({ next }: { next: () => void }) {
           </PrimaryButton>
         </div>
       </CallSplit>
-    </Shell>
+    </CallShell>
   );
 }
 
@@ -203,8 +201,7 @@ export function CmaActivate({ next }: { next: () => void }) {
   const tier = deviceDetail[chosen.name].tier;
   const { monthly, credit, dueNow } = creditedFirstMonth(tier);
   return (
-    <Shell tablet>
-      <PageHeader title="Fit &amp; activate" subtitle={`${chosen.name} · ${tierFor(tier).name} membership`} eyebrow="Same day" />
+    <CallShell header={<PageHeader title="Fit &amp; activate" subtitle={`${chosen.name} · ${tierFor(tier).name} membership`} eyebrow="Same day" />}>
       {/* She stays on the call until the patient is fitted and happy — this
          is the last screen of the session she is part of. */}
       <CallSplit note="Still on with you both — she confirms the fit sounds right before the call ends.">
@@ -227,7 +224,7 @@ export function CmaActivate({ next }: { next: () => void }) {
         </div>
         <div className="mt-6"><PrimaryButton onClick={next}>Activated</PrimaryButton></div>
       </CallSplit>
-    </Shell>
+    </CallShell>
   );
 }
 

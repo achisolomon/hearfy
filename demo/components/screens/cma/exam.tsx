@@ -1,6 +1,6 @@
 "use client";
 import { PageHeader, PrimaryButton } from "../../ui";
-import { Shell } from "../shared";
+import { CallShell } from "../video-split";
 import { CallSplit } from "./call-tile";
 import { OtoscopyStep } from "../../exam/otoscopy-step";
 import { TympanometryStep } from "../../exam/tympanometry-step";
@@ -36,13 +36,12 @@ function ExamStepShell({ id, note, active = false, cta, next, children }: {
 }) {
   const s = step(id);
   return (
-    <Shell tablet>
-      <PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />
+    <CallShell header={<PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />}>
       <CallSplit note={note} active={active}>
         {children}
         <div className="mt-6"><PrimaryButton onClick={next}>{cta}</PrimaryButton></div>
       </CallSplit>
-    </Shell>
+    </CallShell>
   );
 }
 

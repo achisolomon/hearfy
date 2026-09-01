@@ -2282,6 +2282,87 @@ describe("the audiologist presents the comparison", () => {
   });
 });
 
+describe("the call never moves between beats", () => {
+  // Owner, 2026-09-01: "make sure that all the videos in all the slides are in
+  // exactly the same place and exactly the same size so that they will not
+  // jump between one beat to another."
+  //
+  // `VideoSplit` had always guaranteed the SIZE (380px, 4:3) and it held.
+  // What drifted was the PLACE, because a 380px column still starts wherever
+  // its page container starts. Measured walking the demo at 1440px, the call
+  // landed in three different spots and at three different heights:
+  //
+  //   x=96  y=264  CMA exam steps   (Shell tablet, xl:max-w-6xl + px-5)
+  //   x=145 y=210  audiologist      (hand-rolled max-w-5xl + p-6)
+  //   x=217 y=232  device shortlist (hand-rolled max-w-4xl + p-6)
+  //
+  // so the video slid 49px right at the first audiologist beat, another 72px
+  // at the shortlist, and up to 54px vertically — on the one screen whose job
+  // is to look like ONE synchronized system. It now measures x=96 y=261 on
+  // all thirteen video beats. These guard the two causes.
+
+  // Cause 1, horizontal: a screen that carries the call rolls its own page
+  // container instead of using the shared one.
+  it("gives every call screen the one shared page container", () => {
+    const callScreens = componentFiles().filter(f =>
+      /<VideoSplit|<CallSplit/.test(sourceOf(f)));
+    expect(callScreens.length, "expected the demo to still have call screens")
+      .toBeGreaterThan(3);
+    for (const f of callScreens) {
+      const src = sourceOf(f);
+      // A hand-rolled `mx-auto max-w-*` around a call is exactly what put the
+      // three x positions on screen. CallShell (or Shell) owns that width.
+      expect(src, `${f} must not roll its own page container around the call`)
+        .not.toMatch(/mx-auto max-w-\dxl/);
+    }
+  });
+
+  // Cause 2, vertical: the header above the call is a different height on
+  // different beats, so the video below it starts lower or higher. A subtitle
+  // is worth 40px and a status-pill wrapper's margin another 23px, and both
+  // are real content that should not be deleted to line the geometry up — so
+  // CallShell reserves the tallest header's height and short ones leave the
+  // remainder empty.
+  it("reserves a fixed header height above the call", () => {
+    const src = sourceOf("components/screens/video-split.tsx");
+    expect(src, "CallShell must export the reserved header height")
+      .toMatch(/export const CALL_HEADER_MIN = \d+/);
+    expect(src, "CallShell must apply it as a min-height above the children")
+      .toMatch(/md:min-h-\[var\(--call-header\)\]/);
+  });
+
+  // The floor must be in `em`, not `px` (caught by mobile-sweep at 320px with
+  // a 32px browser font, which is the phone accessibility extreme).
+  //
+  // A px floor is correct at ONE rem base and wrong at every other, in both
+  // directions: at a large text size the headers outgrow it, so the
+  // reservation silently stops working and the beats drift apart again; and
+  // the space it holds below a SHORT header stays frozen at its 16px size,
+  // pushing the last device card's "Recommended" button underneath the docked
+  // control bar. `em` makes one number track the type it is reserving for.
+  it("scales the reserved header height with the text size", () => {
+    const src = sourceOf("components/screens/video-split.tsx");
+    for (const v of ["--call-header-sm", "--call-header"]) {
+      const m = new RegExp(`"${v}": \`\\$\\{CALL_HEADER_MIN(_SM)? / 16\\}em\``);
+      expect(src, `${v} must be expressed in em, not px`).toMatch(m);
+    }
+    expect(src, "no px header floor may come back")
+      .not.toMatch(/"--call-header(-sm)?": `\$\{CALL_HEADER_MIN(_SM)?\}px`/);
+  });
+
+  // The header must go through that slot, or the reservation is skipped and
+  // the beat's video sits at its own height again. A call screen rendering a
+  // PageHeader in `children` is the shape that regressed.
+  it("routes every call screen's header through the reserved slot", () => {
+    for (const f of componentFiles()) {
+      const src = sourceOf(f);
+      if (!/<CallShell/.test(src)) continue;
+      expect(src, `${f} must pass its PageHeader to CallShell's header slot`)
+        .not.toMatch(/<CallShell>\s*(\{\/\*(?:[^*]|\*(?!\/))*\*\/\}\s*)?<PageHeader/);
+    }
+  });
+});
+
 describe("one call tile everywhere", () => {
   // The call was drawn two ways: VideoSplit's 380px 4:3 panel for the CMA and
   // audiologist, and a slim strip with a 96x80 thumbnail on the patient's five

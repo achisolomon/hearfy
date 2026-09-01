@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { supervisionQueue, clinician, type SupervisionExam } from "@/lib/mock-data";
 import { Audiogram } from "../../charts/audiogram";
 import { HomeFeed } from "./home-feed";
-import { VideoSplit } from "../video-split";
+import { VideoSplit, CallShell } from "../video-split";
 import { ExamPeek } from "./peek";
 
 /** Red flags first, then longest wait — the MRD prioritisation cues (spec §7). */
@@ -99,13 +99,13 @@ export function AudPanel() {
   const open = supervisionQueue.find(e => e.id === openId) ?? null;
 
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
-      <div className="mx-auto max-w-5xl">
-        <PageHeader
-          eyebrow="Live supervision"
-          title="Six exams in progress"
-          subtitle={`${clinician.name}, ${clinician.credential} · Licensed in ${clinician.licenseState}`}
-        />
+    <CallShell header={
+      <PageHeader
+        eyebrow="Live supervision"
+        title="Six exams in progress"
+        subtitle={`${clinician.name}, ${clinician.credential} · Licensed in ${clinician.licenseState}`}
+      />
+    }>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {list.map(e => (
@@ -142,22 +142,21 @@ export function AudPanel() {
             per clinician, pending validated protocol and legal approval.
           </p>
         </Card>
-      </div>
-    </div>
+    </CallShell>
   );
 }
 
 export function AudMonitor({ next }: { next: () => void }) {
   const hero = supervisionQueue.find(e => e.hero)!;
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <PageHeader eyebrow="Monitoring" title={`${hero.name} · ${hero.step}`} />
-          </div>
-          <span className="mt-1 shrink-0"><StatusPill tone="teal">Live</StatusPill></span>
+    <CallShell header={
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <PageHeader eyebrow="Monitoring" title={`${hero.name} · ${hero.step}`} />
         </div>
+        <span className="mt-1 shrink-0"><StatusPill tone="teal">Live</StatusPill></span>
+      </div>
+    }>
 
         {/* The one shared video geometry (refined 2026-08-31): the room feed
            sits where the call sits on every screen, clinical data beside it. */}
@@ -180,7 +179,6 @@ export function AudMonitor({ next }: { next: () => void }) {
             </Card>
           </div>
         </VideoSplit>
-      </div>
-    </div>
+    </CallShell>
   );
 }

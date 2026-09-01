@@ -288,6 +288,14 @@ describe("corrections sheet 2026-08-31", () => {
 
   // Only the patient is on a phone (refined 2026-08-31): every CMA screen
   // uses the tablet column, not the phone-width strip.
+  //
+  // Two components render that column, and the test asks for EITHER (owner,
+  // 2026-09-01): `Shell tablet` for a CMA screen with no video, `CallShell`
+  // for one carrying the call. They resolve to the same max-width ramp on
+  // purpose — CallShell exists to give the video the same container on both
+  // roles — so a screen using it is as much "laid out for a tablet" as one
+  // using Shell. Pinning the NAME would have failed a screen that satisfies
+  // the rule, which is the tell of a guard testing spelling over behaviour.
   it("lays out every CMA screen for a tablet", () => {
     for (const file of [
       "components/screens/cma/day.tsx",
@@ -297,8 +305,23 @@ describe("corrections sheet 2026-08-31", () => {
       "components/screens/cma/handoff.tsx",
       "components/screens/cma/suitcase.tsx",
     ]) {
-      expect(sourceOf(file), `${file} must use the tablet Shell`).toMatch(/<Shell tablet>/);
+      expect(sourceOf(file), `${file} must use the tablet column (Shell tablet or CallShell)`)
+        .toMatch(/<Shell tablet>|<CallShell[\s>]/);
     }
+  });
+
+  // And the two must actually BE the same column, or the sentence above is a
+  // lie and the video moves between a CMA beat and an audiologist one. Both
+  // ramps are pinned here so widening one without the other fails loudly.
+  it("gives Shell tablet and CallShell the same width ramp", () => {
+    const ramp = /max-w-md[^"]*md:max-w-3xl[^"]*lg:max-w-4xl[^"]*xl:max-w-6xl/;
+    const shell = sourceOf("components/screens/shared.tsx");
+    const call = sourceOf("components/screens/video-split.tsx");
+    expect(shell, "Shell's tablet ramp changed").toMatch(/max-w-md md:max-w-3xl lg:max-w-4xl xl:max-w-6xl/);
+    expect(call, "CallShell must use that same ramp").toMatch(ramp);
+    // Same horizontal padding, or the column starts at a different x even
+    // with an identical max-width.
+    expect(call, "CallShell must use Shell's px-5").toMatch(/px-5/);
   });
 
   // Items 5, 12 — every CMA screen a beat points at must be wired in the

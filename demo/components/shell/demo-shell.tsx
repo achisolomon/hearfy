@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Home, X } from "lucide-react";
 import { BrandLogo } from "../ui";
 import { PersonaAvatar } from "../persona-avatar";
 import { useIsLargestTextSize } from "../a11y/text-size";
@@ -15,7 +15,7 @@ import { prevBeatForRole } from "@/lib/story";
 import { useStory } from "./story-context";
 
 export function DemoShell() {
-  const { phase, next, back, beat, mode, role, atWalkEnd } = useStory();
+  const { phase, next, back, beat, mode, role, atWalkEnd, restart } = useStory();
   const [sheet, setSheet] = useState(false);
   const isLargestText = useIsLargestTextSize();
   // Both walks clamp at their first beat, so Back is dead there rather than
@@ -40,7 +40,31 @@ export function DemoShell() {
             for all nine dots. Nothing is removed at any width; the stage
             jumper simply reappears once it fits. */}
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-5 lg:gap-4">
-          <BrandLogo compact />
+          {/* The logo is the home button (owner, 2026-09-01: "every time that
+              someone is clicking on the HearFy icon, we go back to the base").
+              It was inert decoration, which wasted the one mark on screen that
+              every other product has already taught people to click to get
+              home — so a viewer deep in one persona's day had no way back to
+              the cover but stepping back a beat at a time.
+
+              `restart` is the story context's own call, the same one the
+              end-cap's "Watch it again" button uses: cover phase, beat 0,
+              guided mode. Reusing it rather than re-implementing "go to the
+              base" here keeps the two entry points from drifting.
+
+              A <button>, not a div with an onClick, so it is focusable and
+              works from the keyboard without further effort. BrandLogo's bars
+              are `aria-hidden` and `compact` drops the wordmark, so the
+              control would otherwise be nameless — hence the explicit label,
+              which says what happens rather than naming the picture. */}
+          <button
+            onClick={restart}
+            aria-label="HearFy — back to the start"
+            title="Back to the start"
+            className="shrink-0 rounded-xl px-1 transition hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
+          >
+            <BrandLogo compact />
+          </button>
           <div className="min-w-0 shrink"><RoleTabs /></div>
           <div className="flex-1" />
           <div className="hidden xl:block"><Timeline /></div>
@@ -233,6 +257,31 @@ export function DemoShell() {
               <RoleTabs full />
               <p className="mb-2 mt-6 text-[11px] font-extrabold uppercase tracking-[.2em] text-slate-400">Jump to stage</p>
               <Timeline full />
+              {/* The same "back to the base" the logo gives on desktop. The
+                  top bar that carries the logo is `md:block`, so on a phone
+                  there was no logo to click and the feature would have
+                  shipped for half the audience — and this demo is reviewed on
+                  a real phone.
+
+                  It goes in the sheet rather than the docked bar because that
+                  bar is already width-critical at 375px: Back (40px), the
+                  persona pill and Next were measured down to the pixel across
+                  three text sizes, and Next collapses to an icon at the
+                  largest step to make the persona name fit at all. A fourth
+                  control there would undo that work. The sheet is where the
+                  phone's navigation already lives — role and stage — so
+                  "start over" belongs beside them.
+
+                  It closes the sheet as well as restarting: `restart` moves
+                  to the cover phase, which unmounts this bar entirely, but
+                  leaving `sheet` true would spring the overlay open again the
+                  moment the viewer re-entered the journey. */}
+              <button
+                onClick={() => { setSheet(false); restart(); }}
+                className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#d8e5e8] bg-white px-5 font-bold text-brand-navy"
+              >
+                <Home size={17} /> Back to the start
+              </button>
             </motion.div>
           </motion.div>
         )}

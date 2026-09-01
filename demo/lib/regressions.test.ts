@@ -2400,3 +2400,59 @@ describe("route map direction", () => {
     expect(movers.length).toBe(2);
   });
 });
+
+
+// Owner, 2026-09-01: "Let's do home button on the icon on the left so that
+// every time that someone is clicking on the HearFy icon, we go back to the
+// base."
+//
+// The logo sat in the shell's top bar as inert decoration. It is the one mark
+// on screen a viewer already reads as "home" — in every other product it goes
+// back to the start — so a demo that has walked deep into one persona's day
+// offered no way back to the cover except stepping back beat by beat.
+describe("the logo as a home button", () => {
+  const shell = sourceOf("components/shell/demo-shell.tsx");
+  const ui = sourceOf("components/ui.tsx");
+
+  // The mark must be a real control, not a div someone hung an onClick on:
+  // a button is focusable and reachable from the keyboard for free.
+  it("makes the shell's logo a button that restarts the demo", () => {
+    // No `s` flag: tsconfig targets ES2017, where it does not compile
+    // (`npm run prebuild` typechecks before it builds, so it blocks the
+    // build outright). It buys nothing here anyway — `[^>]*` cannot cross
+    // the `>` it stops at, and no `.` in this pattern needs to match a
+    // newline.
+    expect(shell).toMatch(/<button[^>]*onClick=\{restart\}/);
+    expect(shell).toMatch(/restart/);
+    // It pulls `restart` off the story context rather than re-implementing
+    // "go to the cover" — the end-cap's "Watch it again" uses the same call,
+    // so the two entry points cannot drift apart.
+    expect(shell).toMatch(/useStory\(\)/);
+  });
+
+  // A picture of a logo says nothing to a screen reader, and the mark itself
+  // is aria-hidden inside BrandLogo — without a label the control is an
+  // unnamed button.
+  it("names the control for assistive tech", () => {
+    expect(shell).toMatch(/aria-label="[^"]*[Ss]tart[^"]*"/);
+  });
+
+  // BrandLogo is also rendered on the cover, the end-cap, the landing page
+  // and inside PageHeader — none of which sit under StoryProvider. Baking
+  // the click into the shared component would either break those or make the
+  // logo silently do nothing in most places it appears.
+  it("leaves the shared BrandLogo inert", () => {
+    expect(ui).not.toMatch(/export function BrandLogo[\s\S]{0,400}?onClick/);
+  });
+
+  // The bar carrying the logo is `md:block` — invisible on a phone. Shipping
+  // the home button on the desktop bar alone would leave it missing on the
+  // device this demo is actually reviewed on, so the phone sheet carries the
+  // same action. It closes the sheet on the way out: `restart` unmounts the
+  // bar, and a still-open `sheet` would spring the overlay back the moment
+  // the viewer re-entered the journey.
+  it("gives the phone the same way back to the base", () => {
+    expect(shell).toMatch(/setSheet\(false\);\s*restart\(\)/);
+    expect(shell).toContain("Back to the start");
+  });
+});

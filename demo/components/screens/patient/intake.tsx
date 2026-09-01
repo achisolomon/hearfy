@@ -16,7 +16,55 @@ import { Option, Shell, StepPage } from "../shared";
 const redFlagLatch = createLatch();
 
 export function IntakeFor({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [a,setA]=useState(0);return <StepPage title="Who is the visit for?" subtitle="You can book for yourself or someone you care for." step={1} onBack={back} onNext={()=>go("intake-needs")}><Option title="Myself" sub="I am the patient" icon={UserRound} active={a===0} onClick={()=>setA(0)}/><Option title="A family member" sub="I’ll help manage their care" icon={HeartPulse} active={a===1} onClick={()=>setA(1)}/></StepPage>}
-export function IntakeNeeds({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [a,setA]=useState(0);return <StepPage title="What are you noticing?" subtitle="Choose the main issue. You can add more later." step={2} onBack={back} onNext={()=>go("intake-medical")}><Option title="Speech is unclear" sub="Especially in groups or background noise" active={a===0} onClick={()=>setA(0)}/><Option title="TV or phone volume is too high" active={a===1} onClick={()=>setA(1)}/><Option title="Ringing in the ears" active={a===2} onClick={()=>setA(2)}/><Option title="A recent change in hearing" active={a===3} onClick={()=>setA(3)}/></StepPage>}
+// The needs the pre-visit questionnaire asks about co-occur — unclear speech
+// in noise, a loud TV and ringing are commonly the SAME patient, not four
+// different ones — so holding one `useState(0)` index here (owner,
+// 2026-09-01) silently discarded every answer but the last one clicked, and
+// the copy already promised otherwise ("You can add more later"). A Set of
+// chosen titles replaces the index: clicking toggles rather than replaces,
+// and the screen keeps the whole answer.
+//
+// The keys are the option TITLES rather than positions, so reordering or
+// inserting a need cannot silently re-map an existing selection onto a
+// different answer.
+const NEEDS: {title:string;sub?:string}[] = [
+  {title:"Speech is unclear",sub:"Especially in groups or background noise"},
+  {title:"TV or phone volume is too high"},
+  {title:"Ringing in the ears"},
+  {title:"A recent change in hearing"},
+];
+export function IntakeNeeds({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const [chosen,setChosen] = useState<Set<string>>(new Set());
+  // A new Set every toggle: mutating the held one keeps the same reference,
+  // so React would bail out of the re-render and the tick would not appear.
+  const toggle = (title:string)=>setChosen(prev=>{
+    const next = new Set(prev);
+    if(!next.delete(title)) next.add(title);
+    return next;
+  });
+  // Nothing chosen is not an answer to "what are you noticing?", and the
+  // step used to be un-skippable only because one option was preselected.
+  // With a real empty state the button has to hold the door instead.
+  const count = chosen.size;
+  return <StepPage
+    title="What are you noticing?"
+    subtitle="Choose everything that applies. Most people notice more than one."
+    step={2} onBack={back}
+    onNext={()=>{if(count) go("intake-medical");}}
+    nextDisabled={count===0}
+    next={count>1?`Continue with ${count} answers`:"Continue"}>
+    {/* `group`, not `radiogroup`: this list accepts several answers, and the
+        count is announced so a screen-reader user hears the selection grow
+        without having to re-read the list. */}
+    <div role="group" aria-label="What are you noticing? Choose all that apply." className="space-y-3">
+      {NEEDS.map(n=><Option key={n.title} title={n.title} sub={n.sub} multi
+        active={chosen.has(n.title)} onClick={()=>toggle(n.title)}/>)}
+    </div>
+    <p role="status" className="text-center text-xs leading-5 text-slate-500">
+      {count===0?"Select at least one to continue.":`${count} selected`}
+    </p>
+  </StepPage>;
+}
 export function IntakeMedical({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   // Tracks an explicit "go back" on this mount, so the still-set latch (which
   // survives a remount on purpose) doesn't override a deliberate dismissal.

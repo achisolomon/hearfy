@@ -2401,7 +2401,6 @@ describe("route map direction", () => {
   });
 });
 
-
 // Owner, 2026-09-01: "Let's do home button on the icon on the left so that
 // every time that someone is clicking on the HearFy icon, we go back to the
 // base."
@@ -2454,5 +2453,87 @@ describe("the logo as a home button", () => {
   it("gives the phone the same way back to the base", () => {
     expect(shell).toMatch(/setSheet\(false\);\s*restart\(\)/);
     expect(shell).toContain("Back to the start");
+  });
+});
+
+// Owner, 2026-09-01: on page 2, the "Pre-visit questionnaire (What are you
+// noticing?)" beat, "there is a need for multiple choices from the questions
+// (currently it is a single choice)".
+//
+// The screen held one `useState(0)` index, so every click REPLACED the last
+// answer: a patient who notices unclear speech AND ringing could only ever
+// record one of them, while the subtitle promised "You can add more later".
+// These needs co-occur — they are commonly the same patient, not four
+// different ones — so the single index was losing real clinical answer.
+describe("the pre-visit questionnaire's answers", () => {
+  const intake = sourceOf("components/screens/patient/intake.tsx");
+  const shared = sourceOf("components/screens/shared.tsx");
+  const needs = intake
+    .split(/(?=export function )/)
+    .find(s => s.startsWith("export function IntakeNeeds"));
+
+  it("has the needs screen", () => {
+    expect(needs, "IntakeNeeds not found").toBeTruthy();
+  });
+
+  // The bug itself: one index cannot hold two answers. Whatever replaces it
+  // must be a collection, and the tell-tale `a===n` comparisons that made
+  // selection exclusive must be gone.
+  it("keeps every answer, not just the last one clicked", () => {
+    expect(needs, "a single index cannot hold two answers")
+      .not.toMatch(/useState\(0\)/);
+    expect(needs, "`a===n` is what made the choice exclusive")
+      .not.toMatch(/a===\d/);
+    expect(needs, "the answer must be a collection").toMatch(/new Set/);
+  });
+
+  // Toggling, not replacing: clicking a chosen need must clear it, or a
+  // mis-click becomes permanent on a screen with no other way to undo.
+  it("lets a chosen need be un-chosen", () => {
+    expect(needs, "clicking an already-chosen need must remove it")
+      .toMatch(/\.delete\(/);
+  });
+
+  // A mutated Set keeps its reference, so React bails out of the re-render
+  // and the tick never appears — the classic way a Set-in-state silently
+  // does nothing. The copy has to be made before the mutation.
+  it("copies the Set instead of mutating state in place", () => {
+    expect(needs, "a mutated Set re-renders nothing").toMatch(/new Set\(prev\)/);
+  });
+
+  // A round indicator is the universal "pick one" signal. A list that takes
+  // several answers wearing one tells the viewer the opposite of the truth,
+  // which is exactly how the single-choice behaviour went unnoticed.
+  it("marks the multi-answer list as multi-answer", () => {
+    expect(needs, "the needs list must opt into the multi variant")
+      .toMatch(/multi/);
+    expect(shared, "multi options need a square box, not a radio circle")
+      .toMatch(/multi\?"rounded-md":"rounded-full"/);
+    expect(shared, "several-of lists are aria-pressed, one-of lists are radios")
+      .toMatch(/aria-pressed/);
+  });
+
+  // Single-answer steps must be untouched by this: IntakeFor, IntakeCoverage
+  // and BookTime each still keep exactly one answer, and a regression that
+  // made THEM multi-select would be just as wrong in the other direction.
+  it("leaves the single-answer steps single-answer", () => {
+    for (const name of ["IntakeFor", "IntakeCoverage"]) {
+      const step = intake
+        .split(/(?=export function )/)
+        .find(s => s.startsWith(`export function ${name}`));
+      expect(step, `${name} not found`).toBeTruthy();
+      expect(step, `${name} must still hold one answer`).toMatch(/useState\(0\)/);
+      expect(step, `${name} must not become multi-select`).not.toMatch(/multi/);
+    }
+  });
+
+  // With nothing preselected the step starts genuinely empty, so Continue has
+  // to hold the door — otherwise the viewer walks past the question having
+  // answered nothing, which the old preselected index quietly prevented.
+  it("does not advance with no answer chosen", () => {
+    expect(needs, "Continue must be disabled while nothing is chosen")
+      .toMatch(/nextDisabled/);
+    expect(shared, "StepPage must be able to disable its primary action")
+      .toMatch(/nextDisabled=\{?false|nextDisabled\?:\s*boolean/);
   });
 });

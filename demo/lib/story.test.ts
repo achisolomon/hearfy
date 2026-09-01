@@ -86,10 +86,17 @@ describe("pointer maths", () => {
 
 describe("solo mode (per-persona entry)", () => {
   it("lists only beats where the role's screen changes", () => {
-    const beats = beatsForRole("operator");
-    // The operator's dashboard is ambient at every beat, so a solo operator
-    // walk is a single stop — never 31 presses of Next on the same screen.
-    expect(beats.length).toBe(1);
+    // The operator used to be the example here (his dashboard was one screen
+    // id for the whole script), but he now gets a stage-driven walk instead
+    // of a screen-change-driven one (see "the operator's walk" below) — so
+    // this asserts the screen-change rule on a role it still governs.
+    const beats = beatsForRole("cma");
+    const screens = beats.map(i => BEATS[i].screens.cma);
+    // Never two consecutive stops on the same screen — that is what makes
+    // Next always change the view instead of repeating a press.
+    screens.forEach((s, i) => {
+      if (i > 0) expect(s).not.toBe(screens[i - 1]);
+    });
   });
 
   it("gives the CMA a walk through their own screens", () => {
@@ -149,11 +156,14 @@ describe("solo mode (per-persona entry)", () => {
 
 describe("solo walk boundaries", () => {
   it("a role whose screen never changes has a one-beat walk", () => {
-    // The operator's dashboard is ambient at every beat. Pressing Next must
-    // not advance — and the shell must not read that as the demo ending.
-    const beats = beatsForRole("operator");
-    expect(beats).toEqual([0]);
-    expect(nextBeatForRole(0, "operator")).toBe(0);
+    // The operator is no longer such a role — his walk is the nine stages —
+    // so this asserts the rule on the generic path instead of on him.
+    const roles = ROLES.filter(r => r !== "operator");
+    for (const role of roles) {
+      const screens = BEATS.map(b => b.screens[role]);
+      const unchanging = screens.every(s => s === screens[0]);
+      if (unchanging) expect(beatsForRole(role)).toEqual([0]);
+    }
   });
 
   it("every role's walk starts at or before its first appearance", () => {
@@ -170,6 +180,41 @@ describe("solo walk boundaries", () => {
       const seen = new Set(walk.map(i => BEATS[i].screens[role]));
       const all = new Set(BEATS.map(b => b.screens[role]));
       expect(seen, `${role} walk misses a screen`).toEqual(all);
+    }
+  });
+});
+
+describe("the operator's walk", () => {
+  // His dashboard is one screen id for the whole script, so the screen-change
+  // rule gave him a one-beat walk: entering as him showed "End of this
+  // persona's day" on the first screen and the chrome's Next was dead. The
+  // dashboard reacts to the stage, so his walk is the nine stages.
+  it("gives the operator one stop per stage", () => {
+    const walk = beatsForRole("operator");
+    expect(walk).toHaveLength(STAGES.length);
+    expect(walk.map(i => BEATS[i].stage)).toEqual(STAGES.map(s => s.n));
+  });
+
+  it("starts the operator's walk at the first beat", () => {
+    expect(beatsForRole("operator")[0]).toBe(0);
+  });
+
+  it("advances the operator a stage at a time", () => {
+    const walk = beatsForRole("operator");
+    for (let k = 0; k < walk.length - 1; k++) {
+      expect(nextBeatForRole(walk[k], "operator")).toBe(walk[k + 1]);
+    }
+    // ...and stops at the last stage rather than running off the end.
+    const last = walk[walk.length - 1];
+    expect(nextBeatForRole(last, "operator")).toBe(last);
+  });
+
+  it("still gives every other role a walk driven by their screen changes", () => {
+    for (const role of ["patient", "cma", "audiologist"] as const) {
+      const walk = beatsForRole(role);
+      const screens = walk.map(i => BEATS[i].screens[role]);
+      // No two consecutive stops show the same screen.
+      expect(screens).toEqual(screens.filter((s, k) => k === 0 || s !== screens[k - 1]));
     }
   });
 });

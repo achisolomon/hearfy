@@ -367,3 +367,43 @@ describe("selection colour", () => {
     expect(contrastRatio("#FFFFFF", "#0B2340")).toBeGreaterThanOrEqual(7);
   });
 });
+/**
+ * The home hero's polarity.
+ *
+ * The hero was a navy Card holding a white button: the action colour spent on
+ * the card, so the button had to be its inverse. Under the Selection Rule that
+ * reads wrong twice — navy means "chosen" elsewhere, and this navy is not a
+ * choice — and it put the largest light-on-dark block in the patient journey
+ * in front of the persona least able to read it. Dark ink on a light ground is
+ * the polarity an ageing eye handles best; light-on-dark blooms with cataract
+ * or astigmatism.
+ *
+ * The four dispatch/call screens stay navy on purpose: their audience is the
+ * CMA and the audiologist at work, not the patient.
+ */
+describe("home hero polarity", () => {
+  // Scoped to HomeScreen itself: welcome.tsx also exports Welcome and SignIn,
+  // and HomeScreen is last, so slicing on the wrong boundary silently reads a
+  // different screen and the test passes on a file it never checked.
+  const home = () =>
+    codeOf("components/screens/patient/welcome.tsx").split("export function HomeScreen")[1] ?? "";
+
+  it("puts the patient's hero on a light card, not a navy one", () => {
+    const hero = home();
+    expect(hero).not.toMatch(/<Card[^>]*bg-brand-navy/);
+  });
+
+  it("gives that hero a navy action rather than a white one", () => {
+    const hero = home();
+    // Both variants (booked and unbooked) carry the primary action.
+    for (const label of ["Book a visit", "View visit details"]) {
+      const button = hero.split(label)[0].split("<button").pop() ?? "";
+      expect(button, `"${label}" must be a navy action`).toMatch(/bg-brand-navy/);
+      expect(button, `"${label}" must not be a white-on-navy inversion`).not.toMatch(/bg-white/);
+    }
+  });
+
+  it("leaves no white-on-navy body text stranded on the now-light card", () => {
+    expect(home()).not.toMatch(/text-white\/\d+/);
+  });
+});

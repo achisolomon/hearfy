@@ -31,28 +31,31 @@ function Stub({ screen }: { screen: string }) {
 }
 
 export function RoleView() {
-  const { role, screen, next } = useStory();
+  // `advanceInRole`, not `next`: everything below is a control drawn inside a
+  // persona's own device, and those never switch persona. The chrome keeps
+  // `next()` for the cross-persona story. See story-context.tsx.
+  const { role, screen, advanceInRole } = useStory();
   const id = String(screen);
 
   if (role === "patient") return <PatientApp2 />;
 
   if (role === "cma") {
     switch (id) {
-      case "cma-day": return <CmaDay next={next} />;
-      case "cma-enroute": return <CmaEnroute next={next} />;
-      case "cma-arrival": return <CmaArrival next={next} />;
-      case "cma-consent": return <CmaConsent next={next} />;
-      case "cma-calibration": return <CmaCalibration next={next} />;
-      case "cma-otoscopy": return <CmaOtoscopy next={next} />;
-      case "cma-tympanometry": return <CmaTympanometry next={next} />;
-      case "cma-puretone": return <CmaPureTone next={next} />;
-      case "cma-speech": return <CmaSpeech next={next} />;
-      case "cma-bone": return <CmaBone next={next} />;
+      case "cma-day": return <CmaDay next={advanceInRole} />;
+      case "cma-enroute": return <CmaEnroute next={advanceInRole} />;
+      case "cma-arrival": return <CmaArrival next={advanceInRole} />;
+      case "cma-consent": return <CmaConsent next={advanceInRole} />;
+      case "cma-calibration": return <CmaCalibration next={advanceInRole} />;
+      case "cma-otoscopy": return <CmaOtoscopy next={advanceInRole} />;
+      case "cma-tympanometry": return <CmaTympanometry next={advanceInRole} />;
+      case "cma-puretone": return <CmaPureTone next={advanceInRole} />;
+      case "cma-speech": return <CmaSpeech next={advanceInRole} />;
+      case "cma-bone": return <CmaBone next={advanceInRole} />;
       case "cma-handoff": return <CmaHandoff />;
-      case "cma-stock": return <CmaStock next={next} />;
-      case "cma-tryon": return <CmaTryOn next={next} />;
-      case "cma-signing": return <CmaSigning next={next} />;
-      case "cma-activate": return <CmaActivate next={next} />;
+      case "cma-stock": return <CmaStock next={advanceInRole} />;
+      case "cma-tryon": return <CmaTryOn next={advanceInRole} />;
+      case "cma-signing": return <CmaSigning next={advanceInRole} />;
+      case "cma-activate": return <CmaActivate next={advanceInRole} />;
       case "cma-closeout": return <CmaCloseout />;
       default: return <Stub screen={id} />;
     }
@@ -60,11 +63,11 @@ export function RoleView() {
 
   if (role === "audiologist") {
     switch (id) {
-      case "aud-panel": return <AudPanel next={next} />;
-      case "aud-monitor": return <AudMonitor next={next} />;
-      case "aud-review": return <AudReview next={next} />;
-      case "aud-sign": return <AudSign next={next} />;
-      case "aud-consult": return <AudConsult next={next} />;
+      case "aud-panel": return <AudPanel next={advanceInRole} />;
+      case "aud-monitor": return <AudMonitor next={advanceInRole} />;
+      case "aud-review": return <AudReview next={advanceInRole} />;
+      case "aud-sign": return <AudSign next={advanceInRole} />;
+      case "aud-consult": return <AudConsult next={advanceInRole} />;
       case "aud-prescription": return <AudPrescription />;
       default: return <Stub screen={id} />;
     }

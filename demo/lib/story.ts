@@ -177,8 +177,12 @@ export const BEATS: Beat[] = [
   // phone. The CMA's screen mirrors those inputs as they land.
   { id: "signing", stage: 8, lead: "patient",
     screens: { patient: "signing", cma: "cma-signing", audiologist: "aud-prescription", operator: "op-dashboard" } },
+  // Maya fits and activates the devices in Alex's home here, with Dr. Reed
+  // on the call confirming the sound — Alex is present, not acting, so his
+  // screen is his own view of the fitting (BUG 1, 2026-09-01), not an echo
+  // of the contract he already signed one beat earlier.
   { id: "activate", stage: 8, lead: "cma",
-    screens: { patient: "signing", cma: "cma-activate", audiologist: "aud-prescription", operator: "op-dashboard" } },
+    screens: { patient: "fitting", cma: "cma-activate", audiologist: "aud-prescription", operator: "op-dashboard" } },
 
   // ---- Stage 9: Fulfilment & follow-up ----
   { id: "closeout", stage: 9, lead: "cma",

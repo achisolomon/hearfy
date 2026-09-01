@@ -174,10 +174,26 @@ export const deviceDetail: Record<string, {
   },
 };
 
-/** Order states through fitting and activation (spec §2 gap). */
+/**
+ * Fulfilment states for the "ships to patient" path (spec §8b): a device not
+ * in the CMA's case, ordered through the supplier and shipped to the
+ * patient, fitted at a follow-up visit.
+ */
 export const orderStates = [
   "Submitted", "Supplier accepted", "Configured", "Shipped",
   "Delivered", "Fitting due", "Activated",
+];
+
+/**
+ * Fulfilment states for the "same-day in-home" path (spec §8a): the CMA's
+ * case already carried the device, so nothing was submitted to a supplier,
+ * configured remotely, shipped, or delivered — it was fitted and activated
+ * in the room, on the visit itself. A Submitted→Shipped→Delivered tracker
+ * told the wrong story for this path (BUG 2, 2026-09-01); this list only
+ * ever names what actually happened during an in-home visit.
+ */
+export const inHomeOrderStates = [
+  "Visit completed", "Fitted in your home", "Activated", "Ongoing care started",
 ];
 
 /** Serial numbers of the dispensed pair, one per side. */

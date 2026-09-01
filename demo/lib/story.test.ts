@@ -603,23 +603,28 @@ describe("beatForRoleSwitch stays put when the new role has a meaningful screen 
     expect(beatForRoleSwitch("cma", signing)).toBe(signing);
   });
 
-  // The existing pinned regression (lib/regressions.test.ts) already
-  // requires beatForRoleSwitch("patient", closeout) === signing. That case
-  // is the reason "differs from the previous beat" alone cannot be the rule:
-  // the patient's screen at "closeout" (order) DOES differ from their screen
-  // at the previous beat ("activate", signing) — an ECHO of a screen they
-  // properly own themselves one beat later at "order" — so it must NOT count
-  // as meaningful, or the CMA-fix above would break this pinned case. This
-  // test pins that distinction directly, independent of regressions.test.ts.
+  // The existing pinned regression (lib/regressions.test.ts) requires
+  // switching to "patient" from "closeout" to rewind. That case is the
+  // reason "differs from the previous beat" alone cannot be the rule: the
+  // patient's screen at "closeout" (order) DOES differ from their screen at
+  // the previous beat ("activate") — an ECHO of a screen they properly own
+  // themselves one beat later at "order" — so it must NOT count as
+  // meaningful, or the CMA-fix above would break that pinned case. This test
+  // pins that distinction directly, independent of regressions.test.ts.
+  //
+  // Updated 2026-09-01 (BUG 1 fix): "activate" now carries the patient's own
+  // fitting screen ("fitting", not an echo of "signing"), so the correct
+  // rewind target from "closeout" is "activate" itself, not further back to
+  // "signing" — "activate" has a genuinely meaningful screen of its own now.
   it("does not treat an echo of the role's own upcoming screen as meaningful (closeout does not count for the patient)", () => {
     const closeout = beatIndexById("closeout");
     const order = beatIndexById("order");
-    const signing = beatIndexById("signing");
+    const activate = beatIndexById("activate");
     expect(BEATS[closeout].lead).not.toBe("patient");
     // The echo: patient's screen at closeout equals their screen one beat
     // later, where they properly lead it.
     expect(screenFor(closeout, "patient")).toBe(screenFor(order, "patient"));
-    expect(beatForRoleSwitch("patient", closeout)).toBe(signing);
+    expect(beatForRoleSwitch("patient", closeout)).toBe(activate);
   });
 
   // General invariant, structural: for every beat a role does NOT lead,
@@ -638,5 +643,37 @@ describe("beatForRoleSwitch stays put when the new role has a meaningful screen 
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * BUG 1 (2026-09-01): at "activate" — Maya fits and activates the devices in
+ * Alex's home, with Dr. Reed confirming the sound and Alex sitting there —
+ * the patient's screen was still "signing" (his already-signed contract).
+ * That let a button on his screen ("Membership confirmed") jump straight to
+ * stage 9 delivery tracking, skipping the fitting Maya performs entirely.
+ *
+ * The fix gives the patient his own distinct screen for that beat. Derived
+ * from BEATS via beatIndexById, never a hardcoded beat number — the script
+ * is edited often.
+ */
+describe("the patient has his own screen for the fitting beat", () => {
+  it("shows a patient screen at 'activate' distinct from the signing beat right before it", () => {
+    const signing = beatIndexById("signing");
+    const activate = beatIndexById("activate");
+    expect(activate, "'activate' must immediately follow 'signing'").toBe(signing + 1);
+    // The bug: the patient's screen at "activate" was still "signing" —
+    // literally unchanged from the beat before, even though Maya is now
+    // fitting and activating the devices in the room.
+    expect(screenFor(activate, "patient")).not.toBe(screenFor(signing, "patient"));
+  });
+
+  it("also keeps the fitting screen distinct from the very next beat (closeout's order screen)", () => {
+    const activate = beatIndexById("activate");
+    const closeout = beatIndexById("closeout");
+    expect(closeout).toBe(activate + 1);
+    // Not an echo of the order-tracking screen either — this is its own
+    // beat, not a shared/early appearance of stage 9's screen.
+    expect(screenFor(activate, "patient")).not.toBe(screenFor(closeout, "patient"));
   });
 });

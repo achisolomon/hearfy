@@ -2234,9 +2234,17 @@ describe("the audiologist presents the comparison", () => {
     expect(table).toContain("compareRecommendation.reasons");
   });
 
-  // The call tile belongs to the surfaces with the width for it.
-  it("keeps the video off the patient's phone and on the CMA's screen", () => {
-    expect(commerce).not.toMatch(/AudiologistStrip|ZoomPanel|VideoSplit/);
+  // The call tile belongs to the surfaces with the width for it — scoped to
+  // Compare specifically: the patient is on a phone there, where a 4:3 panel
+  // above the cards pushed the packages below the fold (2026-08-31), per the
+  // comment on Compare itself. This does not extend to every patient screen:
+  // Otoscopy/Tympanometry/Testing (exam.tsx) and Fitting (commerce.tsx,
+  // BUG 1 2026-09-01) legitimately show AudiologistStrip on the patient's
+  // phone for a clinical act someone else performs, on the same pattern.
+  it("keeps the video off the patient's phone on Compare specifically, and on the CMA's screen", () => {
+    const compareBlock = commerce.split(/(?=export function )/).find(p => /^export function Compare\b/.test(p)) ?? "";
+    expect(compareBlock).toBeTruthy();
+    expect(compareBlock).not.toMatch(/AudiologistStrip|ZoomPanel|VideoSplit/);
     expect(suitcase).toContain("CallSplit");
   });
 
@@ -3069,14 +3077,22 @@ describe("switching roles does not skip a beat that role has not been shown yet"
   // The actual bug: after that skip, switching the role tab to "patient"
   // must land on (at least) the signing beat — not silently stay wherever
   // the CMA's walk had already carried the pointer past it.
-  it("lands on the patient's signing beat when switching to patient after the CMA has passed it", () => {
+  //
+  // Updated 2026-09-01 (BUG 1 fix): the patient now has his own distinct
+  // fitting screen at "activate" (Maya fits and activates the devices, Dr.
+  // Reed confirming the sound, Alex watching) — a genuine one-beat screen of
+  // his own, closer to "closeout" than "signing" is. The rewind now correctly
+  // stops there instead of overshooting all the way back to "signing",
+  // exactly the "meaningful screen" rule this describe block is about.
+  it("lands on the patient's fitting beat when switching to patient after the CMA has passed it", () => {
     const closeout = beatIndexById("closeout");
     const signing = beatIndexById("signing");
+    const activate = beatIndexById("activate");
     expect(closeout).toBeGreaterThan(signing);
     const landing = beatForRoleSwitch("patient", closeout);
-    expect(screenFor(landing, "patient"), "must show the patient's own screen").toBe("signing");
+    expect(screenFor(landing, "patient"), "must show the patient's own screen").toBe("fitting");
     expect(landing, "must not stay past the beat the patient has not been shown yet").toBeLessThanOrEqual(closeout);
-    expect(landing).toBe(signing);
+    expect(landing).toBe(activate);
   });
 
   // The rewind must never overshoot into showing FUTURE content either. A
@@ -3107,5 +3123,126 @@ describe("switching roles does not skip a beat that role has not been shown yet"
       if (landing !== i) offenders.push(`${lead} at beat ${i} (${BEATS[i].id}) moved to ${landing}`);
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * BUG 1 (2026-09-01, owner): at the fitting beat ("activate" — Maya fits and
+ * activates the devices in Alex's home, Dr. Reed confirming the sound on the
+ * call, Alex sitting there), the patient's screen was still "signing", whose
+ * "Membership confirmed" button called go("order") — jumping straight to
+ * stage 9 delivery tracking and skipping the fitting entirely. Exactly the
+ * class of bug already fixed for the exam screens: a button on Alex's phone
+ * advancing past a step Maya performs.
+ *
+ * Fix: a new patient screen (Fitting) for that beat, with no forward action
+ * button — the chrome's Next advances the story, matching the established
+ * rule pinned in "the patient's phone offers no button for someone else's
+ * clinical act" above.
+ */
+describe("the patient has a real fitting screen, not a forwarding button on the signed contract", () => {
+  const commerce = sourceOf("components/screens/patient/commerce.tsx");
+
+  function blocksOf(src: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const part of src.split(/(?=export function )/)) {
+      const name = /export function (\w+)/.exec(part)?.[1];
+      if (name) out[name] = part;
+    }
+    return out;
+  }
+  const blocks = blocksOf(commerce);
+
+  // (c) Signing no longer carries the "Membership confirmed" forward button
+  // that jumped the patient past the fitting to order tracking.
+  it("Signing no longer has a 'Membership confirmed' button, or any go(\"order\") call", () => {
+    const signing = blocks["Signing"];
+    expect(signing, "could not find component Signing").toBeTruthy();
+    expect(signing, "Signing must not offer 'Membership confirmed'").not.toContain("Membership confirmed");
+    expect(signing, "Signing must not call go(\"order\") — that button jumped past the fitting").not.toMatch(/go\("order"\)/);
+  });
+
+  // (b) The new fitting screen exists and carries no forward action button —
+  // matching Setup/Otoscopy/Tympanometry/Testing/Live's established pattern.
+  // A PrimaryButton with an onClick is the shape every forwarding action
+  // takes in this codebase (see Signing, Checkout, Compare above); its
+  // absence from the block is what "no action button" means here.
+  it("adds a Fitting screen with no PrimaryButton onClick — the chrome's Next advances instead", () => {
+    const fitting = blocks["Fitting"];
+    expect(fitting, "could not find a new Fitting component in commerce.tsx").toBeTruthy();
+    expect(fitting, "Fitting must not call go(...) at all").not.toMatch(/go\(/);
+    expect(fitting, "Fitting must render no PrimaryButton onClick").not.toMatch(/<PrimaryButton[^>]*onClick=/);
+  });
+
+  // Registered like its neighbouring patient screens: a ScreenId, an entry in
+  // `order`, and a label — following the exact pattern IntakeFor etc. use.
+  it("registers 'fitting' as a ScreenId, in `order`, and with a label", () => {
+    const registry = sourceOf("components/screens/registry.tsx");
+    expect(registry, "ScreenId union must include \"fitting\"").toMatch(/"fitting"/);
+    expect(screenOrder(), "`order` must include fitting").toContain("fitting");
+    expect(registry, "labels must have a fitting entry").toMatch(/fitting:\s*"[^"]+"/);
+  });
+
+  // Wired into the patient app's screen map, same as every other screen.
+  it("wires the Fitting screen into patient-app-2.tsx", () => {
+    const app = sourceOf("components/patient-app-2.tsx");
+    expect(app, "patient-app-2.tsx must import Fitting from commerce").toMatch(/Fitting/);
+    expect(app, "patient-app-2.tsx must map \"fitting\" to a screen").toMatch(/fitting:\s*</);
+  });
+
+  // (a), restated as a component-wiring check (story.test.ts pins the beat
+  // data itself): beat 33's patient screen must point at the new screen, not
+  // stay on "signing".
+  it("points beat 'activate's patient screen at \"fitting\", not \"signing\"", () => {
+    const activateBeat = BEATS[beatIndexById("activate")];
+    expect(activateBeat.screens.patient).toBe("fitting");
+  });
+});
+
+/**
+ * BUG 2 (2026-09-01): the patient's `order` screen ("Fitted and active")
+ * showed Submitted → Supplier accepted → Configured → Shipped → Delivered →
+ * Fitting due → Activated — a shipment tracker for a shipment that never
+ * happened. This walkthrough is the same-day in-home path (spec §8): Maya
+ * carried the devices in her case and fitted/activated them in the room.
+ * Nothing was submitted to a supplier, configured remotely, shipped, or
+ * delivered — those are the OTHER fulfilment path (devices not in the case).
+ */
+describe("the fulfilment tracker tells the same-day in-home story honestly", () => {
+  const commerce = sourceOf("components/screens/patient/commerce.tsx");
+  const orderBlock = commerce.split(/(?=export function Order)/).find(p => /^export function Order\b/.test(p));
+
+  it("found the Order component to check", () => {
+    expect(orderBlock, "could not find component Order").toBeTruthy();
+  });
+
+  // (d) The bug: both fulfilment paths shared ONE `orderStates` list —
+  // Submitted, Supplier accepted, Configured, Shipped, Delivered, Fitting
+  // due, Activated — from lib/mock-data.ts. The in-case (same-day) branch
+  // rendered that whole list up to `orderStates.length`, so a visit where
+  // nothing was ever submitted, configured remotely, shipped or delivered
+  // was narrated as though it had been. The in-case branch of this screen
+  // must not render source that resolves to those shipping-path labels —
+  // asserted against the screen's OWN source, not by editing mock-data.ts's
+  // array (which the ships-to-patient branch still legitimately needs).
+  it("does not render the shipping-path states ('Submitted', 'Supplier accepted', 'Configured', 'Shipped', 'Delivered') for the in-case path", () => {
+    // The component must stop delegating the in-case branch's list to the
+    // shared `orderStates.length` shape used by the shipping path — that
+    // single shared array, rendered start-to-finish, is the mechanism of the
+    // bug (mapping over `orderStates` unconditionally, gated only by how far
+    // `done` reaches). A same-day-specific list of states must exist in this
+    // component's own source instead.
+    expect(orderBlock, "Order must not unconditionally map over the shared `orderStates` for both paths")
+      .not.toMatch(/inCase\s*\?\s*orderStates\.length/);
+  });
+
+  // The screen's existing visual language and legitimate patient control
+  // survive the rewrite: the checkmark timeline, the serial numbers, and the
+  // "Ongoing care" CTA (the patient's own onward navigation) all stay.
+  it("keeps the serials and the Ongoing care control", () => {
+    expect(orderBlock).toContain("serials.left");
+    expect(orderBlock).toContain("serials.right");
+    expect(orderBlock).toMatch(/Ongoing care/);
+    expect(orderBlock).toMatch(/go\("support"\)/);
   });
 });

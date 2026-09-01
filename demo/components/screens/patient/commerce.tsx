@@ -1,15 +1,16 @@
 "use client";
 import { Check, CreditCard, PenLine } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { devices, deviceDetail, identity, orderStates, compareCategories, serials } from "@/lib/mock-data";
+import { devices, deviceDetail, identity, orderStates, inHomeOrderStates, compareCategories, serials } from "@/lib/mock-data";
 import { DeviceThumb } from "../../device-thumb";
 import { creditedFirstMonth, tierFor } from "@/lib/commerce";
 import { selectDevice, useSelectedDevice } from "@/lib/selection";
 import { SIGNING_ITEMS, canSign, sign, toggleSigningItem, useSigning } from "@/lib/signing";
 import { cn } from "@/lib/cn";
 import { ScreenId } from "../registry";
-import { Shell } from "../shared";
+import { Shell, AudiologistStatusLine } from "../shared";
 import { CompareTable } from "../compare-table";
+import { AudiologistStrip } from "../cma/call-tile";
 
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
@@ -124,25 +125,70 @@ export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             <PenLine size={16}/> {canSign(s)?"Tap to sign":"Approve the three items above to sign"}
           </span>}
     </button>
+    {/* No forward button here (BUG 1, 2026-09-01): the only thing left after
+       signing is Maya fitting and activating the devices, which is her act,
+       not Alex's — this screen shows the completed signature and stops,
+       matching the established rule (exam.tsx). The chrome's Next carries
+       the story on to his own view of the fitting. */}
     <div className="mt-6">
-      <PrimaryButton disabled={!s.signed} onClick={()=>go("order")}>
-        {s.signed?"Membership confirmed":"Signature required"}
-      </PrimaryButton>
+      <AudiologistStatusLine>
+        {s.signed?"Signed. Maya is preparing to fit and activate your devices.":"Approve each item above, then sign to continue."}
+      </AudiologistStatusLine>
     </div>
+  </Shell>;
+}
+
+/**
+ * BUG 1 (2026-09-01, owner): the beat right after signing is Maya fitting and
+ * activating the devices in Alex's home, Dr. Reed on the call confirming the
+ * sound — Alex is sitting there, not acting. His screen used to still be
+ * "signing", whose forward button (see Signing above) jumped him straight to
+ * stage 9 delivery tracking, skipping the fitting he actually watched happen.
+ *
+ * This is the patient's own side of the same moment CmaActivate
+ * (cma/suitcase.tsx) shows Maya: "Devices paired and programmed", "Fit
+ * checked, both ears", "Patient shown charging and cleaning". Told from
+ * Alex's side, not copied — his screen doesn't claim to check its own fit,
+ * it watches Maya check it, with Dr. Reed's confirmation as the clinical
+ * sign-off. No forward action button: the chrome's Next moves the story on,
+ * matching every other screen for a clinical act someone else performs.
+ */
+export function Fitting({back}:{back:()=>void}){
+  const chosen = useSelectedDevice();
+  const tier = tierFor(deviceDetail[chosen.name].tier);
+  return <Shell>
+    <PageHeader title="Fitting your devices" subtitle={`${chosen.name} · ${tier.name}`} onBack={back} eyebrow="Same day"/>
+    <AudiologistStrip active note="On the call to confirm the sound before we finish up."/>
+    <Card className="mt-4 p-5">
+      <div className="space-y-3">
+        {["Devices paired and programmed","Fit checked, both ears","Dr. Reed confirming the sound with you"].map(x=>
+          <div key={x} className="flex items-center gap-3">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16}/></span>
+            <b className="text-sm">{x}</b>
+          </div>)}
+      </div>
+    </Card>
+    <Card className="mt-3 p-4">
+      <p className="text-sm leading-6 text-slate-500">Serial {serials.left} / {serials.right}</p>
+    </Card>
   </Shell>;
 }
 
 export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const chosen = useSelectedDevice();
   const inCase = deviceDetail[chosen.name].inCase;
-  // In-case devices (Fulfilment: "In the case — fitted today") were fitted
-  // during the home visit, so every state is already complete. A device that
-  // ships later (Fulfilment: "Ships to you — fitted at a follow-up", e.g. the
-  // Oticon Intent 2) has not been fitted yet — claiming "Activated" for it
-  // would be the same dishonesty the compare screen used to hide: telling the
-  // patient they were fitted today when they were not. So it stops at
-  // "Fitting due", one step short of complete.
-  const done = inCase ? orderStates.length : orderStates.indexOf("Fitting due") + 1;
+  // Two fulfilment paths, two honest trackers (spec §8, BUG 2 2026-09-01).
+  // In-case devices (Fulfilment: "In the case — fitted today") never went
+  // near a supplier or a shipment — Maya fitted and activated them from her
+  // case, in the room, on this visit — so this path uses its own
+  // `inHomeOrderStates` list, complete the moment the visit ends. A device
+  // that ships later (Fulfilment: "Ships to you — fitted at a follow-up",
+  // e.g. the Oticon Intent 2) genuinely does travel through a supplier and a
+  // shipment, so it keeps the original `orderStates` list — and still has
+  // not been fitted yet, so it stops at "Fitting due", one step short of
+  // complete, the same honesty rule as before.
+  const states = inCase ? inHomeOrderStates : orderStates;
+  const done = inCase ? states.length : states.indexOf("Fitting due") + 1;
   return <Shell>
     <PageHeader
       title={inCase ? "Fitted and active" : "On its way"}
@@ -150,11 +196,11 @@ export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
       onBack={back} eyebrow="Your device"/>
     <Card className="p-5">
       <div className="space-y-0">
-        {orderStates.map((s,i)=><div key={s} className="flex gap-3">
+        {states.map((s,i)=><div key={s} className="flex gap-3">
           <div className="flex flex-col items-center">
             <span className={`grid h-7 w-7 place-items-center rounded-full ${i<done?"bg-brand-teal text-white":"bg-[#eef4f5] text-slate-300"}`}>
               <Check size={14}/></span>
-            {i<orderStates.length-1&&<span className={`w-0.5 flex-1 ${i<done-1?"bg-brand-teal":"bg-[#eef4f5]"}`}/>}
+            {i<states.length-1&&<span className={`w-0.5 flex-1 ${i<done-1?"bg-brand-teal":"bg-[#eef4f5]"}`}/>}
           </div>
           <div className="pb-5"><b className="text-sm">{s}</b>
             {s==="Activated"&&i<done&&<p className="mt-1 text-xs text-slate-500">Serial {serials.left} / {serials.right}</p>}</div>

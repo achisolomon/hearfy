@@ -11,7 +11,7 @@ import { BookDate, BookTime, Payment, Confirmed } from "./screens/patient/bookin
 import { Assigned, Driving, Arrived } from "./screens/patient/dispatch";
 import { Consent, Setup, Otoscopy, Tympanometry, Testing, Live } from "./screens/patient/exam";
 import { Review, Results, Recommendation } from "./screens/patient/results";
-import { Compare, Checkout, Signing, Order } from "./screens/patient/commerce";
+import { Compare, Checkout, Signing, Fitting, Order } from "./screens/patient/commerce";
 import { Support } from "./screens/patient/support";
 
 /** Whether the guided script has a beat that shows this patient screen. */
@@ -105,6 +105,9 @@ export function PatientApp2() {
     compare: <Compare go={go} back={back}/>,
     checkout: <Checkout go={go} back={back}/>,
     signing: <Signing go={go} back={back}/>,
+    // Maya's own act — fitting and activating the devices — so, like the
+    // exam screens above, this carries no forward button of its own.
+    fitting: <Fitting back={back}/>,
     order: <Order go={go} back={back}/>,
     support: <Support go={go} back={back}/>,
     // `go` closes over the beat, so the cached elements must be rebuilt when

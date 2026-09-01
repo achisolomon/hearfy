@@ -1982,6 +1982,7 @@ describe("Dr. Reed's camera feed", () => {
 describe("the room's camera feed", () => {
   const feed = sourceOf("components/screens/audiologist/room-feed.tsx");
   const home = sourceOf("components/screens/audiologist/home-feed.tsx");
+  const tile = sourceOf("components/screens/cma/call-tile.tsx");
 
   // The pane drew "ML" / "AR" initials circles on a navy gradient. The room
   // footage replaced them; a leftover placeholder would show the initials on
@@ -2001,8 +2002,45 @@ describe("the room's camera feed", () => {
   // render the LIVE pill, mic/video icons and nameplates twice.
   it("keeps the call chrome in the DOM, over the feed", () => {
     expect(home).toContain("Live");
-    expect(home).toMatch(/<Mic size=\{12\}/);
+    // The mic/video pair renders through the same [Mic, Video].map spread
+    // ZoomPanel uses, so assert that shared shape rather than a literal tag.
+    expect(home).toContain("{[Mic, Video].map(");
+    expect(tile).toContain("{[Mic, Video].map(");
     expect(feed).not.toContain("Live");
+  });
+
+  // Owner, 2026-09-01: "Use the video styling of Dr. Susan with all the
+  // videos of Alex and Maya. It needs to look the same. No text on the
+  // picture itself. Currently Maya's face has text on it."
+  //
+  // The room tile had drifted into its own look: a small name pill and two
+  // speech bubbles floating over the two-shot, both landing on Maya's face,
+  // while Dr. Reed's tile put its nameplate in a bottom gradient band and its
+  // caption BELOW the frame. Two sides of one call, styled like two products.
+  it("uses Dr. Reed's tile styling, not a second look", () => {
+    for (const shared of [
+      "rounded-[28px]",                      // same shell
+      "border-brand-teal ring-1 ring-brand-teal", // same active ring
+      "bg-[#dc2626]",                        // same LIVE pill
+      "bg-teal-ink",                         // same SPEAKING pill
+      "bg-gradient-to-t from-black/75 via-black/45 to-transparent", // same band
+    ]) {
+      expect(home).toContain(shared);
+      expect(tile).toContain(shared);
+    }
+  });
+
+  // The specific complaint: words sitting on the picture. Everything that is
+  // read must live in the bottom gradient band or below the frame — never
+  // free-floating over the two-shot, where it lands on a face.
+  it("puts no text over the picture", () => {
+    // The old floating name pill and caption bubbles, both absolutely
+    // positioned inside the frame over the video.
+    expect(home).not.toMatch(/absolute left-3 top-11/);
+    expect(home).not.toMatch(/absolute inset-x-3 bottom-3/);
+    expect(home).not.toContain("bg-black/55");
+    // The patient's speech now sits below the frame, on the card.
+    expect(home).toMatch(/border-t border-\[#e4eef0\] bg-white/);
   });
 
   // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a

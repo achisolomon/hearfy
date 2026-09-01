@@ -23,7 +23,7 @@ export function OperatorDashboard() {
     <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6">
-          <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">
+          <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-teal-ink">
             {BRAND_NAME} operations
           </span>
           <h1 className="mt-2 text-[28px] font-extrabold tracking-[-.02em]">Everything, right now</h1>

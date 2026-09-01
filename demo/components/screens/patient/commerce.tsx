@@ -101,7 +101,7 @@ export function Signing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         <button key={k} onClick={()=>toggleSigningItem(k)} disabled={s.signed}
           className="flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left">
           <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-            s[k]?"border-brand-teal bg-brand-teal text-white":"border-slate-300"}`}>
+            s[k]?"border-teal-ink bg-teal-ink text-white":"border-slate-300"}`}>
             {s[k]&&<Check size={15}/>}
           </span>
           <span className="text-sm leading-6 text-slate-600">
@@ -215,7 +215,7 @@ export function Order({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
       <div className="space-y-0">
         {states.map((s,i)=><div key={s} className="flex gap-3">
           <div className="flex flex-col items-center">
-            <span className={`grid h-7 w-7 place-items-center rounded-full ${i<done?"bg-brand-teal text-white":"bg-[#eef4f5] text-slate-300"}`}>
+            <span className={`grid h-7 w-7 place-items-center rounded-full ${i<done?"bg-teal-ink text-white":"bg-[#eef4f5] text-slate-300"}`}>
               <Check size={14}/></span>
             {i<states.length-1&&<span className={`w-0.5 flex-1 ${i<done-1?"bg-brand-teal":"bg-[#eef4f5]"}`}/>}
           </div>

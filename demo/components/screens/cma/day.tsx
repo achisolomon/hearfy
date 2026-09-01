@@ -23,7 +23,7 @@ export function CmaDay({ next }: { next: () => void }) {
         ))}
       </div>
       <Card className="mt-4 flex items-center gap-3 p-4">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf8f7] text-brand-teal">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf8f7] text-teal-ink">
           <MapPin size={18} />
         </span>
         <div className="flex-1">
@@ -61,7 +61,7 @@ export function CmaEnroute({ next }: { next: () => void }) {
         </Card>
       </div>
       <Card className="mt-3 flex items-center gap-3 p-4">
-        <Navigation className="text-brand-teal" size={18} />
+        <Navigation className="text-teal-ink" size={18} />
         <p className="text-sm text-slate-500">Arriving in about 6 minutes</p>
       </Card>
       <div className="mt-6"><PrimaryButton onClick={next}>I have arrived</PrimaryButton></div>

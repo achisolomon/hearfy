@@ -2686,6 +2686,45 @@ describe("the pre-visit questionnaire's answers", () => {
   });
 });
 
+// Owner, walking the demo: the medical safety screen ("A few safety
+// questions") had no Continue button at all. It didn't call StepPage like
+// every other intake step — it rendered its own Shell with a bare option
+// list, so options navigated on tap. Worse, "None of these apply to me" was
+// hardcoded `active`, rendering with a filled tick as though already chosen —
+// "there is a radio button with no okay or something. and I don't want to
+// click next." The fix follows IntakeNeeds' established pattern: multiple
+// symptoms can be chosen at once (they co-occur clinically), "None of these"
+// is mutually exclusive with them, and a Continue button — disabled until
+// something is chosen — commits the answer instead of tapping committing it.
+describe("the medical safety screen has a Continue control", () => {
+  const intake = sourceOf("components/screens/patient/intake.tsx");
+  const medical = intake
+    .split(/(?=export function )/)
+    .find(s => s.startsWith("export function IntakeMedical"));
+
+  it("has the medical safety screen", () => {
+    expect(medical, "IntakeMedical not found").toBeTruthy();
+  });
+
+  // The bug itself: no StepPage means no Continue button anywhere on the
+  // screen. Every other intake step renders through StepPage; this one must
+  // too, rather than hand-rolling its own Shell with no forward control.
+  it("renders through StepPage, which is what supplies the Continue button", () => {
+    expect(medical, "the safety screen must render StepPage to get a Continue button")
+      .toMatch(/<StepPage/);
+  });
+
+  // The other half of the bug: "None of these apply to me" was hardcoded
+  // `active`, so it arrived on screen looking already-selected — a filled
+  // tick with nothing tapped. Nothing may be preselected on arrival.
+  it("does not hardcode a preselected option", () => {
+    expect(medical, "no option on this screen may render with a hardcoded `active` prop")
+      .not.toMatch(/\bactive(?:\s*\/>|\s*$)/m);
+    expect(medical, "\"None of these apply to me\" must not be preselected on arrival")
+      .not.toMatch(/None of these apply to me"\s*(?:multi\s*)?active/);
+  });
+});
+
 // Owner, 2026-09-01: "In order to get to that screen, I have to click on 'who
 // is the visit for' Continue. If I click Next, I don't see the screen."
 //
@@ -2745,34 +2784,6 @@ describe("the pre-visit questionnaire is in the guided walk", () => {
 // symptoms can be chosen at once (they co-occur clinically), "None of these"
 // is mutually exclusive with them, and a Continue button — disabled until
 // something is chosen — commits the answer instead of tapping committing it.
-describe("the medical safety screen has a Continue control", () => {
-  const intake = sourceOf("components/screens/patient/intake.tsx");
-  const medical = intake
-    .split(/(?=export function )/)
-    .find(s => s.startsWith("export function IntakeMedical"));
-
-  it("has the medical safety screen", () => {
-    expect(medical, "IntakeMedical not found").toBeTruthy();
-  });
-
-  // The bug itself: no StepPage means no Continue button anywhere on the
-  // screen. Every other intake step renders through StepPage; this one must
-  // too, rather than hand-rolling its own Shell with no forward control.
-  it("renders through StepPage, which is what supplies the Continue button", () => {
-    expect(medical, "the safety screen must render StepPage to get a Continue button")
-      .toMatch(/<StepPage/);
-  });
-
-  // The other half of the bug: "None of these apply to me" was hardcoded
-  // `active`, so it arrived on screen looking already-selected — a filled
-  // tick with nothing tapped. Nothing may be preselected on arrival.
-  it("does not hardcode a preselected option", () => {
-    expect(medical, "no option on this screen may render with a hardcoded `active` prop")
-      .not.toMatch(/\bactive(?:\s*\/>|\s*$)/m);
-    expect(medical, "\"None of these apply to me\" must not be preselected on arrival")
-      .not.toMatch(/None of these apply to me"\s*(?:multi\s*)?active/);
-  });
-});
 
 describe("a click inside a device stays in that persona", () => {
   // Owner, 2026-09-01: "if I click inside a screen I stay with the same

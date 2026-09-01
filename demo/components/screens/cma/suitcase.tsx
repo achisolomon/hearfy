@@ -30,7 +30,7 @@ export function CmaStock({ next }: { next: () => void }) {
         {/* The same comparison the patient is reading, read-only: the CMA
            follows the conversation without being able to choose or sell. */}
         <Card className="mb-4 flex gap-3 p-4">
-          <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
+          <Briefcase size={18} className="mt-0.5 shrink-0 text-teal-ink" />
           <p className="text-sm leading-6 text-slate-500">{compareRecommendation.cmaNote}</p>
         </Card>
         <CompareTable layout="table" selectable={false} />
@@ -61,7 +61,7 @@ export function CmaStock({ next }: { next: () => void }) {
           })}
         </div>
         <Card className="mt-4 flex gap-3 p-4">
-          <Briefcase size={18} className="mt-0.5 shrink-0 text-brand-teal" />
+          <Briefcase size={18} className="mt-0.5 shrink-0 text-teal-ink" />
           <p className="text-sm leading-6 text-slate-500">
             Availability is logistics, not a recommendation. A device that ships is equally
             available to the patient — the clinical choice was made before the case opened.
@@ -95,7 +95,7 @@ export function CmaTryOn({ next }: { next: () => void }) {
                 className={cn("flex w-full items-center gap-3 rounded-2xl border p-4 text-left",
                   on ? "border-brand-teal bg-[#edfbfa]" : "border-[#dfeaec] bg-white")}>
                 <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-full",
-                  on ? "bg-brand-teal text-white" : "bg-[#f1f5f6] text-slate-300")}>
+                  on ? "bg-teal-ink text-white" : "bg-[#f1f5f6] text-slate-300")}>
                   <Check size={15} />
                 </span>
                 <span className="flex-1">
@@ -161,7 +161,7 @@ export function CmaSigning({ next }: { next: () => void }) {
           {SIGNING_ITEMS.map(([k, label]) => (
             <div key={k} className="flex w-full items-start gap-3 rounded-2xl bg-white p-4">
               <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${
-                s[k] ? "border-brand-teal bg-brand-teal text-white" : "border-slate-300"}`}>
+                s[k] ? "border-teal-ink bg-teal-ink text-white" : "border-slate-300"}`}>
                 {s[k] && <Check size={15} />}
               </span>
               <span className="min-w-0 flex-1 text-sm leading-6 text-slate-600">
@@ -170,7 +170,7 @@ export function CmaSigning({ next }: { next: () => void }) {
                   <CreditCard size={13} /> Visa •••• 4242 · saved at booking
                 </span>}
               </span>
-              <span className={cn("shrink-0 text-[11px] font-bold", s[k] ? "text-brand-teal" : "text-slate-300")}>
+              <span className={cn("shrink-0 text-[11px] font-bold", s[k] ? "text-teal-ink" : "text-slate-400")}>
                 {s[k] ? "Approved" : "Waiting"}
               </span>
             </div>
@@ -211,7 +211,7 @@ export function CmaActivate({ next }: { next: () => void }) {
         <Card className="p-5">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-slate-500">First month</span><b>${monthly}</b></div>
-            <div className="flex justify-between text-brand-teal"><span>Visit fee credited</span><b>−${credit}</b></div>
+            <div className="flex justify-between text-teal-ink"><span>Visit fee credited</span><b>−${credit}</b></div>
             <div className="mt-2 flex justify-between border-t border-[#eef4f5] pt-3">
               <b>Due today</b><b className="text-lg">${dueNow}</b>
             </div>
@@ -249,7 +249,7 @@ export function CmaCloseout() {
     <Shell tablet>
       <PageHeader title="Visit complete" subtitle={`${patient.name} left the visit hearing.`} eyebrow="Close-out" />
       <Card className="grid place-items-center p-8 text-center">
-        <span className="grid h-16 w-16 place-items-center rounded-full bg-[#edf8f7] text-brand-teal">
+        <span className="grid h-16 w-16 place-items-center rounded-full bg-[#edf8f7] text-teal-ink">
           <PackageCheck size={26} />
         </span>
         <b className="mt-4 text-[15px]">{chosen.name} dispensed</b>

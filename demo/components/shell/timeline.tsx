@@ -17,7 +17,7 @@ export function Timeline({ full = false }: { full?: boolean }) {
             "grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold transition",
             full && "h-auto w-auto rounded-full px-3 py-2 text-xs",
             stage === s.n
-              ? "bg-brand-teal text-white"
+              ? "bg-teal-ink text-white"
               : stage > s.n
                 ? "bg-[#d6efee] text-[#087d7a]"
                 : "bg-white text-slate-400 hover:text-brand-navy"

@@ -108,7 +108,7 @@ export function AudSign({ next }: { next: () => void }) {
       <PageHeader eyebrow="Signature" title={`${patient.name} — sign the report`} />
       <VideoSplit video={<HomeFeed beat="listening" />}>
       <Card className="w-full max-w-lg p-7">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-brand-teal">
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#edf8f7] text-teal-ink">
           {signed ? <Lock size={21} aria-hidden /> : <PenLine size={21} aria-hidden />}
         </span>
         <h2 className="mt-4 text-2xl font-extrabold tracking-[-.02em]">

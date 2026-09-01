@@ -20,7 +20,7 @@ function Stub({ screen }: { screen: string }) {
   return (
     <div className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 text-center">
       <div className="max-w-sm">
-        <p className="text-[11px] font-extrabold uppercase tracking-[.25em] text-brand-teal">{ROLE_LABELS[role]}</p>
+        <p className="text-[11px] font-extrabold uppercase tracking-[.25em] text-teal-ink">{ROLE_LABELS[role]}</p>
         <h2 className="mt-3 text-2xl font-extrabold text-brand-navy">Stage {stage} — {stageName}</h2>
         <p className="mt-4 text-sm text-slate-500">
           Screen <code className="rounded bg-white px-1.5 py-0.5 font-bold text-brand-navy">{screen}</code> is not built yet.

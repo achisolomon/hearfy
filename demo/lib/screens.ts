@@ -81,33 +81,84 @@ function stripComments(src: string): string {
 }
 
 /**
- * Components outside the shell that pull `next` out of the story context.
+ * Finds every way a piece of source could reach the story context's own
+ * `next` — the one function that reassigns `role` (story-context.tsx).
  *
  * A screen prop happening to be NAMED `next` is not the danger — the shell
  * hands every in-screen control `advanceInRole` through that same prop name,
  * and that is correct: `CmaOtoscopy({ next })` calling `next()` just calls
  * whatever forward function its caller gave it. The actual danger is a
- * component reaching into `useStory()`/`useStoryOptional()` and destructuring
- * the context's own `next`, which is the one function that reassigns `role` —
- * so a screen that got hold of it, not the shell, could switch persona out
- * from under itself no matter what its own props are called. `components/shell/`
- * is the one legitimate place to hold that: it is the chrome, not a persona's
- * device, so its own top nav is allowed to switch persona at a handoff.
+ * component reaching into `useStory()`/`useStoryOptional()` and getting hold
+ * of the context's own `next`, however it does that — so a screen that got
+ * hold of it, not the shell, could switch persona out from under itself no
+ * matter what its own props are called.
  *
- * Returns `file -> [offending destructure lines]` for every offender found.
+ * Three shapes all reach the same function and are all flagged:
+ *
+ *   const { next } = useStory();            // destructure
+ *   const { next: goForward } = useStory();  // destructure, renamed
+ *   const story = useStory();
+ *   story.next();                            // whole-object capture, then property access
+ *   useStory().next();                       // direct chain, no intermediate binding
+ *
+ * `components/shell/` is the one legitimate place to hold `next`: it is the
+ * chrome, not a persona's device, so its own top nav is allowed to switch
+ * persona at a handoff. Callers exclude that directory before invoking this.
+ *
+ * Returns `[offending line/snippet]` for every offence found in `src`. Takes
+ * already-comment-stripped source, so a doc comment that merely explains
+ * what `next()` does can never trip it.
+ */
+export function findContextNextOffences(src: string): string[] {
+  const hits: string[] = [];
+
+  const DESTRUCTURE = /const\s*\{([^}]*)\}\s*=\s*useStory(?:Optional)?\(\)/g;
+  for (const m of src.matchAll(DESTRUCTURE)) {
+    const names = m[1].split(",").map(s => s.trim());
+    if (names.some(n => /^next$/.test(n.split(":")[0].trim()))) hits.push(m[0]);
+  }
+
+  // Direct chaining: useStory().next / useStoryOptional().next — no
+  // intermediate binding, so there is no identifier to track separately.
+  // `useStoryOptional()` can return null, so the idiomatic call site uses
+  // optional chaining (`?.`) — an offender is not exempt just because it
+  // guarded the null case, so the dot may optionally be `?.`.
+  const DIRECT_CHAIN = /useStory(?:Optional)?\(\)\s*\??\s*\.\s*next\b/g;
+  for (const m of src.matchAll(DIRECT_CHAIN)) hits.push(m[0]);
+
+  // Whole-object capture: const <name> = useStory(); ... <name>.next
+  // Track every identifier bound this way, then scan the rest of the file
+  // for `<name>.next` property access anywhere after (or before) the bind —
+  // order doesn't matter for a hazard that just needs to exist in the file.
+  // Same `?.` allowance as above for names bound from useStoryOptional().
+  const BIND = /const\s+(\w+)\s*=\s*useStory(?:Optional)?\(\)/g;
+  const boundNames = new Set<string>();
+  for (const m of src.matchAll(BIND)) boundNames.add(m[1]);
+  for (const name of boundNames) {
+    const ACCESS = new RegExp(`\\b${name}\\s*\\??\\s*\\.\\s*next\\b`, "g");
+    for (const m of src.matchAll(ACCESS)) hits.push(m[0]);
+  }
+
+  return hits;
+}
+
+/**
+ * Components outside the shell that can reach `next` out of the story
+ * context, in any of the shapes `findContextNextOffences` recognizes.
+ *
+ * Returns `file -> [offending snippets]` for every offender found.
  */
 export function screensReachingContextNext(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  const DESTRUCTURE = /const\s*\{([^}]*)\}\s*=\s*useStory(?:Optional)?\(\)/g;
   for (const f of componentFiles("components")) {
     if (f.startsWith("components/shell/")) continue;
     const src = stripComments(sourceOf(f));
-    const hits: string[] = [];
-    for (const m of src.matchAll(DESTRUCTURE)) {
-      const names = m[1].split(",").map(s => s.trim());
-      if (names.some(n => /^next$/.test(n.split(":")[0].trim()))) hits.push(m[0]);
+    const hits = findContextNextOffences(src);
+    if (hits.length) {
+      out[f] = hits.map(
+        h => `${f}: reaches the story context's next() via \`${h}\` — only components/shell/ may do this`,
+      );
     }
-    if (hits.length) out[f] = hits;
   }
   return out;
 }

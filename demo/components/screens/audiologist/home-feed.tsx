@@ -1,15 +1,20 @@
 "use client";
-import { Mic, Video } from "lucide-react";
+import { useState } from "react";
+import { Mic, Video, Volume2, VolumeX } from "lucide-react";
 import { cma, patient } from "@/lib/mock-data";
 import { cn } from "@/lib/cn";
-import { RoomFeed } from "./room-feed";
+import { RoomFeed, type RoomAudio } from "./room-feed";
 
 /**
  * The audiologist SEES and HEARS the room, from the first test until the
- * patient is fitted and happy (refined 2026-08-31): a live feed of the CMA
- * and patient with the patient's responses as Zoom-style captions, and a
- * talk-back control — "I can hear it / I can't hear that one" flows both
- * ways, so her feedback lands mid-test, not after it.
+ * patient is fitted and happy (refined 2026-08-31): a live feed of the
+ * patient with his responses as Zoom-style captions, and a talk-back
+ * control — "I can hear it / I can't hear that one" flows both ways, so her
+ * feedback lands mid-test, not after it.
+ *
+ * The camera is on the PATIENT only (owner, 2026-09-01); it was a two-shot
+ * with the CMA. The CMA is still in the room and the talk-back still
+ * addresses them both — she is simply not the subject of the feed.
  *
  * ONE size on purpose: the feed renders inside `VideoSplit`'s fixed column
  * with the same 4:3 pane as the CMA's view of her, so the call looks
@@ -30,12 +35,17 @@ import { RoomFeed } from "./room-feed";
  */
 export function HomeFeed({ cmaName = cma.name, beat, active = false }:
   { cmaName?: string; beat?: string; active?: boolean }) {
+  // The feed owns the audio (it owns the <video>), but the button belongs in
+  // this tile's control row, so the feed reports its audio state up and the
+  // tile draws the control — rather than a second cluster floating over the
+  // picture.
+  const [audio, setAudio] = useState<RoomAudio | null>(null);
   return (
     <div className={cn(
       "overflow-hidden rounded-[28px] border bg-white shadow-card",
       active ? "border-brand-teal ring-1 ring-brand-teal" : "border-[#e4eef0]")}>
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <RoomFeed beat={beat} />
+        <RoomFeed beat={beat} onAudio={setAudio} />
 
         {/* Call chrome, anchored to the frame's own corners — never to the
             nameplate column, or it drifts down the feed as the names grow.
@@ -53,25 +63,47 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false }:
             Reed's tile: who is in the room on the left, the call controls on
             the right, both sitting in a gradient that fades up into the
             picture. This replaces the small pill that used to float over
-            Maya's face — the names now read against the gradient instead of
-            against her, and the band's own height absorbs a larger rem base
-            by growing downward. */}
+            the frame — the name now reads against the gradient instead of
+            against a face, and the band's own height absorbs a larger rem
+            base by growing downward. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-4 pb-3 pt-12">
           <div className="min-w-0">
             {/* Mirrors ZoomPanel's two lines: who this is on top, their
                 standing underneath. Hers reads "Dr. Susan Reed, Au.D." /
-                "Licensed Audiologist · Florida"; the room's names the pair
-                on the call and where they are. Both wrap rather than
-                truncate — the band is bottom-anchored, so a second line
-                grows down into the gradient, never up over a face. */}
+                "Licensed Audiologist · Florida".
+
+                It names ONLY the patient, because only the patient is in
+                frame (owner, 2026-09-01 — the feed became patient-only). A
+                nameplate that still read "Alex · CMA Maya L." over a shot of
+                one man would caption someone who is not there. Maya's
+                presence is stated where it is true — the talk-back control
+                below still addresses them both, since she is in the room,
+                just not on this camera. */}
             <p className="text-[15px] font-extrabold leading-tight text-white">
-              {patient.name} · CMA {cmaName}
+              {patient.name}
             </p>
             <p className="mt-0.5 text-xs leading-tight text-white/75">
-              Patient &amp; CMA · {patient.city}
+              Patient · {patient.city}
             </p>
           </div>
-          <span className="flex shrink-0 gap-2">
+          {/* The sound toggle leads the row: it is the only one of these
+              that does anything, and it sits nearest the frame's edge where
+              a call's volume control is expected. */}
+          <span className="pointer-events-auto flex shrink-0 gap-2">
+            {audio?.hasAudio && (
+              <button
+                type="button"
+                onClick={audio.toggle}
+                aria-pressed={audio.sound}
+                aria-label={audio.sound ? "Mute the room" : "Hear the room"}
+                title={audio.sound ? "Mute the room" : "Hear the room"}
+                className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                {audio.sound
+                  ? <Volume2 size={15} aria-hidden />
+                  : <VolumeX size={15} aria-hidden />}
+              </button>
+            )}
             {[Mic, Video].map((I, i) => (
               <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
             ))}
@@ -83,7 +115,7 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false }:
           Reed's tile (owner, 2026-09-01: "there is a text on the video on the
           phone. Maybe put the text below the video"), for the same reason and
           now for the same reason again on this side: bubbles floating over
-          the two-shot sat squarely on Maya's face.
+          the picture sat squarely on a face.
 
           Below the frame they cannot cover anyone, however long the line or
           large the text — the tile simply gets taller. They also stop being

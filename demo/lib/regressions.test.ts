@@ -2069,14 +2069,58 @@ describe("the room's camera feed", () => {
   // The demo-wide contract: motion degrades to a still, never plays anyway.
   it("falls back to a poster still under prefers-reduced-motion", () => {
     expect(feed).toContain("prefers-reduced-motion: reduce");
-    expect(feed).toContain("room-puretone-poster.jpg");
+    expect(feed).toContain("room-patient-poster.jpg");
   });
 
   // Only the pure-tone beat has footage so far. An unknown beat must fall
   // back to it rather than resolving to a missing file and rendering a black
   // pane — the remaining beats are still to be generated.
   it("falls back to the one existing clip for a beat with no footage", () => {
-    expect(feed).toContain("CLIPS[beat] ?? CLIPS.puretone");
+    expect(feed).toContain("CLIPS[beat] ?? PATIENT_CLIP");
+  });
+
+  // Owner, 2026-09-01: "The default should be on mute, but I want to be able
+  // to click and actually hear the videos."
+  //
+  // `muted` is not decoration here: a browser only grants autoplay to a muted
+  // video, so removing it to "enable sound" would stop the feed playing at
+  // all. The clip stays muted in markup and the control unmutes the live
+  // element on a real click, which is the gesture that earns audio.
+  it("starts muted so it can autoplay, and unmutes on a click", () => {
+    expect(feed).toContain("muted");            // still muted in markup
+    expect(feed).toContain("v.muted = !next");  // flipped on the element
+    expect(home).toMatch(/aria-pressed=\{audio\.sound\}/);
+    expect(home).toContain("Hear the room");
+    expect(home).toContain("Mute the room");
+  });
+
+  // A control that unmutes silence reads as broken. Dr. Reed's clips have no
+  // audio track at all, which is why her tile has no such button; this one
+  // only appears once the loaded clip is known to carry audio.
+  it("offers the sound control only when the clip has audio", () => {
+    expect(feed).toContain("hasAudio");
+    expect(home).toContain("audio?.hasAudio &&");
+  });
+
+  // The band is pointer-events-none so the nameplate cannot eat clicks meant
+  // for the video; the control row inside it must re-enable them or the
+  // button is visible but dead.
+  it("keeps the sound control clickable inside the nameplate band", () => {
+    expect(home).toContain("pointer-events-auto flex shrink-0 gap-2");
+  });
+
+  // Owner, 2026-09-01: the feed shows the patient alone, not a two-shot with
+  // the CMA. A nameplate naming someone who is not in frame captions a person
+  // the viewer cannot see, and the old two-shot clip must not linger as a
+  // fallback for any beat.
+  it("shows the patient only, and names only the patient", () => {
+    expect(feed).toContain("room-patient.mp4");
+    expect(feed).not.toContain("room-puretone");
+    // The nameplate's own lines — the talk-back button below still names the
+    // CMA, correctly, because she is in the room even though off-camera.
+    const band = home.slice(home.indexOf("absolute inset-x-0 bottom-0"),
+                            home.indexOf("Mic, Video].map"));
+    expect(band).not.toContain("cmaName");
   });
 
   // The clip shows Alex in headphones with the response button: that is the

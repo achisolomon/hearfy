@@ -158,7 +158,7 @@ export function AudMonitor({ next }: { next: () => void }) {
 
         {/* The one shared video geometry (refined 2026-08-31): the room feed
            sits where the call sits on every screen, clinical data beside it. */}
-        <VideoSplit video={<HomeFeed cmaName={hero.cma} />}>
+        <VideoSplit video={<HomeFeed cmaName={hero.cma} beat="puretone" />}>
           <div className="space-y-3">
             <Card className="p-4">
               <b className="text-sm">Thresholds arriving live</b>

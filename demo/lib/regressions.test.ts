@@ -1979,6 +1979,70 @@ describe("Dr. Reed's camera feed", () => {
   });
 });
 
+describe("the room's camera feed", () => {
+  const feed = sourceOf("components/screens/audiologist/room-feed.tsx");
+  const home = sourceOf("components/screens/audiologist/home-feed.tsx");
+
+  // The pane drew "ML" / "AR" initials circles on a navy gradient. The room
+  // footage replaced them; a leftover placeholder would show the initials on
+  // some screens and the real people on others.
+  it("shows the footage, not the ML/AR initials placeholder", () => {
+    // The placeholder was a mapped array of initials rendered into chips.
+    // Matching the JSX, not the letters, so the comment above the feed may
+    // still name what it replaced.
+    expect(home).not.toMatch(/\[\["ML"/);
+    expect(home).not.toMatch(/rounded-full bg-white\/90 text-xl font-extrabold/);
+    expect(home).toContain("<RoomFeed");
+  });
+
+  // The source take is a 16:9 screen-recording of a video call, with the
+  // call's own nameplates and control bar drawn INTO the frame. The clip is
+  // cropped to exclude them; the app draws its own. Baked-in chrome would
+  // render the LIVE pill, mic/video icons and nameplates twice.
+  it("keeps the call chrome in the DOM, over the feed", () => {
+    expect(home).toContain("Live");
+    expect(home).toMatch(/<Mic size=\{12\}/);
+    expect(feed).not.toContain("Live");
+  });
+
+  // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a
+  // raw <video src> alone, so a literal "/video/..." 404s in production while
+  // working on localhost. Same trap as Dr. Reed's feed.
+  it("builds asset URLs through the basePath helper", () => {
+    expect(feed).toContain("asset(");
+    expect(feed).not.toMatch(/(src|poster)=\{?["`]\/video\//);
+  });
+
+  // Autoplay is only permitted for muted video. The source had an AAC track;
+  // the demo is silent, and an unmuted clip would simply refuse to start.
+  it("is muted, looping and inline so it can autoplay", () => {
+    for (const attr of ["autoPlay", "loop", "muted", "playsInline"]) {
+      expect(feed).toContain(attr);
+    }
+  });
+
+  // The demo-wide contract: motion degrades to a still, never plays anyway.
+  it("falls back to a poster still under prefers-reduced-motion", () => {
+    expect(feed).toContain("prefers-reduced-motion: reduce");
+    expect(feed).toContain("room-puretone-poster.jpg");
+  });
+
+  // Only the pure-tone beat has footage so far. An unknown beat must fall
+  // back to it rather than resolving to a missing file and rendering a black
+  // pane — the remaining beats are still to be generated.
+  it("falls back to the one existing clip for a beat with no footage", () => {
+    expect(feed).toContain("CLIPS[beat] ?? CLIPS.puretone");
+  });
+
+  // The clip shows Alex in headphones with the response button: that is the
+  // pure-tone beat, and the live-monitoring screen must name it rather than
+  // relying on the default.
+  it("names the beat on the live exam screen", () => {
+    expect(sourceOf("components/screens/audiologist/supervision.tsx"))
+      .toContain('beat="puretone"');
+  });
+});
+
 describe("the audiologist presents the comparison", () => {
   const table = sourceOf("components/screens/compare-table.tsx");
   const commerce = sourceOf("components/screens/patient/commerce.tsx");

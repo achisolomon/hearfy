@@ -2,6 +2,7 @@
 import { Mic, Video } from "lucide-react";
 import { Card } from "../../ui";
 import { cma, patient } from "@/lib/mock-data";
+import { RoomFeed } from "./room-feed";
 
 /**
  * The audiologist SEES and HEARS the room, from the first test until the
@@ -14,25 +15,27 @@ import { cma, patient } from "@/lib/mock-data";
  * with the same 4:3 pane as the CMA's view of her, so the call looks
  * identical wherever it appears.
  */
-export function HomeFeed({ cmaName = cma.name }: { cmaName?: string }) {
+export function HomeFeed({ cmaName = cma.name, beat }: { cmaName?: string; beat?: string }) {
   return (
     <Card className="overflow-hidden">
-      <div className="relative grid aspect-[4/3] place-items-center bg-gradient-to-br from-[#16426c] to-[#0c2340]">
-        <div className="flex items-center gap-5 pb-10">
-          {[["ML", `CMA ${cmaName}`], ["AR", patient.name]].map(([initials, label]) => (
-            <div key={label} className="text-center">
-              <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white/90 text-xl font-extrabold text-brand-navy">
-                {initials}
-              </span>
-              <span className="mt-1.5 block text-[10px] font-semibold text-white/75">{label}</span>
-            </div>
-          ))}
-        </div>
+      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#16426c] to-[#0c2340]">
+        {/* The room itself, replacing the "ML" / "AR" initials circles
+            (2026-09-01). The gradient stays behind it as the ground the
+            poster frame sits on, so the tile still reads as the same call
+            surface it always was. */}
+        <RoomFeed beat={beat} />
         <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> Live
         </span>
-        <span className="absolute right-3 top-3 flex gap-1.5 text-white/80">
+        <span className="absolute right-3 top-3 flex gap-1.5 text-white drop-shadow">
           <Mic size={12} /> <Video size={12} />
+        </span>
+        {/* Who is in the room — the names the initials circles used to carry.
+            Kept as a small nameplate so the feed still identifies the pair,
+            and truncating rather than wrapping so it cannot grow over the
+            faces at a large rem base (same reasoning as ZoomPanel's). */}
+        <span className="pointer-events-none absolute left-3 top-11 max-w-[calc(100%-1.5rem)] truncate rounded-full bg-black/45 px-2 py-0.5 text-[9px] font-semibold text-white">
+          CMA {cmaName} · {patient.name}
         </span>
         {/* The patient's words land as live captions, the way a call renders speech.
 

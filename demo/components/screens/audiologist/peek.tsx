@@ -27,7 +27,12 @@ export function ExamPeek({ exam, acknowledged, onAcknowledge, onOpenMonitoring, 
   exam: SupervisionExam | null;
   acknowledged: boolean;
   onAcknowledge: () => void;
-  onOpenMonitoring: () => void;
+  /**
+   * Absent while the panel is idle: before testing starts there is no live
+   * monitoring to open, and wiring one here would jump the story eighteen
+   * beats into a case that has not begun.
+   */
+  onOpenMonitoring?: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -96,7 +101,7 @@ export function ExamPeek({ exam, acknowledged, onAcknowledge, onOpenMonitoring, 
             <div className="mt-4"><StatusPill tone="green">Acknowledged · routed to on-call</StatusPill></div>
           )}
 
-          {exam.hero && (
+          {exam.hero && onOpenMonitoring && (
             <div className="mt-4"><PrimaryButton onClick={onOpenMonitoring}>Open full monitoring</PrimaryButton></div>
           )}
 

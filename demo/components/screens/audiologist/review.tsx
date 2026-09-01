@@ -14,7 +14,7 @@ const signedLatch = createLatch();
 
 export function AudReview({ next }: { next: () => void }) {
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
         <PageHeader eyebrow="Clinical review" title={`${patient.name} — exam complete`} />
 
@@ -101,7 +101,7 @@ export function AudReview({ next }: { next: () => void }) {
 export function AudSign({ next }: { next: () => void }) {
   const signed = signedLatch.use();
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
       {/* Same page header as every other audiologist screen (consistency,
          Achi 2026-08-31) — the card below carries the state, not the title. */}

@@ -99,7 +99,7 @@ export function AudPanel({ next }: { next: () => void }) {
   const open = supervisionQueue.find(e => e.id === openId) ?? null;
 
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
         <PageHeader
           eyebrow="Live supervision"
@@ -147,7 +147,7 @@ export function AudPanel({ next }: { next: () => void }) {
 export function AudMonitor({ next }: { next: () => void }) {
   const hero = supervisionQueue.find(e => e.hero)!;
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">

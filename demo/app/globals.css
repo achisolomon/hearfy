@@ -3,12 +3,32 @@
 @tailwind utilities;
 :root{color-scheme:light}*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;color:#0b2340;background:radial-gradient(circle at 8% 0%,rgba(18,170,165,.10),transparent 28rem),radial-gradient(circle at 96% 18%,rgba(37,95,152,.08),transparent 24rem),#f4f8f8;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button{-webkit-tap-highlight-color:transparent}.map-grid{background-color:#eef5f5;background-image:linear-gradient(rgba(11,35,64,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(11,35,64,.05) 1px,transparent 1px),linear-gradient(28deg,transparent 45%,rgba(255,255,255,.96) 46%,rgba(255,255,255,.96) 52%,transparent 53%),linear-gradient(-32deg,transparent 46%,rgba(255,255,255,.94) 47%,rgba(255,255,255,.94) 54%,transparent 55%);background-size:28px 28px,28px 28px,150px 110px,180px 130px}
 
-/* Low-vision standard (patient persona §2): the rem base is 18px (112.5% of
-   the 16px browser default), never below 16px, so it must live on the root
-   element — Tailwind's text-* utilities resolve in rem against html, not
-   body, so a body-scoped rule left almost every classed string untouched.
-   TextSize (components/a11y/text-size.tsx) writes this same 112.5%-scaled
-   percentage inline for its "standard"/"large"/"larger" choices, so the
-   inline value composes with this baseline instead of replacing it with a
-   plain 16px-relative one. */
-html { font-size: 112.5%; }
+/* Low-vision standard (patient persona §2): the rem base is 18px, never below
+   16px, so it must live on the root element — Tailwind's text-* utilities
+   resolve in rem against html, not body, so a body-scoped rule left almost
+   every classed string untouched.
+
+   This was `font-size: 112.5%` — a percentage of the BROWSER's default font
+   size. On a desktop that default is 16px, so it landed on the intended 18px
+   and looked right. On a phone it does not: Android Chrome and iOS Safari
+   apply the OS/browser "font size" accessibility setting by scaling that same
+   default, and the percentage then multiplies it. A phone set to a large font
+   (a common setting, and a likely one for this product's own low-vision
+   audience) took the default to ~24px, which 112.5% turned into a 27px rem
+   base — every rem-sized string in the app inflated ~50%, overflowing cards,
+   truncating the persona bar and pushing controls under the docked bar.
+   Measured 2026-09-01 walking the demo at 390px with a 24px browser default:
+   28 of 37 screens had clipped or off-screen content, versus 6 at 16px.
+
+   `clamp()` on an absolute basis fixes both ends. The preferred value is
+   still expressed relative to the user's own setting (1.125rem at the root is
+   the browser default × 1.125), so someone who has asked their phone for
+   bigger text still gets bigger text — the accessibility intent is kept, not
+   overridden. But the result is now bounded to 18–22px, so it can never run
+   away into the layout-breaking range. The floor holds the 18px low-vision
+   baseline for anyone at or below a 16px default.
+
+   TextSize (components/a11y/text-size.tsx) multiplies this base for its
+   "standard"/"large"/"larger" steps and applies the same clamp, so the
+   in-product control remains the deliberate way to get larger text. */
+html { font-size: clamp(18px, 1.125rem, 22px); }

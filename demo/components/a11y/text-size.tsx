@@ -35,12 +35,18 @@ function setIndex(i: number) {
   emit();
 }
 
-/** The root font-size (relative to the 16px browser default) for a given
- * SIZES scale. `html`'s base rule in globals.css sets the low-vision 18px
- * baseline as 112.5%; writing this same 112.5%-scaled value inline keeps the
- * inline style composing with that baseline instead of replacing it with a
- * plain 16px-relative percentage. */
-const rootFontSize = (scale: number) => `${scale * 112.5}%`;
+/** The root font-size for a given SIZES scale.
+ *
+ * This was `${scale * 112.5}%` — a percentage of the browser's own default.
+ * That default is 16px on a desktop but is scaled by the OS/browser "font
+ * size" accessibility setting on a phone, so the percentage multiplied it and
+ * the rem base ran away (see the `html` rule in globals.css for the measured
+ * damage). Mirroring that rule's `clamp()` keeps this control authoritative
+ * over its own three steps while staying inside the same safe 18–22px band,
+ * scaled per step. The user's own setting still shows through the `1.125rem`
+ * preferred term, so asking the phone for bigger text still does something. */
+const rootFontSize = (scale: number) =>
+  `clamp(${18 * scale}px, ${1.125 * scale}rem, ${22 * scale}px)`;
 
 /**
  * The current text-size step, for chrome that must react to it outside the

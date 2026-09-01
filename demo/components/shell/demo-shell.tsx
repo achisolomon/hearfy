@@ -82,7 +82,13 @@ export function DemoShell() {
           labelled trigger that also shows the current role covers what two
           separate buttons did, and leaves more width for the label at
           375px. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-between gap-2 border-t border-[#dce7e9] bg-white/95 px-3 backdrop-blur md:hidden">
+      {/* `min-h-14`, not `h-14`: a fixed height cannot grow with its contents,
+          so when the rem base rises (a phone set to a large system font) the
+          persona name and role were clipped to "Al…" / "Pat…" — the owner saw
+          exactly this on a real device, 2026-09-01. A minimum keeps the bar's
+          resting height identical at the standard size while letting it take
+          the extra few pixels it needs instead of cutting the text. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex min-h-14 items-center justify-between gap-2 border-t border-[#dce7e9] bg-white/95 px-3 py-2 backdrop-blur md:hidden">
         <button
           onClick={back}
           disabled={atStart}
@@ -148,12 +154,27 @@ export function DemoShell() {
             budget at every text size, the full titles do not.
           */}
           <span className="min-w-0 text-left leading-tight">
-            <b className="block truncate text-sm font-bold leading-tight">
+            {/* `whitespace-nowrap`, not `truncate`. On a 320px phone with an
+                enlarged browser font this line was losing up to 71% of
+                itself — "Dr. Reed" became "D…", which identifies nobody and
+                defeats the whole reason the owner asked for the person's
+                name here. These are one-word labels ("Alex", "Maya",
+                "Jordan", "Dr. Reed") with no longer case coming, so keeping
+                them whole costs a few pixels the flex row can give up. */}
+            <b className="block whitespace-nowrap text-sm font-bold leading-tight">
               {personaFor(role).name.startsWith("Dr. ")
                 ? `Dr. ${personaFor(role).name.split(" ").at(-1)}`
                 : personaFor(role).name.split(" ")[0]}
             </b>
-            <span className="block truncate text-xs font-normal leading-tight text-slate-500">
+            {/* No `truncate` on the role line. These are four short, fixed
+                words, and the longest of them ("Audiologist") was losing a
+                quarter of itself to the ellipsis on a 360px phone whose
+                browser font is enlarged — "Audiolog…" names nobody. The
+                whole point of this line is to say which of the four roles is
+                active, so it must survive intact. `whitespace-nowrap` keeps
+                it on one line, and the flex column above may shrink; there
+                is no wider label coming, so nothing can overflow here. */}
+            <span className="block whitespace-nowrap text-xs font-normal leading-tight text-slate-500">
               {SHORT[role]}
             </span>
           </span>

@@ -32,8 +32,16 @@ export function CompareTable({ layout = "cards", selectable = true, onSelect }: 
 
   return (
     <>
-      {/* The CMA's tablet: the side-by-side comparison. */}
-      {layout === "table" && <div>
+      {/* The CMA's tablet: the side-by-side comparison.
+
+          The wide table is for the width that can hold it — the CMA's tablet
+          and up. Below `md` it would need either a crushed rightmost column
+          or a horizontal scrollbar, and the owner already ruled on that one:
+          "It looks bad. Lose this. Lose the scroll." So the phone gets the
+          `cards` layout below instead, which stacks the same three devices
+          one per row and needs no width it does not have. Both are rendered
+          and the breakpoint picks; nothing is lost at either size. */}
+      {layout === "table" && <div className="hidden md:block">
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-[9rem_repeat(3,1fr)]">
             <div />
@@ -90,8 +98,14 @@ export function CompareTable({ layout = "cards", selectable = true, onSelect }: 
         </Card>
       </div>}
 
-      {/* The patient's phone: one card per package, the same six rows. */}
-      {layout === "cards" && <div className="space-y-4">
+      {/* The patient's phone: one card per package, the same six rows.
+          Also what the CMA's `table` falls back to below `md`, where the
+          four-column grid cannot fit — same content, stacked, no scrollbar.
+
+          The role still chooses the layout; the breakpoint only supplies the
+          narrow rendering of the CMA's own choice, the same way BottomNav's
+          siblings do it. Both trees stay in the DOM, so nothing waits on JS. */}
+      {(layout === "cards" || layout === "table") && <div className={cn("space-y-4", layout === "table" && "md:hidden")}>
         {shortlist.map(d => {
           const isSel = d.name === selected.name;
           const detail = deviceDetail[d.name];

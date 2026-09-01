@@ -88,28 +88,67 @@ export function ZoomPanel({ note, active }: { note: string; active: boolean }) {
           </span>
         )}
 
-        {/* Nameplate above caption in one bottom-anchored column, so a long
-            note pushes the stack up instead of colliding with the name. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-4 pb-4 pt-12">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-extrabold leading-tight text-white">{clinician.name}, {clinician.credential}</p>
-              <p className="mt-0.5 truncate text-xs text-white/75">Licensed Audiologist · {clinician.licenseState}</p>
-            </div>
-            <span className="flex shrink-0 gap-2">
-              {[Mic, Video].map((I, i) => (
-                <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
-              ))}
-            </span>
+        {/* Nameplate, anchored to the bottom of the frame. The name and title
+            `truncate` rather than wrap, so this band's height is fixed no
+            matter how the rem base moves — it can never grow to cover her
+            face the way the caption did. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-4 pb-3 pt-12">
+          <div className="min-w-0">
+            {/* The credential wraps to its own line rather than truncating.
+                At 320px with an enlarged browser font this lost 36% of
+                itself, cutting "Dr. Susan Reed, Au.D." mid-credential —
+                and the Au.D. is the thing that makes her the person who may
+                legally sign the audiogram. Wrapping is safe now that the
+                caption has moved out of the frame: this band sits at the
+                bottom, so a second line grows downward into the gradient,
+                not up over her face. */}
+            <p className="text-[15px] font-extrabold leading-tight text-white">{clinician.name}, {clinician.credential}</p>
+            {/* "Licensed Audiologist · Florida" lost a quarter of itself to
+                the ellipsis at a large rem base, cutting the line mid-word.
+                Dropping `truncate` here lets it wrap to a second line
+                instead: the credential and its licence state both survive,
+                and because this sits in a bottom-anchored band OUTSIDE the
+                caption (which now lives below the frame), one extra line
+                cannot grow back over Dr. Reed's face. The name above keeps
+                its `truncate` — one long name should not push the video
+                around. */}
+            <p className="mt-0.5 text-xs leading-tight text-white/75">
+              Licensed Audiologist · {clinician.licenseState}
+            </p>
           </div>
-          {/* Her words land as a live caption, the way a call renders speech. */}
-          <p className={cn(
-            "rounded-2xl px-3 py-2 text-xs leading-5 text-white",
-            active ? "bg-black/65 font-semibold" : "bg-black/50")}>
-            {note}
-          </p>
+          <span className="flex shrink-0 gap-2">
+            {[Mic, Video].map((I, i) => (
+              <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-white"><I size={15} /></span>
+            ))}
+          </span>
         </div>
       </div>
+
+      {/* Her words, BELOW the frame rather than over it (owner, 2026-09-01:
+          "there is a text on the video on the phone. Maybe put the text below
+          the video").
+
+          This caption used to sit inside the 4:3 frame, stacked under the
+          nameplate in the same bottom-anchored column. That column grows
+          upward as the note gets longer, and on a phone — where the frame is
+          only ~340px wide and the rem base is larger — a two-line note on the
+          desktop became a six-line block that covered Dr. Reed's face
+          entirely, which is the one thing the live call is there to show.
+
+          Below the frame it cannot cover anything, no matter how long the
+          note or how large the text: the tile simply gets taller. It also
+          stops being white-on-video, so it no longer depends on whatever
+          happens to be behind it for legibility — it now reads as ordinary
+          dark-on-light caption text, matched to the card it sits in. The
+          `active` state keeps its distinction through weight and the teal
+          rule, mirroring the panel's own active border. */}
+      <p className={cn(
+        "border-t px-4 py-3 text-sm leading-relaxed",
+        active
+          ? "border-brand-teal/30 bg-[#f0fbfa] font-semibold text-brand-navy"
+          : "border-[#e4eef0] bg-white text-[#3f5061]")}>
+        {note}
+      </p>
     </div>
   );
 }

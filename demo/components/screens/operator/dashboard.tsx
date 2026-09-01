@@ -8,7 +8,7 @@ import { BRAND_NAME } from "@/lib/mock-data";
 /** One ruthlessly composed screen, not a multi-tab app (spec §3). */
 export function OperatorDashboard() {
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6">
           <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-brand-teal">

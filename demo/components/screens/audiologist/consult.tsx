@@ -26,7 +26,7 @@ export function AudConsult({ next }: { next: () => void }) {
   const excluded = devices[2].name;
 
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -131,7 +131,7 @@ export function AudConsult({ next }: { next: () => void }) {
 export function AudPrescription() {
   const locked = lockedLatch.use();
   return (
-    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-20 text-brand-navy md:pb-6">
+    <div className="min-h-[100dvh] bg-brand-bg p-6 pb-32 text-brand-navy md:pb-6">
       <div className="mx-auto max-w-5xl">
       {/* Same page header as every other audiologist screen (consistency,
          Achi 2026-08-31) — the card below carries the state, not the title. */}

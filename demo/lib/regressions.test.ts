@@ -323,10 +323,19 @@ describe("mobile persona indicator", () => {
   });
 
   // The role line sits directly beneath the name in the same fixed-width
-  // column; if either wraps or overflows it will push the Next pill or break
-  // the bar's single-row layout. Both lines truncate to a single line with
-  // an ellipsis instead.
-  it("truncates the role label instead of wrapping or overflowing", () => {
+  // column; if either wraps it will push the Next pill or break the bar's
+  // single-row layout. Both lines are therefore held to ONE line.
+  //
+  // Originally that was `truncate`, which is `nowrap` plus an ellipsis. The
+  // ellipsis turned out to be the harmful half: on a 360px phone with an
+  // enlarged browser font "Audiologist" lost a quarter of itself, and at
+  // 320px "Dr. Reed" lost 71% and rendered as "D…" — a persona indicator
+  // that names nobody, which is precisely what this line exists to do
+  // (owner, 2026-09-01). These labels are a short fixed set with no longer
+  // case coming, so they are now `whitespace-nowrap`: the same single-line
+  // guarantee this test was written to protect, without the truncation.
+  // The invariant is "never wraps", so that is what is asserted.
+  it("holds the role label to a single line instead of wrapping", () => {
     // The bar's aria-label also reads SHORT[role] (inside a `${...}`
     // template-literal interpolation, e.g. `${SHORT[role]}`), which is not
     // the rendered text this test cares about — the JSX-content usage is
@@ -337,7 +346,9 @@ describe("mobile persona indicator", () => {
     const before = controlBarBlock.slice(0, shortMatch!.index);
     const openTag = /<span\b[^>]*>\s*$/.exec(before);
     expect(openTag, "expected {SHORT[role]} to be rendered as the direct content of a <span> whose opening tag immediately precedes it").toBeTruthy();
-    expect(openTag![0]).toMatch(/\btruncate\b/);
+    // `truncate` and `whitespace-nowrap` both pin it to one line; either is
+    // acceptable, wrapping is not.
+    expect(openTag![0]).toMatch(/\btruncate\b|\bwhitespace-nowrap\b/);
   });
 
   it("opens the same sheet used for role switching when the indicator is tapped", () => {

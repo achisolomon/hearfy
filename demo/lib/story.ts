@@ -247,6 +247,14 @@ export function beatForScreenNear(role: Role, screen: AnyScreenId, from: number)
  * the patient's side advances.
  */
 export function beatsForRole(role: Role): number[] {
+  // The operator watches rather than acts: one screen id for the entire
+  // script, whose CONTENT changes with the stage (pipeline, metrics,
+  // exceptions). Keyed on screen changes he had a one-beat walk, so the
+  // chrome's Next was dead and his first screen said "End of this persona's
+  // day". His day is the nine stages.
+  if (role === "operator") {
+    return STAGES.map(s => firstBeatOfStage(s.n));
+  }
   const out: number[] = [];
   let last: AnyScreenId | null = null;
   BEATS.forEach((b, i) => {

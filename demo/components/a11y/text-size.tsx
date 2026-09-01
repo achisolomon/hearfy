@@ -136,7 +136,12 @@ export function TextSize() {
           // under it at 36px. The visual pill stays compact because the
           // buttons are round and the label inside them is unchanged.
           className={cn("grid h-11 w-11 place-items-center rounded-full font-bold transition",
-            i === idx ? "bg-brand-navy text-white" : "text-slate-500 hover:bg-[#f1f5f6]")}
+            // Selection is teal (DESIGN.md's Selection Rule: navy acts, teal
+            // marks) — this control was one of the two surfaces still filling
+            // navy, which is the action colour. Teal Ink, not Vital Teal:
+            // the label is white, and white on #12AAA5 is 2.87:1, the exact
+            // fault ui.tsx already fixed once. White on #087D7A is 4.97:1.
+            i === idx ? "bg-teal-ink text-white" : "text-slate-500 hover:bg-[#f1f5f6]")}
           style={{ fontSize: `${11 * s.scale}px` }}
         >
           {s.label}

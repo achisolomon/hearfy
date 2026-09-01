@@ -294,3 +294,76 @@ describe("Compare's device selector is a real touch target", () => {
     expect(compare).toContain("min-h-11");
   });
 });
+
+/**
+ * The Selection Rule: navy acts, teal marks.
+ *
+ * Found 2026-09-01, walking the booking flow: the selected day tile on
+ * "Choose a day" was `bg-brand-navy` and the Continue button directly beneath
+ * it was also `bg-brand-navy`, so the viewer's answer and the control that
+ * left the screen were the same object. The text-size control had the same
+ * fault. Five other selectable surfaces (Option rows, device cards, the CMA's
+ * try-on list, the audiologist's recommend button, BottomNav) were already
+ * teal, so the app was 5-for-7 and the two strays were the bug.
+ *
+ * DESIGN.md's Selection Rule now states it: navy is the thing you press, teal
+ * is the thing you picked, and the two never collide on one screen.
+ *
+ * These assert the invariant, not the spelling. A test that only banned the
+ * literal `bg-brand-navy` on one line of booking.tsx would pass the moment
+ * someone re-introduced the collision somewhere else, or wrote the same navy
+ * as an arbitrary hex.
+ */
+describe("selection colour", () => {
+  /** Harbor Navy, however it is spelled in a class list. */
+  const NAVY_FILL = /bg-(?:brand-navy|\[#0[bB]2340\])/;
+
+  /**
+   * A selected-state class list: the truthy branch of a ternary keyed on a
+   * selection flag. Catches `active?"…":"…"`, `isSel?…`, `d===i?…`, `on?…`.
+   */
+  const SELECTED_BRANCHES =
+    /(?:active|isSel|isRec|selected|on|d===i|i===idx|current===t)\s*\?\s*"([^"]*)"/g;
+
+  it("never fills a selected item with the action colour", () => {
+    const offenders: string[] = [];
+    for (const file of componentFiles()) {
+      // The demo shell's own chrome is not in-screen selection: RoleTabs is
+      // how a viewer switches persona, and it stays navy on purpose so the
+      // chrome reads as separate from the product. Everything under
+      // components/screens and the patient's own a11y control is product UI.
+      if (file.startsWith("components/shell/")) continue;
+      for (const [, branch] of codeOf(file).matchAll(SELECTED_BRANCHES)) {
+        if (NAVY_FILL.test(branch)) offenders.push(`${file}: ${branch}`);
+      }
+    }
+    expect(
+      offenders,
+      `Selected items must not fill with the action colour (DESIGN.md's Selection Rule).\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("marks the chosen day with teal, the same as every other pick-one list", () => {
+    const book = codeOf("components/screens/patient/booking.tsx")
+      .split("export function BookTime")[0];
+    // The selected branch carries teal, and the tile is a real radio.
+    expect(book).toMatch(/d===i\s*\?\s*"[^"]*teal/);
+    expect(book).toMatch(/role="radio"/);
+    expect(book).not.toMatch(NAVY_FILL);
+  });
+
+  it("marks the chosen text size with Teal Ink, never Vital Teal behind white", () => {
+    const ts = codeOf("components/a11y/text-size.tsx");
+    expect(ts).toMatch(/i === idx\s*\?\s*"bg-teal-ink text-white"/);
+    // #12AAA5 behind a white label is 2.87:1 — the fault ui.tsx already fixed.
+    expect(ts).not.toMatch(/bg-brand-teal text-white/);
+    expect(contrastRatio("#FFFFFF", "#087D7A")).toBeGreaterThanOrEqual(BODY);
+  });
+
+  it("keeps the primary action navy, at the contrast the low-vision floor wants", () => {
+    // White on Harbor Navy is the most legible pairing the palette has, which
+    // is why the action keeps it rather than trading it for a lighter fill.
+    expect(contrastRatio("#FFFFFF", "#0B2340")).toBeGreaterThan(contrastRatio("#FFFFFF", "#087D7A"));
+    expect(contrastRatio("#FFFFFF", "#0B2340")).toBeGreaterThanOrEqual(7);
+  });
+});

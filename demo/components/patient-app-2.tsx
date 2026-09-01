@@ -25,7 +25,7 @@ function onScript(s: ScreenId) {
  * shell replaces it. Demo 1's patient-app.tsx stays frozen.
  */
 export function PatientApp2() {
-  const { screen, beat, mode, goToScreen, next } = useStory();
+  const { screen, beat, goToScreen, advanceInRole } = useStory();
   /**
    * The guided script narrates four of stage 2's nine screens, so the other
    * five — the rest of intake, and both booking steps — have no beat of their
@@ -40,21 +40,27 @@ export function PatientApp2() {
   const current = (active ?? screen) as ScreenId;
 
   /**
-   * A screen's own forward button is the patient taking the story's next step,
-   * so it behaves like the shell's Next: when the following beat is led by
-   * someone else, the demo hands over to them. `goToScreen` deliberately stays
-   * inside the current role, so using it for a forward move pinned the viewer
-   * to the patient and no handoff ever fired.
+   * A button on Alex's phone is Alex acting on his own device, so it moves
+   * time but never hands the view to someone else.
+   *
+   * This used to call the shell's `next()` for a forward step, which adopts
+   * the landing beat's lead role: tapping "Simulate visit day" put the viewer
+   * on Maya's tablet mid-tap (owner, 2026-09-01). Handoffs belong to the
+   * chrome — the top Next, the timeline and the role tabs still tell the
+   * cross-persona story.
+   *
+   * Both modes behave identically now; there is no reason a click inside a
+   * device should mean different things depending on how the demo was entered.
    */
   const go = (s: ScreenId) => {
     // A screen the script never narrates can only be shown as a detour.
     if (!onScript(s)) return setDetour({ screen: s, from: screen });
     setDetour(null);
-    if (mode === "solo") return goToScreen(s);
-    // Taking the next step advances the story, so a handoff to another role
-    // fires as it does from the shell's own Next. Anything else just browses.
+    // A forward step to the next screen in registry order walks this role's
+    // own beats, so a stretch where only other personas act is crossed in one
+    // press instead of stranding the viewer on an unchanged screen.
     const isNextStep = order.indexOf(s) === order.indexOf(current) + 1;
-    if (isNextStep) next();
+    if (isNextStep) advanceInRole();
     else goToScreen(s);
   };
 
@@ -97,9 +103,9 @@ export function PatientApp2() {
     signing: <Signing go={go} back={back}/>,
     order: <Order go={go} back={back}/>,
     support: <Support go={go} back={back}/>,
-    // `go` closes over the beat and the mode, so the cached elements must be
-    // rebuilt when either moves — not only when the screen id changes.
-  } as Record<ScreenId, React.ReactNode>), [current, beat, mode, screen]);
+    // `go` closes over the beat, so the cached elements must be rebuilt when
+    // it moves — not only when the screen id changes.
+  } as Record<ScreenId, React.ReactNode>), [current, beat, screen]);
 
   return (
     <main>

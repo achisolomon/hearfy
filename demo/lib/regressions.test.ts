@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
-import { componentFiles, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
+import { componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
 import { audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
@@ -2752,6 +2752,87 @@ describe("a click inside a device stays in that persona", () => {
   // destructure `next` from the context itself.
   it("never destructures the story context's next() outside the shell", () => {
     expect(screensReachingContextNext()).toEqual({});
+  });
+
+  // The destructuring guard above only catches `const { next } = useStory()`.
+  // It was blind to a component that captures the whole context object and
+  // reaches `.next` off it later — a shape that compiles, typechecks, and
+  // would pass a destructure-only check while reintroducing the exact bug
+  // this whole describe block exists for. That idiom already lives in the
+  // codebase (components/a11y/text-size.tsx does `const story =
+  // useStoryOptional()`), safely, because it only ever reads `.role`. A
+  // *future* component in the same shape calling `story.next()` must be
+  // caught. Test the matching logic itself (`findContextNextOffences`)
+  // against inline source strings, independent of the filesystem, so this
+  // pins the detection's own behavior rather than only the current tree's
+  // state.
+  it("catches whole-object capture and direct chaining, not just destructuring", () => {
+    // Whole-object capture, then a `.next` property access later in the file.
+    expect(
+      findContextNextOffences(`
+        function Bad() {
+          const story = useStory();
+          return <button onClick={() => story.next()} />;
+        }
+      `),
+    ).not.toEqual([]);
+
+    // Same shape via useStoryOptional().
+    expect(
+      findContextNextOffences(`
+        function Bad() {
+          const story = useStoryOptional();
+          return <button onClick={() => story?.next()} />;
+        }
+      `),
+    ).not.toEqual([]);
+
+    // Direct chaining with no intermediate binding at all.
+    expect(
+      findContextNextOffences(`function Bad() { return useStory().next(); }`),
+    ).not.toEqual([]);
+    expect(
+      findContextNextOffences(`function Bad() { return useStoryOptional()?.next(); }`),
+    ).not.toEqual([]);
+
+    // The existing destructuring shapes still fire (no regression from the refactor).
+    expect(
+      findContextNextOffences(`const { next } = useStory();`),
+    ).not.toEqual([]);
+    expect(
+      findContextNextOffences(`const { next: goForward } = useStory();`),
+    ).not.toEqual([]);
+
+    // The safe idiom already in the codebase: whole-object capture that only
+    // ever reads `.role` must NOT be flagged — a false positive here would
+    // block text-size.tsx's legitimate usage.
+    expect(
+      findContextNextOffences(`
+        function Safe() {
+          const story = useStoryOptional();
+          const hidden = story !== null && story.role !== "patient";
+          return hidden ? null : <div />;
+        }
+      `),
+    ).toEqual([]);
+
+    // A prop merely NAMED next is not the danger — only reaching it off the
+    // context object itself is.
+    expect(
+      findContextNextOffences(`
+        function Safe({ next }: { next: () => void }) {
+          return <button onClick={next} />;
+        }
+      `),
+    ).toEqual([]);
+
+    // findContextNextOffences is a pure text matcher with no notion of
+    // comments — stripping comments is stripComments' job, applied upstream
+    // by screensReachingContextNext before it ever calls this matcher (see
+    // "never destructures the story context's next() outside the shell"
+    // above, which exercises that real composition against the actual
+    // component tree and would fail if a doc comment mentioning `.next()`
+    // were ever mistaken for a real call there).
   });
 
   // The guard above passes if literally nobody wires anything — pin the

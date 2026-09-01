@@ -328,3 +328,67 @@ export function prevBeatForRole(i: number, role: Role): number {
   const earlier = beats.filter(b => b < i);
   return earlier.length ? earlier[earlier.length - 1] : (beats[0] ?? i);
 }
+
+/**
+ * Whether the chrome's solo-mode Next should HAND OVER to another persona
+ * at beat `i`, rather than continue walking `role`'s own beats.
+ *
+ * Two rules are in tension at a beat like this (owner, 2026-09-01): an
+ * IN-SCREEN button must never switch persona (`advanceInRole` — untouched by
+ * this function), but the chrome's Next is explicitly allowed to, because
+ * that is how a cross-persona handoff gets demonstrated at all. The bug this
+ * resolves: solo-walking the CMA past the beat where her own screen is a
+ * read-only mirror of a patient-led act skipped straight to her NEXT beat,
+ * so the patient's own screen for that act — the whole point of the beat —
+ * was never shown to either persona (`nextBeatForRole` alone cannot know
+ * this; it only ever walks `role`'s own screen changes).
+ *
+ * `i` is a hand-over point for `role` when ALL of:
+ *   1. `role` does not lead beat `i` — someone else does, so `role`'s own
+ *      screen there is necessarily a mirror of their act, not `role`'s own.
+ *   2. `i` is not `role`'s walk-start (`beatsForRole(role)[0]`, always beat
+ *      0). At the very start `role` has not begun their story yet, so there
+ *      is nothing of theirs to "resume" — firing here would eject a viewer
+ *      who just chose to enter as this persona before their walk even
+ *      begins, breaking the per-persona solo walk entirely.
+ *   3. `role`'s OWN next walk-stop after `i` is led by `role` again. This is
+ *      what separates a single sandwiched aside (hand over: role has
+ *      nothing further to do right here, and is about to resume leading
+ *      right after) from an extended passive stretch where role legitimately
+ *      keeps watching several more beats led by others in a row — e.g. the
+ *      patient watching the CMA's whole home-visit exam unfold on his own
+ *      phone, beat after beat. That must stay a normal, uninterrupted solo
+ *      walk: a cascade of handoffs there would eject the viewer from the
+ *      persona they chose after a single press.
+ *   4. `role`'s own screen at `i` differs from `role`'s own screen at the
+ *      very next FULL beat (`i + 1`, not role's own skip target). This is
+ *      what separates a genuinely distinct, one-beat-only mirror (the
+ *      contract signing: `cma-signing` appears at exactly this beat, then
+ *      moves on to `cma-activate`) from a beat whose screen for `role` is
+ *      really just an early, shared appearance of the SAME screen `role`
+ *      properly owns one beat later (e.g. the CMA's device shortlist screen
+ *      already shows while the audiologist nominally still leads, then
+ *      stays on screen, unchanged, once the CMA's own lead beat begins) —
+ *      condition 3 alone cannot tell these apart, and firing on the shared-
+ *      screen case hands off before `role` ever reaches their own later
+ *      beats, silently truncating the rest of their walk.
+ *
+ * Returns the beat's lead role to hand over to, landing on the SAME beat
+ * index `i` — the lead's own screen for the beat already on display, not a
+ * beat further along — or `null` when solo Next should proceed normally via
+ * `nextBeatForRole`. Pure and framework-free like the rest of this file, so
+ * `story-context.tsx`'s `next()` can call it directly and set `handoff` from
+ * the result, the same mechanism guided mode already uses to announce a role
+ * change rather than let it happen silently.
+ */
+export function soloHandoffAt(i: number, role: Role): Role | null {
+  const beat = BEATS[clamp(i)];
+  const lead = beat.lead;
+  if (lead === role) return null;
+  const walk = beatsForRole(role);
+  if (walk[0] === i || !walk.includes(i)) return null;
+  const resumed = nextBeatForRole(i, role);
+  if (resumed === i || BEATS[resumed].lead !== role) return null;
+  if (screenFor(i, role) === screenFor(i + 1, role)) return null;
+  return lead;
+}

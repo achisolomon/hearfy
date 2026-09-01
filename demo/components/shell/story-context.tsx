@@ -12,6 +12,7 @@ import {
   prevBeat,
   prevBeatForRole,
   screenFor,
+  soloHandoffAt,
   type AnyScreenId,
   type Role,
   type StageNumber,
@@ -112,11 +113,25 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
    * happens to be idempotent, which is not a property worth depending on.
    */
   const next = useCallback(() => {
-    // Solo: walk only this role's own beats; never switch role. Reaching the
-    // end of one persona's walk is NOT the end of the demo — the operator's
-    // dashboard is ambient, so their walk is a single beat, and ending the
-    // whole demo on one click would read as broken.
+    // Solo: walk only this role's own beats; never switch role — EXCEPT at a
+    // beat whose entire purpose is another persona acting while the current
+    // persona is explicitly a passive mirror (soloHandoffAt, lib/story.ts).
+    // There, the chrome's Next follows the story like guided mode does: hand
+    // over to that beat's lead so their own screen for THIS beat is actually
+    // shown, and announce the switch via `handoff` rather than let it happen
+    // silently. This is the chrome's call to make, not an in-screen button's
+    // — `advanceInRole` below still never reassigns role.
+    //
+    // Reaching the end of one persona's walk is NOT the end of the demo —
+    // the operator's dashboard is ambient, so their walk is a single beat,
+    // and ending the whole demo on one click would read as broken.
     if (mode === "solo") {
+      const handoffTo = soloHandoffAt(beat, role);
+      if (handoffTo) {
+        setHandoff(handoffTo);
+        setRoleState(handoffTo);
+        return;
+      }
       setBeat(nextBeatForRole(beat, role));
       return;
     }

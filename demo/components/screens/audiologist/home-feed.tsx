@@ -34,12 +34,23 @@ export function HomeFeed({ cmaName = cma.name }: { cmaName?: string }) {
         <span className="absolute right-3 top-3 flex gap-1.5 text-white/80">
           <Mic size={12} /> <Video size={12} />
         </span>
-        {/* The patient's words land as live captions, the way a call renders speech. */}
+        {/* The patient's words land as live captions, the way a call renders speech.
+
+            These wrap rather than `truncate`. With the in-app text control at
+            its largest step AND the phone's own font enlarged, the two
+            multiply to a ~28.6px rem base and the longer line lost 28% of
+            itself — "…I can't hear anyth…" is the exact quote a viewer needs
+            whole, since it is the moment the threshold is found. A caption is
+            speech, and clipped speech says nothing; the bubbles are anchored
+            to the bottom of the frame, so a second line grows downward within
+            the pane rather than over the two-shot. `rounded-2xl`, not
+            `rounded-full`, because a pill shape only reads correctly on a
+            single line. */}
         <div className="absolute inset-x-3 bottom-3 space-y-1 text-center">
-          <p className="mx-auto w-fit max-w-full truncate rounded-full bg-black/55 px-3 py-1 text-xs text-white">
+          <p className="mx-auto w-fit max-w-full rounded-2xl bg-black/55 px-3 py-1 text-xs leading-snug text-white">
             <b>{patient.name}:</b> &ldquo;I can hear that one.&rdquo;
           </p>
-          <p className="mx-auto w-fit max-w-full animate-pulse truncate rounded-full bg-black/55 px-3 py-1 text-xs text-white motion-reduce:animate-none">
+          <p className="mx-auto w-fit max-w-full animate-pulse rounded-2xl bg-black/55 px-3 py-1 text-xs leading-snug text-white motion-reduce:animate-none">
             <b>{patient.name}:</b> &ldquo;…I can&rsquo;t hear anything now.&rdquo;
           </p>
         </div>

@@ -124,7 +124,13 @@ export function CompareTable({ layout = "cards", selectable = true, onSelect }: 
                   {compareRecommendation.reasons[d.name]}
                 </span>
               </span>
-              <span className={cn("shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider",
+              {/* Not `shrink-0`. "Patient's choice" is the longest label here,
+                  and at 360px with both the in-app text control and the
+                  phone's own font at maximum it refused to give up width and
+                  pushed itself off the right edge instead. Allowing it to
+                  shrink and wrap keeps it on screen; `text-center` keeps the
+                  two words balanced once they stack. */}
+              <span className={cn("min-w-0 rounded-2xl px-3 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider",
                 selectable
                   ? (isSel ? "bg-teal-ink text-white" : "bg-[#f1f5f6] text-slate-500")
                   : (isSel ? "bg-brand-teal/15 text-teal-ink" : "bg-[#f6f8f9] text-slate-400"))}>

@@ -338,3 +338,17 @@ export const tryOnTalk: Record<string, { patient: string; clinician: string }> =
 export const compareCategories = [
   "Clinical fit", "Use & lifestyle", "Usability", "Commercial", "Terms", "Fulfilment",
 ];
+
+/**
+ * The pre-test questionnaire, as the clearance checklist sees it (owner,
+ * 2026-09-02). Alex answered it at intake — `intake-medical`, the medical
+ * safety gate — days before the visit. The checklist restates it because the
+ * audiologist signs off on all three checks together, and "answered at
+ * intake" is exactly the sort of thing that is assumed rather than verified.
+ */
+export const preTestQuestionnaire = {
+  completedOn: "May 19, 2025",
+  /** No red-flag answer was given; see lib/red-flag.ts for the flagged path. */
+  redFlagAnswers: 0,
+  finding: "Completed at intake, no red-flag answers",
+};

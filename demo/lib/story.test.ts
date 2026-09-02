@@ -481,13 +481,21 @@ describe("mirror-beat handoff, mode-agnostic (shared primitive)", () => {
     return undefined;
   }
 
-  it("finds a genuine mirror beat for the CMA and confirms it is beat 32 (signing) — sanity, not a hardcode: the script could change and this would just find a different beat", () => {
+  it("finds a genuine mirror beat for the CMA — sanity, not a hardcode: the script could change and this would just find a different beat", () => {
     const mirrorBeat = findGenuineMirrorBeat("cma");
     expect(mirrorBeat).toBeDefined();
     // Not asserted as a requirement — just documenting today's data for
-    // anyone reading this file, since the owner's report was specifically
-    // about beat 32.
-    expect(BEATS[mirrorBeat!].id).toBe("signing");
+    // anyone reading this file. The owner's original report was about beat 32
+    // ("signing"), which is what this found until the pre-test clearance gate
+    // landed (2026-09-02). The finder returns the FIRST such beat, and
+    // "clearance" is a genuine one that now sits earlier: the audiologist
+    // leads it (she signs the three checks off), while the CMA's own
+    // `cma-clearance` screen there is distinct from her tympanometry screen
+    // before it and her pure-tone screen after. Both beats are real mirrors;
+    // the behaviour under test — that mirrorHandoffAt fires at one — is
+    // asserted by the tests below, and is unchanged.
+    expect(BEATS[mirrorBeat!].id).toBe("clearance");
+    expect(findGenuineMirrorBeat("cma")).toBeLessThan(beatIndexById("signing"));
   });
 
   it("mirrorHandoffAt returns the beat's lead role at a genuine mirror beat", () => {

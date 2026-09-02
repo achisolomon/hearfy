@@ -120,6 +120,16 @@ export const BEATS: Beat[] = [
   // between the ear health check and the hearing test.
   { id: "tympanometry", stage: 4, lead: "cma",
     screens: { patient: "tympanometry", cma: "cma-tympanometry", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // The formal pass gate (owner, 2026-09-02). Nothing in the script used to
+  // ASK whether otoscopy and tympanometry had passed — the exam simply carried
+  // on into the hearing test, so a failed safety check would have ended in a
+  // device sale like any other visit. This beat is where the visit either
+  // clears or stops, and it is the one beat where the CMA and the audiologist
+  // are BOTH looking at the same three checks: she reports, the licensed
+  // clinician decides. Hence `aud-clearance` rather than her idle panel — the
+  // sign-off is her act, so she leads it.
+  { id: "clearance", stage: 4, lead: "audiologist",
+    screens: { patient: "clearance", cma: "cma-clearance", audiologist: "aud-clearance", operator: "op-dashboard" } },
   { id: "puretone", stage: 4, lead: "cma",
     screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
 

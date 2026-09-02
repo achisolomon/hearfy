@@ -56,9 +56,12 @@ export function CmaOtoscopy({ next }: { next: () => void }) {
 
 // Corrections sheet 2026-08-31, item 5: tympanometry runs on every exam,
 // between the ear health check and the hearing test.
+// The CTA says where it goes (owner, 2026-09-02): the next screen is the
+// clearance gate, not the hearing test. "Start hearing test" here would state
+// the very thing the gate exists to decide.
 export function CmaTympanometry({ next }: { next: () => void }) {
   return (
-    <ExamStepShell id="tympanometry" next={next} cta="Both ears traced"
+    <ExamStepShell id="tympanometry" next={next} cta="Both ears traced — review clearance"
       note="Reading each trace as it lands — a broken seal means a re-run, not a guess.">
       <TympanometryStep framing="cma" />
     </ExamStepShell>

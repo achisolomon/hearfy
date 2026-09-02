@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, beatIndexById } from "./story";
 import { EXAM_STEPS } from "./exam";
+import { clearanceOf, visitClearance, visitGates } from "./clearance";
 import { compareCategories, devices, deviceDetail, tiers } from "./mock-data";
 import { componentFiles, sourceOf } from "./screens";
 import { existsSync } from "node:fs";
@@ -520,5 +521,101 @@ describe("audiologist critique 2026-08-31", () => {
       const escapes = (src.match(/motion-reduce:animate-none/g) ?? []).length;
       expect(escapes, `${file}: ${pulses} animation(s), ${escapes} escape(s)`).toBe(pulses);
     }
+  });
+});
+
+/* ---------------------------------------------------------------------- *
+ * Owner, 2026-09-02 — the pre-test clearance gate.
+ *
+ * "If the tympanometry or otoscopy test failed, do not continue to the next
+ *  step. Notify the patient he has to go to a doctor. In this case we cannot
+ *  proceed with providing a hearing device, so we stop the process."
+ * "We need a formal passing screen before the hearing test starts."
+ * "The CMA screen should show a cleared-for-testing screen, while the
+ *  audiologist screen should show a checklist for 3 items — pre-test
+ *  questionnaire, otoscopy and tympanometry."
+ * ---------------------------------------------------------------------- */
+describe("the pre-test clearance gate", () => {
+  // The gate is a BEAT, not a flourish inside the tympanometry screen: it has
+  // to be somewhere the story can stop, and every role needs its own view of
+  // a stop that affects all three of them.
+  it("sits between tympanometry and the hearing test", () => {
+    expect(beatIndexById("clearance")).toBe(beatIndexById("tympanometry") + 1);
+    expect(beatIndexById("puretone")).toBe(beatIndexById("clearance") + 1);
+  });
+
+  // The clinician decides; the CMA reports. Whoever leads the beat is who the
+  // guided walk hands the decision to.
+  it("is led by the audiologist, who signs the checks off", () => {
+    const beat = BEATS[beatIndexById("clearance")];
+    expect(beat.lead).toBe("audiologist");
+    expect(beat.screens.audiologist).toBe("aud-clearance");
+    expect(beat.screens.cma).toBe("cma-clearance");
+    expect(beat.screens.patient).toBe("clearance");
+  });
+
+  // Three items, in the owner's order.
+  it("checks exactly the three named items, in order", () => {
+    expect(visitGates().map(g => g.label)).toEqual([
+      "Pre-test questionnaire", "Otoscopy", "Tympanometry",
+    ]);
+  });
+
+  // The whole point: a failed check must make the rest of the visit
+  // unreachable. Asserted on the logic, because that is what both screens
+  // branch on.
+  it("stops the visit when otoscopy or tympanometry fails", () => {
+    for (const bad of ["otoscopy", "tympanometry"]) {
+      const gates = visitGates().map(g =>
+        g.id === bad ? { ...g, verdict: "fail" as const } : g);
+      const c = clearanceOf(gates);
+      expect(c.stopped, `${bad} failure must stop the visit`).toBe(true);
+      expect(c.cleared).toBe(false);
+    }
+  });
+
+  // A stopped visit sells nothing. Both clinician-facing screens say so in
+  // words, because "no device" is the instruction that is easiest to lose.
+  it("tells both operators that no device is provided on a stopped visit", () => {
+    for (const f of ["components/screens/cma/clearance.tsx",
+                     "components/screens/audiologist/clearance.tsx"]) {
+      const src = sourceOf(f);
+      expect(src, `${f} must send the patient to a physician`).toMatch(/physician|doctor/i);
+      expect(src, `${f} must rule out a device`).toMatch(/no device|device recommendation/i);
+    }
+  });
+
+  // A gate with a bypass is not a gate. Neither clinical screen may offer a
+  // way to continue into the exam once a check has failed.
+  it("offers no override on a stopped visit", () => {
+    for (const f of ["components/screens/cma/clearance.tsx",
+                     "components/screens/audiologist/clearance.tsx"]) {
+      const src = sourceOf(f);
+      expect(src, `${f} must not offer a bypass`)
+        .not.toMatch(/continue anyway|proceed anyway|override|skip check/i);
+    }
+  });
+
+  // The patient is told, in his own words, on his own screen — the owner's
+  // "notify the patient he has to go to a doctor".
+  it("notifies the patient and names the doctor visit", () => {
+    const src = sourceOf("components/screens/patient/exam.tsx");
+    expect(src).toMatch(/Please see a doctor first/);
+    expect(src).toMatch(/not going ahead with the hearing test or any hearing device/);
+  });
+
+  // Both clinical surfaces read ONE source of truth. Two independent accounts
+  // of whether a visit may proceed is the bug this prevents.
+  it("draws the CMA's and the audiologist's checklists from one function", () => {
+    for (const f of ["components/screens/cma/clearance.tsx",
+                     "components/screens/audiologist/clearance.tsx"]) {
+      expect(sourceOf(f), `${f} must use visitClearance()`).toMatch(/visitClearance\(\)/);
+    }
+  });
+
+  // Amber is not a failure. The hero's own ears are amber on both physical
+  // checks, and the demo's main story has to reach the hearing test.
+  it("lets the hero visit through on its noted findings", () => {
+    expect(visitClearance().cleared).toBe(true);
   });
 });

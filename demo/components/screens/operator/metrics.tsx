@@ -7,7 +7,7 @@ const money = (n: number) => `$${n.toLocaleString("en-US")}`;
 export function Metrics() {
   return (
     <section>
-      {/* Membership leads — HearFy is a subscription business (spec §9a). */}
+      {/* Membership leads — Hearfy is a subscription business (spec §9a). */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active memberships</span>

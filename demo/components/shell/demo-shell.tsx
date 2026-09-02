@@ -43,7 +43,7 @@ export function DemoShell() {
             jumper simply reappears once it fits. */}
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-5 lg:gap-4">
           {/* The logo is the home button (owner, 2026-09-01: "every time that
-              someone is clicking on the HearFy icon, we go back to the base").
+              someone is clicking on the Hearfy icon, we go back to the base").
               It was inert decoration, which wasted the one mark on screen that
               every other product has already taught people to click to get
               home — so a viewer deep in one persona's day had no way back to

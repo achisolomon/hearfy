@@ -291,7 +291,7 @@ export default function OnePagerPage() {
       </section>
 
       {/* ---------------------------------------------------------- *
-       * Market — where HearFy sits
+       * Market — where Hearfy sits
        * ---------------------------------------------------------- */}
       <section className="mt-16">
         <Reveal>
@@ -378,7 +378,7 @@ export default function OnePagerPage() {
           <SectionTitle>{CONTRAST.title}</SectionTitle>
         </Reveal>
 
-        {/* Three cells of equal size on ONE row: the clinic list, the HearFy
+        {/* Three cells of equal size on ONE row: the clinic list, the Hearfy
             list, and the exam running (owner, 2026-09-02: "don't take space,
             put this like three evenly size square on the same row"). The video
             used to sit full-width BELOW the pair, which cost a whole band of

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
-import { componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
+import { brandScopeFiles, componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
 import { BRAND_NAME, WORDMARK_HEAD, WORDMARK_TAIL, audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
@@ -2654,7 +2654,7 @@ describe("route map direction", () => {
 });
 
 // Owner, 2026-09-01: "Let's do home button on the icon on the left so that
-// every time that someone is clicking on the HearFy icon, we go back to the
+// every time that someone is clicking on the Hearfy icon, we go back to the
 // base."
 //
 // The logo sat in the shell's top bar as inert decoration. It is the one mark
@@ -3625,7 +3625,16 @@ describe("the bone step's audiogram fills its card", () => {
  * The brand name, set once and rendered everywhere (asked 2026-09-02).
  * The wordmark rides beside the mark in the demo shell's top bar, and the
  * company name is written Hearfy — capital H, the rest lower case. Never
- * shouted in caps, and never the intercapped "HearFy" it shipped as first.
+ * shouted in caps, and never the intercapped "Hear" + capital F it shipped
+ * as first.
+ *
+ * SCOPE IS THE WHOLE SOURCE TREE, deliberately. This guard used to read a
+ * hand-listed set — every component, plus calendar.ts and mock-data.ts — and
+ * the one-pager's copy lives in `lib/one-pager.ts`, which was on neither
+ * list. Four intercapped mentions shipped to the public page underneath a
+ * passing suite (found 2026-09-02). A naming rule that only covers the files
+ * someone remembered to enumerate is not a rule, so it now walks every
+ * .ts/.tsx/.css/.md under the app and opts files OUT explicitly.
  */
 describe("the brand name is written Hearfy everywhere", () => {
   const ui = sourceOf("components/ui.tsx");
@@ -3634,27 +3643,60 @@ describe("the brand name is written Hearfy everywhere", () => {
     expect(BRAND_NAME).toBe("Hearfy");
   });
 
+  // Correct spelling in a literal is still a literal: it is the copy that
+  // drifts next. Content modules (lib/one-pager.ts) are in scope for this,
+  // not only components — that file is where the public page's words live.
   it("renders the name from the shared constant, never a literal", () => {
-    for (const f of componentFiles()) {
-      const src = sourceOf(f);
+    const offenders: string[] = [];
+    for (const f of brandScopeFiles()) {
+      if (f === "lib/mock-data.ts" || f.endsWith(".test.ts") || f.endsWith(".md")) continue;
       // The letters in that order, outside a comment, are a hardcoded name.
-      const stripped = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
-      expect(stripped, `${f} must render the brand from BRAND_NAME`)
-        .not.toMatch(/["'>]\s*Hearfy\s*["'<]/i);
-    }
-  });
-
-  // Any casing but "Hearfy" in a user-visible string is the bug: the wordmark
-  // shipped as "HEARFY", then as the intercapped "HearFy", before this.
-  it("has no mis-cased brand name in any user-visible string", () => {
-    const files = [...componentFiles(), "lib/calendar.ts", "lib/mock-data.ts"];
-    for (const f of files) {
       const stripped = sourceOf(f)
         .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
-      const wrong = [...stripped.matchAll(/\bHear[Ff]y\b|\bHEARFY\b/g)]
-        .map(m => m[0]).filter(n => n !== "Hearfy");
-      expect(wrong, `${f} spells the brand ${wrong.join(", ")}`).toEqual([]);
+      if (/["'>`]\s*Hearfy\s*["'<`]/i.test(stripped)
+        || /\bHearfy\b/.test(stripped.replace(/BRAND_NAME/g, ""))) {
+        offenders.push(`${f} must render the brand from BRAND_NAME`);
+      }
     }
+    expect(offenders).toEqual([]);
+  });
+
+  // Any casing but "Hearfy" is the bug: the wordmark shipped as "HEARFY",
+  // then intercapped, before this. Comments count too — prose that spells the
+  // company wrong is what the next person copies into a heading.
+  it("has no mis-cased brand name anywhere in the source", () => {
+    /**
+     * The one sanctioned exception, and it must stay this narrow.
+     *
+     * The founders' deck art really is branded HEARFY in all caps, and both
+     * one-pager modules carry a comment saying so, to explain why a screenshot
+     * on the page does not match the wordmark beside it. `lib/one-pager.test.ts`
+     * pins that comment. This guard's own pattern and comments name the wrong
+     * spellings too, for the same unavoidable reason: a rule against a string
+     * cannot be written without quoting it.
+     *
+     * So: allowed ONLY on a line that is discussing the old branding, never in
+     * a string a reader will see. A new file needing this is a signal the copy
+     * is wrong, not that the list is short.
+     */
+    const discussingTheOldDeck = /branded HEARFY|shipped as "HEARFY"|"HEARFY" was the wordmark|Hear\[Ff\]y/;
+    const offenders: string[] = [];
+    for (const f of brandScopeFiles()) {
+      for (const [i, line] of sourceOf(f).split("\n").entries()) {
+        if (discussingTheOldDeck.test(line)) continue;
+        const wrong = [...line.matchAll(/\bHear[Ff]y\b|\bHEARFY\b/g)]
+          .map(m => m[0]).filter(n => n !== "Hearfy");
+        if (wrong.length) offenders.push(`${f}:${i + 1} spells the brand ${wrong.join(", ")}`);
+      }
+    }
+    expect(offenders, "the company is written Hearfy").toEqual([]);
+  });
+
+  // The lowercase `hearfy` in a slug, package name, path or URL is not the
+  // company name and is not in scope; this pins that the guard above is
+  // case-sensitive about the H, so a rename never silently widens to those.
+  it("leaves lowercase identifiers like the /hearfy/ basePath alone", () => {
+    expect(sourceOf("lib/asset.ts")).toMatch(/\/hearfy\//);
   });
 
   // "HEARFY" was the wordmark for months; the owner asked for mixed case.

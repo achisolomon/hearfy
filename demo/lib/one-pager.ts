@@ -20,13 +20,13 @@
  *
  * WHAT IS ALLOWED, and why:
  *   - the public-health prevalence figures (1.5B / 430M from WHO, 17% from
- *     NIDCD). These are published statistics, not HearFy business
+ *     NIDCD). These are published statistics, not Hearfy business
  *     information, and they are the public case for the product existing.
  *     The deck cites all three as WHO; the 17% is NIDCD's, for US adults
  *     only, and was corrected here on 2026-09-02 — see PROBLEM.stats.
  *   - third-party MARKET SIZE figures (see MARKET below). These are published
- *     analyst forecasts of an industry, not HearFy's own numbers: they say how
- *     big hearing care is, never what HearFy earns, charges, or projects. The
+ *     analyst forecasts of an industry, not Hearfy's own numbers: they say how
+ *     big hearing care is, never what Hearfy earns, charges, or projects. The
  *     forbidden list above is about OUR figures, and none of these are ours.
  *     Every one carries the firm that published it.
  *
@@ -47,9 +47,16 @@
  * run; being addressed as the patient puts them in the wrong seat. The rest of
  * the page still speaks to the reader directly, which is deliberate: the hero
  * and the offer are an invitation, and `HOW` is a description.
+ *
+ * THE NAME. The company is written `Hearfy` — capital H, the rest lower case.
+ * Every user-visible mention here interpolates BRAND_NAME rather than spelling
+ * it out, so the page can never drift out of step with the wordmark the shell
+ * renders. `lib/regressions.test.ts` fails the build on a literal.
  */
 
-/** The masthead: what HearFy is, in the deck's own words. */
+import { BRAND_NAME } from "./mock-data";
+
+/** The masthead: what Hearfy is, in the deck's own words. */
 export const HERO = {
   eyebrow: "Hearing care at home",
   title: ["Bringing hearing care", "home."],
@@ -100,18 +107,18 @@ export const PROBLEM = {
  * The market, as a single held number — "One Number, Held".
  *
  * Chosen by the owner on 2026-09-02 from five rendered options (initially
- * "Where HearFy Sits", changed the same day). The whole section is the
+ * "Where Hearfy Sits", changed the same day). The whole section is the
  * figure: no chart, no bars, no rings. It is the owner's own investor line —
  * "A $36B global hearing care market by 2030, growing at approximately 6%
  * annually" — rendered literally, and it is the fastest read on the page.
  *
- * THE FIGURES ARE THIRD-PARTY ANALYST FORECASTS, not HearFy's. That is what
+ * THE FIGURES ARE THIRD-PARTY ANALYST FORECASTS, not Hearfy's. That is what
  * makes them publishable here at all; see the header's WHAT IS ALLOWED note.
  *
  * Because a lone number asserts rather than demonstrates, the qualifiers are
  * not optional decoration — the breakdown and the footnote are what keep it
  * from reading as a bare boast, and `sources` is what keeps it from reading
- * as HearFy's own projection. A future edit that strips them for tidiness
+ * as Hearfy's own projection. A future edit that strips them for tidiness
  * turns a cited market fact into an unsourced claim on a public page.
  *
  * The owner's segment model, from which the $36B is cut:
@@ -131,7 +138,7 @@ export const PROBLEM = {
  *     the number and make it less credible, which is the opposite of the point.
  *
  * $36B drops hearing protection from the broad market as less relevant to
- * HearFy, and is the figure the section leads with.
+ * Hearfy, and is the figure the section leads with.
  */
 export const MARKET = {
   /**
@@ -210,7 +217,7 @@ export const CONTRAST = {
     points: ["Wait weeks or months", "Travel to the clinic", "Test in a sound booth", "Return for the fitting"],
   },
   home: {
-    label: "A HearFy Home Visit",
+    label: `A ${BRAND_NAME} Home Visit`,
     tone: "brand" as const,
     points: ["Book within days", "We come to you", "Test in your own home", "Get fitted in the same visit"],
   },
@@ -267,7 +274,7 @@ export const HOW = {
 export const SYSTEM = {
   title: "The clinic, distributed",
   subtitle:
-    "HearFy coordinates qualified professionals, clinic-grade equipment and remote clinical expertise into one seamless home visit — bringing the care to the patient, instead of the patient to the clinic.",
+    `${BRAND_NAME} coordinates qualified professionals, clinic-grade equipment and remote clinical expertise into one seamless home visit — bringing the care to the patient, instead of the patient to the clinic.`,
   parts: [
     {
       name: "In your home",
@@ -296,8 +303,8 @@ export const TRUST = [
 ];
 
 export const CTA = {
-  title: "Experience HearFy",
-  line: "See how HearFy turns booking, home diagnostics and clinical review into one coordinated patient journey.",
+  title: `Experience ${BRAND_NAME}`,
+  line: `See how ${BRAND_NAME} turns booking, home diagnostics and clinical review into one coordinated patient journey.`,
   /**
    * The page used to close on a "Walk through the product" button into the
    * demo. The owner removed it on 2026-09-02 and put a way to reach a human in
@@ -337,7 +344,7 @@ export const MEDIA = {
     alt: "A Certified Medical Assistant sits beside a patient at home, showing her a hearing aid, with the exam kit and a tablet on the table.",
   },
   /**
-   * The exam actually running, looping. Moved down to the HearFy-visit card,
+   * The exam actually running, looping. Moved down to the Hearfy-visit card,
    * where "tested in your own room" is the claim it evidences, and where its
    * motion pulls the eye to the side of the comparison that matters.
    */

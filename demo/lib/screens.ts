@@ -162,3 +162,32 @@ export function screensReachingContextNext(): Record<string, string[]> {
   }
   return out;
 }
+
+/**
+ * Every source file the brand-name rule applies to: all of `app/`,
+ * `components/`, `lib/`, plus the demo's own README.
+ *
+ * Deliberately a walk, not a list. The naming guard in `regressions.test.ts`
+ * used to enumerate its files by hand and missed `lib/one-pager.ts`, which is
+ * where the public one-pager's copy lives — the company name shipped
+ * intercapped on a public page under a green suite. Anything that opts out
+ * has to say so here, in the open, rather than by being forgotten.
+ *
+ * Build output and dependencies are skipped: they are generated or vendored,
+ * and neither is ours to spell.
+ */
+export function brandScopeFiles(): string[] {
+  const SKIP = new Set([".next", "node_modules", "out", "public", ".git"]);
+  const EXT = /\.(tsx?|css|md)$/;
+  const walk = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+      if (SKIP.has(entry.name)) continue;
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) out.push(...walk(rel));
+      else if (EXT.test(entry.name)) out.push(rel);
+    }
+    return out;
+  };
+  return [...walk("app"), ...walk("components"), ...walk("lib"), "README.md"];
+}

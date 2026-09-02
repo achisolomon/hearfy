@@ -1,4 +1,4 @@
-# HearFy Patient Demo
+# Hearfy Patient Demo
 
 Investor-grade interactive patient journey based on the pitch-deck visual language.
 The brand name is configurable via `BRAND_NAME` in `lib/mock-data.ts`.

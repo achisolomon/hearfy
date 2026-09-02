@@ -75,7 +75,7 @@ describe("public one-pager carries no business information", () => {
   /**
    * NOTE ON MARKET FIGURES. The page carries third-party analyst forecasts of
    * the hearing industry ($36B / $39B / $15B). Those are deliberately NOT on
-   * this list: they describe an industry, not HearFy. The prohibition is on
+   * this list: they describe an industry, not Hearfy. The prohibition is on
    * OUR numbers — what we earn, charge, or project — and the deck's own
    * sizing ($31B/$15B/$1.5B TAM/SAM/SOM) stays barred above, including the
    * "$15B" spelling, which is why the market section says "~$15B" and is
@@ -225,7 +225,7 @@ describe("the market section is honest about its figures", () => {
   /**
    * The number is an analyst forecast, and that is the only reason it may
    * appear on a page that bars business figures. Unattributed, it reads as
-   * HearFy's own projection — which is precisely the content boundary.
+   * Hearfy's own projection — which is precisely the content boundary.
    */
   it("attributes the figure to the firms that published it", () => {
     expect(MARKET.sources.length, "the market figure has no source").toBeGreaterThan(8);
@@ -303,11 +303,11 @@ describe("the market section is honest about its figures", () => {
   });
 
   /**
-   * The section describes an industry, never HearFy's position in it. A
+   * The section describes an industry, never Hearfy's position in it. A
    * share, a capture claim, or a projection would turn a public market fact
    * into the business information this page exists to keep out.
    */
-  it("makes no claim about HearFy's share of it", () => {
+  it("makes no claim about Hearfy's share of it", () => {
     const prose = [
       MARKET.title,
       MARKET.headline,
@@ -568,7 +568,7 @@ describe("the page's media", () => {
   });
 
   /**
-   * The deck's photography is HearFy-branded in the live copy, but a crop
+   * The deck's photography is Hearfy-branded in the live copy, but a crop
    * taken from an older render could carry the old name in shot. The page
    * must never ship one — and the brand-spelling guard above only reads
    * source text, not what is baked into a picture, so provenance is pinned

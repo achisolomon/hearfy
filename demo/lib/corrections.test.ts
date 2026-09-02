@@ -285,12 +285,22 @@ describe("corrections sheet 2026-08-31", () => {
     }
   });
 
-  // Refined 2026-08-31: the patient's exam feels like a hearing lab with
-  // the audiologist right next to them — her live strip is on every exam
-  // step of the patient's phone.
+  // Refined 2026-08-31: the patient's exam feels like a hearing lab with the
+  // audiologist right next to them — she is present on every exam step of the
+  // patient's phone. Refined again 2026-09-02 (owner): her presence is no
+  // longer a video tile, because the patient's pages carry no video streaming
+  // at all. What the rule was always protecting is that she is THERE on each
+  // step, so the guard asserts the presence, not the medium — a screen that
+  // drops her line entirely still fails here, which is the point.
   it("keeps Dr. Reed next to the patient through the exam", () => {
     const src = sourceOf("components/screens/patient/exam.tsx");
-    expect((src.match(/<AudiologistStrip /g) ?? []).length).toBeGreaterThanOrEqual(3);
+    const steps = ["Otoscopy", "Tympanometry", "Testing"];
+    for (const part of src.split(/(?=export function )/)) {
+      const name = /export function (\w+)/.exec(part)?.[1];
+      if (!name || !steps.includes(name)) continue;
+      expect(part, `${name} must still say Dr. Reed is with the patient`)
+        .toMatch(/<AudiologistStatusLine[^]*?Dr\. Reed/);
+    }
   });
 
   // Only the patient is on a phone (refined 2026-08-31): every CMA screen

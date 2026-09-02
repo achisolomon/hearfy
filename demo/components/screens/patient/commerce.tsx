@@ -10,7 +10,6 @@ import { cn } from "@/lib/cn";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
 import { CompareTable } from "../compare-table";
-import { AudiologistStrip } from "../cma/call-tile";
 
 export function Compare({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,3);
@@ -175,7 +174,10 @@ export function Fitting({back}:{back:()=>void}){
   const tier = tierFor(deviceDetail[chosen.name].tier);
   return <Shell>
     <PageHeader title="Fitting your devices" subtitle={`${chosen.name} · ${tier.name}`} onBack={back} eyebrow="Same day"/>
-    <AudiologistStrip active note="On the call to confirm the sound before we finish up."/>
+    {/* No video tile (owner, 2026-09-02: no video streaming on the patient's
+       pages). Dr. Reed is still on the call — the line says so — but the
+       patient's phone carries her in words, not footage. */}
+    <AudiologistStatusLine className="mt-4">Dr. Reed is on the call to confirm the sound before we finish up.</AudiologistStatusLine>
     <Card className="mt-4 p-5">
       <div className="space-y-3">
         {["Devices paired and programmed","Fit checked, both ears","Dr. Reed confirming the sound with you"].map(x=>

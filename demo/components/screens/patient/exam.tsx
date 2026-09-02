@@ -6,7 +6,6 @@ import { BRAND_NAME } from "@/lib/mock-data";
 import { OtoscopyStep } from "../../exam/otoscopy-step";
 import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
-import { AudiologistStrip } from "../cma/call-tile";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
 
@@ -24,21 +23,22 @@ export function Consent({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [
 export function Setup({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title={`Preparing the ${BRAND_NAME} kit`} subtitle="Maya is setting up your hearing lab, right here at home." onBack={back} eyebrow={visitEyebrow("setup")}/><div className="grid place-items-center rounded-[30px] bg-gradient-to-br from-[#e7f8f7] to-white py-10"><div className="relative h-36 w-56 rounded-[28px] bg-brand-navy shadow-card"><div className="absolute inset-x-8 top-8 h-16 rounded-xl bg-[#e6f7f6]"/><div className="absolute bottom-5 left-1/2 h-4 w-20 -translate-x-1/2 rounded-full bg-[#183b5e]"/></div></div><div className="mt-5 space-y-3">{["Kit identity verified","Equipment calibration current","Single-use items prepared","Room noise level acceptable"].map(x=><div key={x} className="flex items-center gap-3 rounded-2xl bg-white p-4"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16}/></span><b className="text-sm">{x}</b></div>)}</div><div className="mt-6"><AudiologistStatusLine>Maya is preparing the kit.</AudiologistStatusLine></div></Shell>}
 // Two captures, one per ear (corrections sheet 2026-08-31, item 3) — the
 // shared step renders both, so patient and CMA can never drift apart.
-// The patient's screen carries no button for this clinical act; the
-// AudiologistStrip note already says who is acting ("Dr. Reed is right here
-// with you"), so dropping the button adds no duplicate status line — the
-// existing note is enough on its own.
-export function Otoscopy({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Ear health check" subtitle="Maya is capturing a secure image of each ear for clinical review." onBack={back} eyebrow={visitEyebrow("otoscopy")}/><AudiologistStrip note="Dr. Reed is right here with you — she sees each ear image as it’s captured."/><OtoscopyStep framing="patient"/><Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Images are reviewed by your licensed audiologist and stored with today’s clinical record.</p></Card></Shell>}
+// The patient's screen carries no button for this clinical act, and no live
+// video of Dr. Reed (owner, 2026-09-02: no video streaming on the patient's
+// pages). Her presence is carried in words instead — a status line naming
+// who is acting, the same pattern Setup and Arrived already use.
+export function Otoscopy({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Ear health check" subtitle="Maya is capturing a secure image of each ear for clinical review." onBack={back} eyebrow={visitEyebrow("otoscopy")}/><AudiologistStatusLine className="mb-4">Dr. Reed is right here with you — she sees each ear image as it’s captured.</AudiologistStatusLine><OtoscopyStep framing="patient"/><Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Images are reviewed by your licensed audiologist and stored with today’s clinical record.</p></Card></Shell>}
 // New step (corrections sheet 2026-08-31, item 5): tympanometry between the
 // ear health check and the hearing test, on every exam.
-// Same reasoning as Otoscopy: the strip's note already covers who is acting.
-export function Tympanometry({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Tympanometry" subtitle="A gentle middle ear check — pressure on each eardrum, nothing to do but sit still." onBack={back} eyebrow={visitEyebrow("tympanometry")}/><AudiologistStrip note="Watching your traces with you — nothing to do but sit still."/><TympanometryStep framing="patient"/></Shell>}
+// Same reasoning as Otoscopy: a status line, not a video tile, says who is
+// acting.
+export function Tympanometry({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Tympanometry" subtitle="A gentle middle ear check — pressure on each eardrum, nothing to do but sit still." onBack={back} eyebrow={visitEyebrow("tympanometry")}/><AudiologistStatusLine className="mb-4">Dr. Reed is watching your traces with you — nothing to do but sit still.</AudiologistStatusLine><TympanometryStep framing="patient"/></Shell>}
 // The "Complete test" button ended the whole procedure — Maya/Dr. Reed's
 // call, not Alex's, so the patient's screen carries no button for it.
 // `PureToneStep`'s own "tap when you hear a tone" button is UNTOUCHED: it is
 // the patient's own audiometric response, the one clinical act that
 // genuinely is his (see puretone-step.tsx).
-export function Testing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Hearing test in progress" subtitle="Tap the button whenever you hear a tone, even if it is very soft." onBack={back} eyebrow={visitEyebrow("testing")}/><AudiologistStrip active note="Listening with you — she adjusts the test as you press."/><PureToneStep framing="patient"/></Shell>}
+export function Testing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Hearing test in progress" subtitle="Tap the button whenever you hear a tone, even if it is very soft." onBack={back} eyebrow={visitEyebrow("testing")}/><AudiologistStatusLine className="mb-4">Dr. Reed is listening with you — she adjusts the test as you press.</AudiologistStatusLine><PureToneStep framing="patient"/></Shell>}
 // Ending the consult is Dr. Reed's own act, so the patient's screen carries
 // no "Finish consultation" button — a status line is shown instead, and the
 // chrome's Next advances the story. The red hang-up button in the call card

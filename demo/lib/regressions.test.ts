@@ -2246,17 +2246,28 @@ describe("the audiologist presents the comparison", () => {
     expect(table).toContain("compareRecommendation.reasons");
   });
 
-  // The call tile belongs to the surfaces with the width for it — scoped to
-  // Compare specifically: the patient is on a phone there, where a 4:3 panel
-  // above the cards pushed the packages below the fold (2026-08-31), per the
-  // comment on Compare itself. This does not extend to every patient screen:
-  // Otoscopy/Tympanometry/Testing (exam.tsx) and Fitting (commerce.tsx,
-  // BUG 1 2026-09-01) legitimately show AudiologistStrip on the patient's
-  // phone for a clinical act someone else performs, on the same pattern.
-  it("keeps the video off the patient's phone on Compare specifically, and on the CMA's screen", () => {
-    const compareBlock = commerce.split(/(?=export function )/).find(p => /^export function Compare\b/.test(p)) ?? "";
-    expect(compareBlock).toBeTruthy();
-    expect(compareBlock).not.toMatch(/AudiologistStrip|ZoomPanel|VideoSplit/);
+  // The call tile belongs to the surfaces with the width for it — the CMA's
+  // tablet and the audiologist's desktop, which keep it.
+  //
+  // It is off the patient's phone entirely (owner, 2026-09-02: "in the
+  // patient pages — no video streaming — remove this, if there is more remove
+  // them as well"). This started as a Compare-only rule on a layout argument
+  // (a 4:3 panel above the cards pushed the packages below the fold,
+  // 2026-08-31) and is now the rule for every patient screen, so the guard
+  // sweeps the whole patient directory rather than naming one screen: "if
+  // there is more remove them as well" is a statement about the surface, and
+  // a new patient screen that reaches for a tile must fail here without
+  // anyone remembering to add it to a list.
+  it("keeps the video off the patient's phone entirely, and keeps it on the CMA's screen", () => {
+    const files = componentFiles("components/screens/patient");
+    expect(files.length).toBeGreaterThanOrEqual(5);
+    for (const f of files) {
+      const src = sourceOf(f);
+      expect(src, `${f} must not render the call tile on the patient's phone`)
+        .not.toMatch(/<(AudiologistStrip|AudiologistCallTile|ZoomPanel|VideoSplit|CallSplit|ReedFeed|RoomFeed|HomeFeed)\b/);
+      expect(src, `${f} must not render a raw <video> on the patient's phone`)
+        .not.toMatch(/<video\b/);
+    }
     expect(suitcase).toContain("CallSplit");
   });
 

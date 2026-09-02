@@ -16,7 +16,8 @@ import { componentFiles, sourceOf } from "./screens";
  * only the sweep can — but they fail fast on the two patterns that have
  * actually broken it here.
  *
- * The rule they encode, from DESIGN.md: furniture that stays on screen must
+ * The rule they encode, written up in full in HELD-FRAME-RULE.md at the repo
+ * root (DESIGN.md carries the same rule for design work): furniture that stays on screen must
  * stay put. When content genuinely varies, RESERVE the tallest or widest case
  * and let the short case leave the remainder empty. Three fixes in this repo
  * use that one pattern — CALL_HEADER_MIN, CALL_NOTE_MIN, and the top bar's

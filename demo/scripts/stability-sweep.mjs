@@ -226,6 +226,7 @@ if (findings.length) {
     if (f.drifted.dx > TOLERANCE || f.drifted.dy > TOLERANCE) console.log(`     moved   ${f.moved}`);
     if (f.drifted.dw > TOLERANCE || f.drifted.dh > TOLERANCE) console.log(`     resized ${f.resized}`);
   }
+  console.log(`\nSee HELD-FRAME-RULE.md for why this rule exists and how to fix it.`);
   console.log(`\nPersistent chrome must hold still. If a change is deliberate, it is`);
   console.log(`still chrome that moves under the viewer's cursor — reserve the space`);
   console.log(`instead (see CallShell's reserved header height, or the Next button's`);

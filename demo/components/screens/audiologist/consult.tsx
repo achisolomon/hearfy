@@ -44,20 +44,18 @@ export function AudConsult({ next }: { next: () => void }) {
         {/* She presents the shortlist INTO the room — the call carries the
            consult until the patient is fitted, in the same place and size as
            on every other screen (refined 2026-08-31). */}
-        <VideoSplit video={
-          <div className="space-y-3">
-            {/* He is trying each one on and telling her how it sounds, so the
-               feed is him listening to her and the captions are his feedback
-               — not a tone report from the hearing test (owner, 2026-09-01). */}
-            <HomeFeed beat="fitting" />
-            <Card className="flex items-center gap-3 p-4">
-              <Video size={18} className="shrink-0 text-teal-ink" aria-hidden />
-              <p className="text-sm text-slate-500">
-                Recording is visible to the patient throughout, per their consent.
-              </p>
-            </Card>
-          </div>
-        }>
+        {/* He is trying each one on and telling her how it sounds, so the feed
+           is him listening to her and the captions are his feedback — not a
+           tone report from the hearing test (owner, 2026-09-01).
+
+           The tile is the ONLY thing in this column, as on every other screen
+           of every role. The recording note used to be stacked under it here,
+           which made this the one screen whose video column was a different
+           height (589px against 492px everywhere else) — so stepping onto and
+           off this beat moved the column and everything anchored to it. The
+           note is about the consult, not about the video, so it now sits with
+           the other consult note in the content pane below. */}
+        <VideoSplit video={<HomeFeed beat="fitting" />}>
         <div className="space-y-3">
           {devices.map(d => {
             const isRec = recommended.includes(d.name);
@@ -107,6 +105,13 @@ export function AudConsult({ next }: { next: () => void }) {
             );
           })}
         </div>
+
+        <Card className="mt-4 flex items-center gap-3 p-4">
+          <Video size={18} className="shrink-0 text-teal-ink" aria-hidden />
+          <p className="text-sm text-slate-500">
+            Recording is visible to the patient throughout, per their consent.
+          </p>
+        </Card>
 
         <Card className="mt-4 p-4">
           <p className="text-xs leading-5 text-slate-400">

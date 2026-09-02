@@ -45,6 +45,7 @@ export function TympanometryStep({ framing, status, earAction }: {
           const over = status?.[ear.side];
           const tone = over?.tone ?? ear.tone;
           const label = over?.label ?? (ear.tone === "green" ? "Normal" : "Noted");
+          const icon = over?.icon;
           return (
             <Card key={ear.label} className="p-4">
               <span className="text-xs text-slate-500">{ear.label}</span>
@@ -54,7 +55,7 @@ export function TympanometryStep({ framing, status, earAction }: {
                 Peak {ear.pressure} · {ear.compliance}
               </p>
               <div className="mt-2">
-                <StatusPill tone={tone}>{label}</StatusPill>
+                <StatusPill tone={tone} icon={icon}>{label}</StatusPill>
               </div>
               {earAction && <div className="mt-3">{earAction(ear.side)}</div>}
             </Card>

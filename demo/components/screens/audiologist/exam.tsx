@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { Card, PageHeader, PrimaryButton, SecondaryButton } from "../../ui";
 import { CallShell, VideoSplit } from "../video-split";
 import { HomeFeed } from "./home-feed";
@@ -59,9 +60,13 @@ type Side = "left" | "right";
 type SentBack = ReadonlySet<Side>;
 
 function statusFor(sent: SentBack, ordered: string): { left?: EarStatus; right?: EarStatus } {
+  // `RotateCcw`, not the pill's default tick: this ear was REFUSED and is
+  // going round again. A checkmark here read as though the capture had
+  // passed, which is the opposite of what she just did (owner, 2026-09-02).
+  const back: EarStatus = { tone: "amber", label: ordered, icon: RotateCcw };
   const out: { left?: EarStatus; right?: EarStatus } = {};
-  if (sent.has("left")) out.left = { tone: "amber", label: ordered };
-  if (sent.has("right")) out.right = { tone: "amber", label: ordered };
+  if (sent.has("left")) out.left = back;
+  if (sent.has("right")) out.right = back;
   return out;
 }
 

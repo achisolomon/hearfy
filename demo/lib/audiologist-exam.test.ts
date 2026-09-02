@@ -185,6 +185,18 @@ describe("her exam screens", () => {
     expect(src).not.toMatch(/Send right ear back|Send left ear back/);
   });
 
+  /**
+   * A returned ear must not wear a checkmark (owner, 2026-09-02). StatusPill
+   * bakes in a tick, which is right for "Confirmed" and "Done" and wrong for
+   * the one pill that means NO — "✓ Retake ordered" read as a pass.
+   */
+  it("does not put a checkmark on a refused ear", () => {
+    expect(SRC()).toMatch(/icon: RotateCcw/);
+    const ui = sourceOf("components/ui.tsx");
+    // Opt-in, so the other forty-odd affirmative pills keep their tick.
+    expect(ui).toMatch(/icon:Icon=Check/);
+  });
+
   /** Both steps must accept the per-ear slot, or only one exam gets it. */
   it("wires the per-ear control into both exam steps", () => {
     for (const f of ["components/exam/otoscopy-step.tsx",

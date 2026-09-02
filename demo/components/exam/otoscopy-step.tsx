@@ -50,6 +50,8 @@ export function EarImage({ hue }: { hue: "warm" | "cool" }) {
 export interface EarStatus {
   tone: "green" | "amber";
   label: string;
+  /** Overrides the pill's tick — a returned ear is a refusal, not a pass. */
+  icon?: React.ComponentType<{ size?: number }>;
 }
 
 /**
@@ -85,6 +87,7 @@ export function OtoscopyStep({ framing, status, earAction }: {
           const over = status?.[ear.side];
           const tone = over?.tone ?? ear.tone;
           const label = over?.label ?? (ear.tone === "green" ? "Good view" : "View adequate");
+          const icon = over?.icon;
           return (
             <Card key={ear.label} className="overflow-hidden">
               <EarImage hue={ear.hue} />
@@ -93,7 +96,7 @@ export function OtoscopyStep({ framing, status, earAction }: {
                 <h3 className="text-sm font-extrabold">Image captured</h3>
                 {/* Procedural quality, not a clinical finding — safe for both roles. */}
                 <div className="mt-2">
-                  <StatusPill tone={tone}>{label}</StatusPill>
+                  <StatusPill tone={tone} icon={icon}>{label}</StatusPill>
                 </div>
                 {earAction && <div className="mt-3">{earAction(ear.side)}</div>}
               </div>

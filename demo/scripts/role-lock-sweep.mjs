@@ -26,7 +26,7 @@ import { chromium } from "playwright-core";
 
 const CHROME = process.env.CHROME_PATH
   || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const URL = process.env.SWEEP_URL || "http://localhost:3000/demo2";
+const URL = process.env.SWEEP_URL || "http://localhost:3000/";
 
 const ROLES = (process.env.SWEEP_ROLES || "Patient,CMA,Audiologist,Operator").split(",");
 /** The cover's per-persona entry buttons are labelled with the person. */
@@ -100,10 +100,17 @@ for (const role of ROLES) {
     }
     if (ended) break;
 
-    if (await activeRole() !== role) {
-      violations.push(`${role}: chrome Next left the persona at beat ${beat} before any in-screen click`);
-      break;
-    }
+    // Chrome Next advances the STORY, and the story hands the scene between
+    // personas — the audiologist leads six beats, but not six in a row. Landing
+    // on someone else's beat is the script working, not a lock failure (the
+    // chrome is explicitly allowed to switch persona; see the header). Skip to
+    // the next beat instead of reporting it, or this sweep only ever tests the
+    // opening run of whichever persona happens to lead first.
+    //
+    // This walk used to be checked as a violation, which passed unnoticed while
+    // the sweep pointed at a route where `enterAs` never matched and it silently
+    // walked zero screens (found 2026-09-02, when `/demo2` folded into `/`).
+    if (await activeRole() !== role) continue;
 
     const heading = (await page.locator("h1,h2").first().innerText().catch(() => "")).replace(/\s+/g, " ");
     const btns = await inScreenButtons();
@@ -137,6 +144,14 @@ console.log(`\n${clicks} in-screen clicks across ${screens} screens, ${ROLES.len
 if (violations.length) {
   console.log("\nVIOLATIONS:");
   violations.forEach(v => console.log("  " + v));
+  process.exit(1);
+}
+// A sweep that reached nothing has proved nothing. This printed a cheerful
+// pass for weeks while aimed at a route where `enterAs` never matched, so the
+// absence of violations was meaningless (found 2026-09-02).
+if (screens === 0) {
+  console.log(`\nNOTHING SWEPT: reached 0 screens at ${URL}.`);
+  console.log("The entry buttons never matched — check SWEEP_URL and that the server is up.");
   process.exit(1);
 }
 console.log("No in-screen click changed the persona.");

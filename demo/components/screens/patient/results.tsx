@@ -16,26 +16,42 @@ export function Results({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     {label:"Left ear",ear:"left" as const,avg:pta(audiogram.frequencies,audiogram.left)},
     {label:"Right ear",ear:"right" as const,avg:pta(audiogram.frequencies,audiogram.right)},
   ];
-  return <Shell><PageHeader title="Your hearing results" subtitle="Two results, one for each ear. Reviewed and signed by Dr. Susan Reed." onBack={back} eyebrow="Results"/>
-  {/* Chart world: the plot is the screen's subject, so each ear's chart runs
-     full-bleed on the banded ground with its reading stated above it in
-     words. The bands name where the line lands; the speech sounds show which
-     of the patient's own sounds fall below it. */}
-  <div className="space-y-4">
-    {ears.map(e=><Card key={e.label} className="p-5">
-      <div className="mb-3 flex items-baseline justify-between">
-        <b className="text-xs font-extrabold uppercase tracking-widest text-slate-500">{e.label}</b>
-        <span className="text-sm font-bold text-brand-navy">{e.avg} dB HL · {lossBand(e.avg)}</span>
-      </div>
-      <Audiogram ear={e.ear} bands speech/>
-      <p className="mt-3 text-sm leading-6 text-slate-600">
-        Your line sits in the <b className="text-brand-navy">{lossBand(e.avg).toLowerCase()}</b> band
-        and falls as the sounds get higher, so <b className="text-brand-navy">s</b>,{" "}
-        <b className="text-brand-navy">f</b> and <b className="text-brand-navy">th</b> land below it.
-      </p>
-    </Card>)}
-  </div>
-  <Card className="mt-4 p-5"><StatusPill tone="blue">Clinical summary</StatusPill><h2 className="mt-4 text-[23px] font-extrabold">Moderate hearing loss in both ears</h2><p className="mt-3 text-sm leading-6 text-slate-500">Speech may sound unclear, especially in groups, restaurants, and other noisy environments.</p><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-[#f2f7f7] p-4"><span className="text-xs text-slate-500">Speech clarity</span><b className="mt-1 block">Reduced</b></div><div className="rounded-2xl bg-[#f2f7f7] p-4"><span className="text-xs text-slate-500">Next step</span><b className="mt-1 block">Hearing aids</b></div></div></Card><div className="mt-6"><PrimaryButton onClick={()=>go("recommendation")}>View recommendation</PrimaryButton></div></Shell>}
+  return <Shell><PageHeader title="Your hearing results" subtitle="One audiogram, both ears. Reviewed and signed by Dr. Susan Reed." onBack={back} eyebrow="Results"/>
+  {/* The bottom line leads (asked 2026-09-02). The patient opens this screen to
+     learn ONE thing — what the exam found — and the two audiograms are the
+     evidence for it, not the answer. Reading order now matches: the finding in
+     the largest type on the screen, then the charts that back it up. */}
+  <Card className="mb-4 p-6">
+    <StatusPill tone="blue">Clinical summary</StatusPill>
+    <h2 className="mt-4 text-[30px] font-extrabold leading-[1.15]">Moderate hearing loss in both ears</h2>
+    <p className="mt-3 text-[15px] leading-7 text-slate-600">Speech may sound unclear, especially in groups, restaurants, and other noisy environments.</p>
+    <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="rounded-2xl bg-[#f2f7f7] p-4"><span className="text-xs text-slate-500">Speech clarity</span><b className="mt-1 block text-[17px]">Reduced</b></div>
+      <div className="rounded-2xl bg-[#f2f7f7] p-4"><span className="text-xs text-slate-500">Next step</span><b className="mt-1 block text-[17px]">Hearing aids</b></div>
+    </div>
+  </Card>
+  {/* One chart, identical to the audiologist's "exam complete" view (asked
+     2026-09-02). The patient and the clinician were looking at two different
+     pictures of the same exam — hers banded and split per ear, his a single
+     clinical overlay — which read as two different instruments. Same plot,
+     same scale, same marks, so what she sees IS what was signed.
+
+     The per-ear numbers survive as a reading above the chart, so the "one
+     result per ear" the corrections sheet asked for (2026-08-31, item 4) is
+     still stated; it is the DRAWING that is now shared, not the finding. */}
+  <Card className="p-5">
+    <div className="mb-4 flex items-baseline justify-between gap-3">
+      <b className="text-sm">Audiogram with bone conduction</b>
+    </div>
+    <div className="mb-4 grid grid-cols-2 gap-3">
+      {ears.map(e=><div key={e.label} className="rounded-2xl bg-[#f2f7f7] p-3">
+        <span className="text-xs text-slate-500">{e.label}</span>
+        <b className="mt-1 block text-[15px]">{e.avg} dB HL · {lossBand(e.avg)}</b>
+      </div>)}
+    </div>
+    <Audiogram showBone/>
+  </Card>
+  <div className="mt-6"><PrimaryButton onClick={()=>go("recommendation")}>View recommendation</PrimaryButton></div></Shell>}
 export function Recommendation({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
   const shortlist = devices.slice(0,2); // The audiologist recommended two.
   return <Shell>

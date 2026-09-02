@@ -1,6 +1,6 @@
 // The product name is expected to change again (prior names: RightHear, HearMi).
 // All UI must read it from this one constant so a rename is a one-line edit.
-export const BRAND_NAME = "HearFy";
+export const BRAND_NAME = "Hearfy";
 
 export const patient = { name: "Alex", city: "Miami, FL" };
 

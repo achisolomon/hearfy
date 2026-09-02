@@ -13,6 +13,13 @@ import { audiogram } from "@/lib/mock-data";
 const W = 320, H = 220, PAD_L = 34, PAD_B = 26, PAD_T = 12, PAD_R = 10;
 const DB_MIN = -10, DB_MAX = 90;
 
+/**
+ * Horizontal offset for the bone-conduction brackets, in chart units. Bone
+ * marks sit beside their frequency, never on it, so they never occlude the
+ * air symbol whose distance from them IS the finding.
+ */
+const BONE_DX = 7;
+
 function x(i: number, n: number) {
   return PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
 }
@@ -168,11 +175,20 @@ export function Audiogram({ animate = false, showBone = false, ear = "both",
         {/* Bone conduction — part of every exam since the 2026-08-31 corrections (item 6) */}
         {showBone && (
           <>
+            {/* Bone marks are OFFSET off the gridline, the clinical convention:
+               right bracket sits left of the frequency, left bracket right of
+               it. Both ears share a bone threshold at four of six frequencies
+               in this exam, so drawn on the line the two glyphs land on the
+               same point and read as one smudge — and where a bone threshold
+               equals its own air threshold, the bracket disappears inside the
+               O or X. The offset is what makes the air-bone gap countable. */}
             {showRight && boneRight.map((db, i) => (
-              <text key={`br${i}`} x={x(i, n)} y={y(db) + 4} textAnchor="middle" fontSize="11" fill="#ef6b6b">&lt;</text>
+              <text key={`br${i}`} x={x(i, n) - BONE_DX} y={y(db) + 4} textAnchor="middle"
+                    fontSize="12" fontWeight="700" fill="#ef6b6b">&lt;</text>
             ))}
             {showLeft && boneLeft.map((db, i) => (
-              <text key={`bl${i}`} x={x(i, n)} y={y(db) + 4} textAnchor="middle" fontSize="11" fill="#2788c8">&gt;</text>
+              <text key={`bl${i}`} x={x(i, n) + BONE_DX} y={y(db) + 4} textAnchor="middle"
+                    fontSize="12" fontWeight="700" fill="#2788c8">&gt;</text>
             ))}
           </>
         )}

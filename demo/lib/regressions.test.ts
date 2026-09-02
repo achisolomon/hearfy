@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
-import { audiogram } from "./mock-data";
+import { BRAND_NAME, audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
 import { dismissDiversion, selectRedFlag, showsDiversion, NO_RED_FLAG } from "./red-flag";
@@ -1841,9 +1841,16 @@ describe("banded audiogram", () => {
 
   // The chart is only legible to someone who has never read an audiogram if
   // the screen states the reading in words.
+  // Superseded 2026-09-02: the patient's chart is now the clinician's chart,
+  // so the bands and speech letters that made it self-explanatory are gone.
+  // The plain-language duty did not go with them — it moved into the leading
+  // Clinical summary and the per-ear readings, which is where a non-clinician
+  // actually gets the answer.
   it("states the results reading in plain language", () => {
-    expect(resultsSrc).toMatch(/bands speech/);
-    expect(resultsSrc).toMatch(/lossBand\(e\.avg\)\.toLowerCase\(\)/);
+    expect(resultsSrc, "the finding must be stated in words, not only plotted")
+      .toMatch(/Moderate hearing loss in both ears/);
+    expect(resultsSrc, "each ear's result needs its band named, not just a number")
+      .toMatch(/lossBand\(e\.avg\)/);
   });
 
   it("keeps the results screen off slate-400", () => {
@@ -1884,9 +1891,14 @@ describe("audiogram band labels collide with nothing", () => {
   it("computes placement instead of pinning to the band's top edge", () => {
     expect(
       src,
-      "band labels are pinned to y(b.from), which is a gridline row — use bandLabelY()",
+      "band labels are pinned to y(b.from), which is a gridline row; compute the placement instead",
     ).not.toMatch(/y=\{y\(b\.from\) \+ \d+\}/);
-    expect(src).toMatch(/y=\{bandLabelY\(b\.from, b\.to\)\}/);
+    // The invariant, not the spelling: the label's y comes from a helper that
+    // gets BOTH bounds, so it can center in the band and dodge the gridline.
+    // (Pinning the helper's name broke when it was aliased for the short
+    // canvas, while the behaviour was unchanged.)
+    expect(src, "the band label's y must be computed from both band bounds")
+      .toMatch(/y=\{\w*[lL]abelY\(b\.from, b\.to\)\}/);
   });
 
   it("keeps every band's label off every gridline", () => {
@@ -2662,7 +2674,10 @@ describe("the logo as a home button", () => {
   // is aria-hidden inside BrandLogo — without a label the control is an
   // unnamed button.
   it("names the control for assistive tech", () => {
-    expect(shell).toMatch(/aria-label="[^"]*[Ss]tart[^"]*"/);
+    // Either a literal or a template — the label just has to SAY what happens.
+    // (It became `{`${BRAND_NAME} — back to the start`}` when the brand name
+    // moved to the shared constant, which a quoted-string-only match missed.)
+    expect(shell).toMatch(/aria-label=(?:"[^"]*[Ss]tart[^"]*"|\{`[^`]*[Ss]tart[^`]*`\})/);
   });
 
   // BrandLogo is also rendered on the cover, the end-cap, the landing page
@@ -3403,5 +3418,285 @@ describe("the patient can move on from their own signature", () => {
     // And that beat is led by the CMA — Alex is watching her act, which is
     // exactly why his screen there carries no clinical control of its own.
     expect(BEATS[landing].lead).toBe("cma");
+  });
+});
+
+/**
+ * Step 5's illustration is audience-dependent. The CMA is running the bone
+ * thresholds — the air–bone gap is the entire clinical point of the step — so
+ * her screen must show the audiogram those marks land on, not a picture of the
+ * transducer. The patient, who is about to have the device placed on her head,
+ * still gets the device (asked 2026-09-02).
+ */
+describe("the bone conduction step shows the CMA the plot, not the hardware", () => {
+  const bone = sourceOf("components/exam/bone-step.tsx");
+
+  it("renders an audiogram somewhere in the step", () => {
+    expect(bone, "the bone step must be able to draw an audiogram at all")
+      .toMatch(/<Audiogram\b/);
+  });
+
+  // The bone marks are the reason the chart is there; an audiogram without
+  // them shows the CMA air conduction she has already seen two steps ago.
+  it("turns the bone conduction marks on wherever it draws one", () => {
+    const charts = [...bone.matchAll(/<Audiogram\b[^/>]*/g)].map(m => m[0]);
+    expect(charts.length).toBeGreaterThan(0);
+    for (const c of charts) {
+      expect(c, "an audiogram on the bone step without showBone plots no bone thresholds")
+        .toMatch(/\bshowBone\b/);
+    }
+  });
+
+  // The invariant, not the spelling: whatever the framing test is called, the
+  // chart and the transducer illustration must sit on opposite sides of it, so
+  // exactly one of the two renders per audience.
+  it("gives the chart to the CMA and the transducer to the patient", () => {
+    // The step's two audiences must still be distinguished at all.
+    expect(bone, "the step must branch on framing").toMatch(/\bcma\b/);
+
+    // The transducer drawing (the stacked bars over the gradient panel) and the
+    // audiogram must not both be unconditional — one of them is the patient's.
+    const branch = /\?[\s\S]*?<Audiogram[\s\S]*?:[\s\S]*?\)|<Audiogram[\s\S]*?:[\s\S]*?\?/;
+    const ternaryChoosesChart = branch.test(bone);
+    const guardedChart = /&&\s*(<div[^>]*>\s*)?<Audiogram/.test(bone);
+    expect(ternaryChoosesChart || guardedChart,
+      "the audiogram must be chosen by the framing branch, not rendered for everyone")
+      .toBe(true);
+  });
+
+  // The patient is not shown a clinical plot of her own results mid-exam; that
+  // belongs on the results screen, after the audiologist has read it.
+  it("keeps a transducer illustration for the patient's side of the branch", () => {
+    expect(bone, "the patient still needs to see what is about to touch her head")
+      .toMatch(/bg-brand-teal|bg-brand-navy/);
+  });
+});
+
+/**
+ * The patient's results screen leads with the finding, not the evidence.
+ * She opens it to learn one thing — what the exam found — and the two
+ * audiograms are what supports that answer, not the answer itself (asked
+ * 2026-09-02).
+ */
+describe("the patient's results screen leads with the clinical summary", () => {
+  const results = sourceOf("components/screens/patient/results.tsx");
+  // Only the Results screen; Review and Recommendation live in the same file.
+  const screen = results.split(/(?=export function )/)
+    .find(p => /^export function Results\b/.test(p)) ?? "";
+
+  it("has a Results screen carrying both the summary and the ear charts", () => {
+    expect(screen, "could not isolate the Results screen").toMatch(/Clinical summary/);
+    expect(screen).toMatch(/<Audiogram/);
+  });
+
+  // The invariant: whatever the markup around them, the summary's position in
+  // the source is ABOVE the charts, which is the reading order on the page.
+  it("puts the summary before the first audiogram", () => {
+    const summary = screen.indexOf("Clinical summary");
+    const chart = screen.indexOf("<Audiogram");
+    expect(summary).toBeGreaterThan(-1);
+    expect(chart).toBeGreaterThan(-1);
+    expect(summary, "the bottom line must come first, not after the evidence")
+      .toBeLessThan(chart);
+  });
+
+  // "Bigger" has to mean bigger than the per-ear headings it now outranks, or
+  // leading position buys nothing.
+  it("sets the finding in larger type than the per-ear readings under it", () => {
+    const heading = /Moderate hearing loss in both ears/.exec(screen);
+    if (!heading) throw new Error("the finding headline must still be on the screen");
+    // The px size on the element that holds the headline.
+    const block = screen.slice(Math.max(0, heading.index - 200), heading.index);
+    const px = /text-\[(\d+)px\]/.exec(block);
+    if (!px) throw new Error("the finding must carry an explicit type size");
+    expect(Number(px[1]), "the finding is the bottom line, so it must be the big type")
+      .toBeGreaterThanOrEqual(28);
+  });
+
+  // Two results, one per ear, survived the reorder (corrections item 4).
+  it("still shows one chart per ear below the summary", () => {
+    expect(screen).toMatch(/ear:\s*"left"/);
+    expect(screen).toMatch(/ear:\s*"right"/);
+  });
+});
+
+/**
+ * Consistency as a design RULE, not a one-time tidy (asked 2026-09-02).
+ *
+ * The demo's whole claim is "one synchronized system across four roles"
+ * (DESIGN.md §1), so the chrome has to be predictable: the same header
+ * grammar everywhere, and exactly two page layouts — the patient's phone
+ * column and the pro roles' wider tablet view — never a third.
+ */
+describe("screen chrome is consistent by rule", () => {
+  const screens = componentFiles("components/screens");
+  const eyebrows = screens.flatMap(f =>
+    [...sourceOf(f).matchAll(/eyebrow="([^"]*)"/g)].map(m => ({ file: f, text: m[1] })));
+
+  it("finds the eyebrows to check", () => {
+    expect(eyebrows.length).toBeGreaterThan(20);
+  });
+
+  // "Visit " shipped with a trailing space, which the uppercase tracked style
+  // turns into a visible gap before the next element.
+  it("has no eyebrow padded with stray whitespace", () => {
+    const padded = eyebrows.filter(e => e.text !== e.text.trim());
+    expect(padded.map(e => `${e.file}: ${JSON.stringify(e.text)}`)).toEqual([]);
+  });
+
+  // The eyebrow is a short label, never a sentence: it renders uppercase and
+  // letter-spaced, where a sentence becomes unreadable.
+  it("keeps every eyebrow a short label rather than a sentence", () => {
+    const bad = eyebrows.filter(e =>
+      e.text.length > 24 || /[.!?]$/.test(e.text.trim()));
+    expect(bad.map(e => `${e.file}: ${JSON.stringify(e.text)}`)).toEqual([]);
+  });
+
+  // Capitalised consistently: the set is sentence-case labels, so a stray
+  // lowercase or SHOUTING one breaks the row.
+  it("capitalises every eyebrow the same way", () => {
+    const bad = eyebrows.filter(e => {
+      const t = e.text.trim();
+      if (!t) return true;
+      const first = t[0];
+      // Must start with a capital or a digit; must not be entirely uppercase
+      // words (the style element already uppercases it).
+      return !/[A-Z0-9]/.test(first) || (t.length > 3 && t === t.toUpperCase() && /[A-Z]{4,}/.test(t));
+    });
+    expect(bad.map(e => `${e.file}: ${JSON.stringify(e.text)}`)).toEqual([]);
+  });
+});
+
+/**
+ * The bone step's chart fills its card. A width cap left it huddled in the
+ * corner of a wide panel, and the fix has to hold on both axes: full width,
+ * and short enough that "Submit exam" stays above the fold (asked 2026-09-02).
+ */
+describe("the bone step's audiogram fills its card", () => {
+  const bone = sourceOf("components/exam/bone-step.tsx");
+  const chart = sourceOf("components/charts/audiogram.tsx");
+
+  it("puts no width cap on the chart's container", () => {
+    const wrapper = /<div className="([^"]*)"><Audiogram/.exec(bone);
+    expect(wrapper, "could not find the chart's wrapper").not.toBeNull();
+    expect(wrapper![1], "a max-w cap strands the chart in the corner of the card")
+      .not.toMatch(/max-w-/);
+  });
+
+  // One instrument, one shape (asked 2026-09-02). The step-5 chart and the
+  // audiologist's "exam complete" chart show the same bone thresholds, so they
+  // must be drawn at the same scale — a per-screen canvas made them read as two
+  // different instruments.
+  it("draws on the same canvas as every other audiogram", () => {
+    const canvases = [...chart.matchAll(/H(?:_\w+)?\s*=\s*(\d+)/g)]
+      .filter(m => /\bH\s*=/.test(m[0]) || /H_\w+/.test(m[0]));
+    expect(canvases.length, "the chart must define exactly one drawing height")
+      .toBe(1);
+    expect(chart, "the viewBox must use that single height")
+      .toMatch(/viewBox=\{`0 0 \$\{W\} \$\{H\}`\}/);
+  });
+
+  // No screen may opt its chart onto different proportions.
+  it("gives every screen's audiogram the same proportions", () => {
+    const files = ["components/exam/bone-step.tsx",
+                   "components/screens/audiologist/review.tsx",
+                   "components/screens/patient/results.tsx",
+                   "components/screens/audiologist/supervision.tsx"];
+    for (const f of files) {
+      for (const c of [...sourceOf(f).matchAll(/<Audiogram\b[^/>]*/g)].map(m => m[0])) {
+        expect(c, `${f} must not resize the chart's canvas`).not.toMatch(/\bwide\b/);
+      }
+    }
+  });
+});
+
+/**
+ * The brand name, set once and rendered everywhere (asked 2026-09-02).
+ * The wordmark rides beside the mark in the demo shell's top bar, and the
+ * company name is written Hearfy — capital H, the rest lower case. Never
+ * shouted in caps, and never the intercapped "HearFy" it shipped as first.
+ */
+describe("the brand name is written Hearfy everywhere", () => {
+  const ui = sourceOf("components/ui.tsx");
+
+  it("spells the name Hearfy, capital H only", () => {
+    expect(BRAND_NAME).toBe("Hearfy");
+  });
+
+  it("renders the name from the shared constant, never a literal", () => {
+    for (const f of componentFiles()) {
+      const src = sourceOf(f);
+      // The letters in that order, outside a comment, are a hardcoded name.
+      const stripped = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+      expect(stripped, `${f} must render the brand from BRAND_NAME`)
+        .not.toMatch(/["'>]\s*Hearfy\s*["'<]/i);
+    }
+  });
+
+  // Any casing but "Hearfy" in a user-visible string is the bug: the wordmark
+  // shipped as "HEARFY", then as the intercapped "HearFy", before this.
+  it("has no mis-cased brand name in any user-visible string", () => {
+    const files = [...componentFiles(), "lib/calendar.ts", "lib/mock-data.ts"];
+    for (const f of files) {
+      const stripped = sourceOf(f)
+        .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+      const wrong = [...stripped.matchAll(/\bHear[Ff]y\b|\bHEARFY\b/g)]
+        .map(m => m[0]).filter(n => n !== "Hearfy");
+      expect(wrong, `${f} spells the brand ${wrong.join(", ")}`).toEqual([]);
+    }
+  });
+
+  // "HEARFY" was the wordmark for months; the owner asked for mixed case.
+  it("never upper-cases the brand name", () => {
+    for (const f of componentFiles()) {
+      expect(sourceOf(f), `${f} shouts the brand name`)
+        .not.toMatch(/BRAND_NAME\.toUpperCase\(\)/);
+    }
+  });
+
+  it("shows the wordmark beside the mark by default", () => {
+    expect(ui, "BrandLogo must render the name unless asked not to")
+      .toMatch(/\{!compact&&<span[^>]*>\{BRAND_NAME\}<\/span>\}/);
+  });
+
+  // The top bar's contents (mark, four role tabs, Back, Next) fill 768px on
+  // their own: the wordmark there overlapped "Operator" with "Back", so it
+  // waits for `lg`. A Tailwind class built by interpolation is NOT compiled,
+  // so the gate must be a literal class or it silently hides at every width.
+  it("gates the shell's wordmark with a literal Tailwind class", () => {
+    expect(ui, "an interpolated breakpoint prefix compiles to nothing")
+      .not.toMatch(/`hidden \$\{[^}]+\}:inline`/);
+    expect(ui, "the responsive gate must be a literal class Tailwind can see")
+      .toMatch(/"hidden lg:inline"/);
+    expect(sourceOf("components/shell/demo-shell.tsx"),
+      "the shell's logo opts into the gate").toMatch(/wordmarkFromLg/);
+  });
+});
+
+/**
+ * A sweep that walks zero screens must not report success.
+ *
+ * `role-lock-sweep.mjs` pointed at a route where its cover-entry never matched,
+ * so it walked 0 screens, clicked nothing, and printed "No in-screen click
+ * changed the persona" — a green tick for a test that never ran. It stayed
+ * green until `/demo2` folded into `/` (2026-09-02) and the sweep started
+ * actually reaching screens.
+ */
+describe("the browser sweeps cannot pass without doing any work", () => {
+  const roleLock = sourceOf("scripts/role-lock-sweep.mjs");
+  const mobile = sourceOf("scripts/mobile-sweep.mjs");
+
+  it("points both sweeps at the route the app actually serves", () => {
+    // `/demo2` was removed; a sweep aimed at a 404 silently does nothing.
+    for (const [name, src] of [["role-lock", roleLock], ["mobile", mobile]] as const) {
+      expect(src, `${name}-sweep still defaults to the retired /demo2 route`)
+        .not.toMatch(/localhost:3000\/demo2/);
+    }
+  });
+
+  // The guard itself: reaching no screens is a failure, not a pass.
+  it("fails the role-lock sweep when it reaches no screens at all", () => {
+    expect(roleLock, "the sweep must treat a zero-screen walk as a failure")
+      .toMatch(/screens\s*===?\s*0|!screens|screens\s*<\s*1/);
   });
 });

@@ -28,7 +28,7 @@ import path from "node:path";
 
 const CHROME = process.env.CHROME_PATH
   || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const URL = process.env.SWEEP_URL || "http://localhost:3000/demo2";
+const URL = process.env.SWEEP_URL || "http://localhost:3000/";
 const OUT = process.env.SWEEP_OUT || "";           // set to a dir to save shots
 const BIG = Number(process.env.BASE_FONT || 0);
 const WIDTH = Number(process.env.SWEEP_WIDTH || 390);

@@ -4,10 +4,20 @@ import { ArrowLeft, ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { BRAND_NAME } from "@/lib/mock-data";
 
-export function BrandLogo({ compact=false, className="" }:{compact?:boolean;className?:string}){
+export function BrandLogo({ compact=false, className="", wordmarkFromLg=false }:{compact?:boolean;className?:string;
+  /**
+   * Hold the wordmark back until `lg`. The demo shell's top bar needs it: at
+   * 768px the bar's own contents — mark, four role tabs, Back and Next — leave
+   * no room for the name, and "Operator" ran straight into "Back". Written as
+   * a literal class, not an interpolated prefix: Tailwind only compiles class
+   * names it can see in the source, so a built-up `${p}:inline` silently
+   * renders as no class at all (it did — the wordmark vanished at every width).
+   */
+  wordmarkFromLg?:boolean}){
   return <div className={cn("flex items-center gap-2.5",className)}>
     <div className="flex h-8 items-center gap-[3px]" aria-hidden>{[10,19,28,19,10].map((h,i)=><span key={i} className="w-[3px] rounded-full bg-brand-teal" style={{height:h}}/>)}</div>
-    {!compact&&<span className="text-[19px] font-extrabold tracking-[.08em] text-brand-navy">{BRAND_NAME.toUpperCase()}</span>}
+    {!compact&&<span className={cn("text-[19px] font-extrabold tracking-[-.01em] text-brand-navy",
+      wordmarkFromLg&&"hidden lg:inline")}>{BRAND_NAME}</span>}
   </div>
 }
 export function Card({children,className=""}:{children:React.ReactNode;className?:string}){return <div className={cn("rounded-[24px] border border-[#e4eef0] bg-white shadow-card",className)}>{children}</div>}
@@ -39,7 +49,7 @@ export function SecondaryButton({children,onClick,className=""}:{children:React.
  * ground, the exact case DESIGN.md's "don't use Vital Teal for text below
  * 18px on white" rule forbids.
  */
-export function PageHeader({title,subtitle,onBack,eyebrow}:{title:string;subtitle?:string;onBack?:()=>void;eyebrow?:string}){return <header className="mb-6"><div className="mb-5 flex items-center justify-between">{onBack?<button onClick={onBack} aria-label="Go back" className="grid h-11 w-11 place-items-center rounded-full border border-[#e1ebed] bg-white text-brand-navy transition hover:bg-[#f4f8f8]"><ArrowLeft size={19}/></button>:<BrandLogo/>}{eyebrow&&<span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#087d7a]">{eyebrow}</span>}</div><h1 className="text-[30px] font-extrabold leading-[1.08] tracking-[-.03em] text-balance text-brand-navy">{title}</h1>{subtitle&&<p className="mt-3 text-[15px] leading-6 text-slate-500">{subtitle}</p>}</header>}
+export function PageHeader({title,subtitle,onBack,eyebrow}:{title:string;subtitle?:string;onBack?:()=>void;eyebrow?:string}){return <header className="mb-6"><div className="mb-5 flex items-center justify-between">{onBack?<button onClick={onBack} aria-label="Go back" className="grid h-11 w-11 place-items-center rounded-full border border-[#e1ebed] bg-white text-brand-navy transition hover:bg-[#f4f8f8]"><ArrowLeft size={19}/></button>:<BrandLogo className="md:hidden"/>}{eyebrow&&<span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#087d7a]">{eyebrow}</span>}</div><h1 className="text-[30px] font-extrabold leading-[1.08] tracking-[-.03em] text-balance text-brand-navy">{title}</h1>{subtitle&&<p className="mt-3 text-[15px] leading-6 text-slate-500">{subtitle}</p>}</header>}
 export function StatusPill({children,tone="teal"}:{children:React.ReactNode;tone?:"teal"|"blue"|"green"|"amber"}){const tones={teal:"bg-[#e8f9f8] text-[#087d7a]",blue:"bg-[#edf4fb] text-[#235f98]",green:"bg-[#edf8f2] text-[#237451]",amber:"bg-[#fff6e8] text-[#9d6514]"};return <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",tones[tone])}><Check size={13}/>{children}</span>}
 export function Progress({step,total}:{step:number;total:number}){return <div className="mb-6"><div className="mb-2 flex justify-between text-[11px] font-bold text-slate-400"><span>STEP {step} OF {total}</span><span>{Math.round(step/total*100)}%</span></div><div className="h-1.5 rounded-full bg-[#e4eeee]"><div className="h-full rounded-full bg-brand-teal transition-all" style={{width:`${step/total*100}%`}}/></div></div>}
 export function SecureFooter(){return <div className="mt-7 flex items-center justify-center gap-2 text-[11px] font-semibold text-slate-400"><ShieldCheck size={14}/>HIPAA-ready demo · Secure & encrypted</div>}

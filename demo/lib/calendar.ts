@@ -1,4 +1,4 @@
-import { appointment } from "./mock-data";
+import { BRAND_NAME, appointment } from "./mock-data";
 
 /**
  * "Add to calendar" on the Confirmed screen (booking.tsx) was wired to
@@ -56,14 +56,14 @@ export function buildIcs(appt: typeof appointment = appointment): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//HearFy//Demo//EN",
+    `PRODID:-//${BRAND_NAME}//Demo//EN`,
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:hearfy-visit-${year}${pad(month)}${pad(day)}@hearfy.demo`,
     `DTSTAMP:${dtStamp}`,
     `DTSTART:${dtStart}`,
     `DTEND:${dtEnd}`,
-    "SUMMARY:HearFy at-home diagnostic visit",
+    `SUMMARY:${BRAND_NAME} at-home diagnostic visit`,
     "DESCRIPTION:Your certified medical assistant will visit for your at-home hearing diagnostic.",
     "LOCATION:1420 Brickell Ave\\, Miami\\, FL",
     "END:VEVENT",

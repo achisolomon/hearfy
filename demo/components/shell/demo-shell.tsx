@@ -10,6 +10,7 @@ import { Interstitial } from "./interstitial";
 import { RoleTabs, SHORT } from "./role-tabs";
 import { RoleView } from "./role-view";
 import { Timeline } from "./timeline";
+import { BRAND_NAME } from "@/lib/mock-data";
 import { personaFor } from "@/lib/personas";
 import { prevBeatForRole } from "@/lib/story";
 import { useStory } from "./story-context";
@@ -59,11 +60,15 @@ export function DemoShell() {
               which says what happens rather than naming the picture. */}
           <button
             onClick={restart}
-            aria-label="HearFy — back to the start"
+            aria-label={`${BRAND_NAME} — back to the start`}
             title="Back to the start"
             className="shrink-0 rounded-xl px-1 transition hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal"
           >
-            <BrandLogo compact />
+            {/* The wordmark rides along (asked 2026-09-02): this bar is now the
+               only place the brand appears on desktop, since the in-screen
+               logo is hidden from `md` up, so the mark alone was carrying the
+               name for the whole product. */}
+            <BrandLogo wordmarkFromLg />
           </button>
           <div className="min-w-0 shrink"><RoleTabs /></div>
           <div className="flex-1" />

@@ -44,8 +44,15 @@ describe("corrections sheet 2026-08-31", () => {
       expect(src).toMatch(/Right ear/);
       expect(src).toMatch(/Left ear/);
     }
-    // The results screen charts each ear separately, not as one overlay.
-    expect(sourceOf("components/screens/patient/results.tsx")).toMatch(/Audiogram ear=/);
+    // Superseded 2026-09-02: the results screen now shows ONE audiogram, the
+    // same drawing the audiologist signed, because two different pictures of
+    // one exam read as two different instruments. Item 4's requirement is a
+    // result PER EAR, which the screen still states — as a dB HL + loss-band
+    // reading for each ear above the shared chart, rather than two plots.
+    const results = sourceOf("components/screens/patient/results.tsx");
+    expect(results, "each ear still needs its own stated result")
+      .toMatch(/\{e\.avg\} dB HL/);
+    expect(results, "and its own loss band in words").toMatch(/lossBand\(e\.avg\)/);
     // Refined 2026-08-31: the sweep animates through BOTH ears via the
     // lib-tested advanceSweep state machine, not a frozen one-ear snapshot.
     expect(sourceOf("components/exam/puretone-step.tsx")).toMatch(/advanceSweep/);

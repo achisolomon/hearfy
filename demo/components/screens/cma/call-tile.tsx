@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Mic, Video } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clinician } from "@/lib/mock-data";
-import { VideoSplit } from "../video-split";
+import { VideoSplit, CALL_NOTE_MIN } from "../video-split";
 import { ReedFeed } from "./reed-feed";
 import { SoundButton } from "../sound-button";
 import type { VideoSound } from "@/lib/use-video-sound";
@@ -164,7 +164,12 @@ export function ZoomPanel({ note, active, sound = false }:
           dark-on-light caption text, matched to the card it sits in. The
           `active` state keeps its distinction through weight and the teal
           rule, mirroring the panel's own active border. */}
-      <p className={cn(
+      {/* `min-h`, not a fixed height: the note must still be free to grow if a
+          longer one is ever written, or at the largest text setting — it just
+          may not SHRINK the panel below the tallest note the demo uses. The
+          floor is an `em` so it scales with the text-size control instead of
+          clipping at the largest setting. See CALL_NOTE_MIN. */}
+      <p style={{ minHeight: `${CALL_NOTE_MIN / 16}em` }} className={cn(
         "border-t px-4 py-3 text-sm leading-relaxed",
         active
           ? "border-brand-teal/30 bg-[#f0fbfa] font-semibold text-brand-navy"

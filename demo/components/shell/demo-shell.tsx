@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Home, X } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { BrandLogo } from "../ui";
 import { PersonaAvatar } from "../persona-avatar";
 import { useIsLargestTextSize } from "../a11y/text-size";
@@ -82,13 +83,32 @@ export function DemoShell() {
             <ArrowLeft size={14} /> Back
           </button>
           {/* A finished solo walk is not the end of the demo — say so, and
-              leave the role tabs and timeline live. */}
+              leave the role tabs and timeline live.
+
+              The label swaps between "Next" and a sentence roughly five times
+              its width. In a single flex row that resize pushed everything to
+              its LEFT — the role tabs (which may `shrink`) gave up space, and
+              the whole bar including the logo slid sideways on the beat where
+              a persona's walk ended (owner, 2026-09-02: "the bar at the top is
+              moving — it should not"). Chrome that shifts under the cursor is
+              the thing DESIGN.md's chrome-consistency rule exists to prevent.
+
+              A grid with both labels stacked in the same cell reserves the
+              wider one's width permanently: the button is then the same size
+              in both states, so nothing downstream of it ever moves. The
+              inactive label keeps its space with `invisible` rather than
+              `hidden`, which is what holds the column open. */}
           <button
             onClick={next}
             disabled={atWalkEnd}
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-navy px-4 py-2 text-xs font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
+            className="grid shrink-0 place-items-center rounded-full bg-brand-navy px-4 py-2 text-xs font-bold text-white disabled:bg-[#e4eef0] disabled:text-slate-400"
           >
-            {atWalkEnd ? "End of this persona's day" : <>Next <ArrowRight size={14} /></>}
+            <span className={cn("col-start-1 row-start-1 whitespace-nowrap", !atWalkEnd && "invisible")} aria-hidden={!atWalkEnd}>
+              End of this persona&rsquo;s day
+            </span>
+            <span className={cn("col-start-1 row-start-1 flex items-center gap-1.5 whitespace-nowrap", atWalkEnd && "invisible")} aria-hidden={atWalkEnd}>
+              Next <ArrowRight size={14} />
+            </span>
           </button>
         </div>
       </div>

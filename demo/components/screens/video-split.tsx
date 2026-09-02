@@ -101,6 +101,24 @@ export const CALL_HEADER_MIN = 155;
  */
 export const CALL_HEADER_MIN_SM = 185;
 
+/**
+ * The reserved height of the caption BELOW a call tile, in px.
+ *
+ * Same defect as the header above it, one element down. The audiologist's
+ * note is one, two or three lines depending on the beat, and the caption is
+ * inside the `md:sticky` panel — so the panel itself grew and shrank as the
+ * story advanced, moving the video and everything under it. `stability-sweep`
+ * measured the three natural heights at 1440px as 79.2 / 104.8 / 130.4px
+ * (2026-09-02); the tallest is the floor, and shorter notes leave the
+ * remainder empty rather than pulling the panel up.
+ *
+ * The caption's own comment says "the tile simply gets taller", which was the
+ * right answer to the bug it was fixing (a long note covering Dr. Reed's
+ * face) and the wrong one for this: it must not cover the video, AND it must
+ * not resize the panel. Reserving the tallest does both.
+ */
+export const CALL_NOTE_MIN = 131;
+
 export function CallShell({ header, children, className }: {
   /** The screen's PageHeader (plus any status pill beside it). Reserved a
       fixed height so the video below starts at the same y on every beat. */

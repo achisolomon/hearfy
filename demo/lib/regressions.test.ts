@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
 import { componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
-import { BRAND_NAME, audiogram } from "./mock-data";
+import { BRAND_NAME, WORDMARK_HEAD, WORDMARK_TAIL, audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
 import { compareRecommendation, deviceDetail, devices, tryOnTalk } from "./mock-data";
 import { dismissDiversion, selectRedFlag, showsDiversion, NO_RED_FLAG } from "./red-flag";
@@ -3655,8 +3655,157 @@ describe("the brand name is written Hearfy everywhere", () => {
   });
 
   it("shows the wordmark beside the mark by default", () => {
+    // Pins the behaviour, not one spelling of the JSX: the wordmark is gated
+    // on `compact` and its visible text comes from the shared constant. It
+    // used to pin the literal `{BRAND_NAME}`, which broke the moment the name
+    // went two-tone (2026-09-02) even though nothing about the rule changed.
     expect(ui, "BrandLogo must render the name unless asked not to")
-      .toMatch(/\{!compact&&<span[^>]*>\{BRAND_NAME\}<\/span>\}/);
+      .toMatch(/\{!compact&&<span[\s\S]*?WORDMARK_HEAD[\s\S]*?WORDMARK_TAIL/);
+  });
+
+  // The new logo tints the name's last two letters Vital Teal. Both halves
+  // must render, in that order, or the wordmark reads as a truncated name —
+  // "Hear" alone, or a stray teal "fy".
+  it("renders both halves of the two-tone wordmark, head before tail", () => {
+    expect(WORDMARK_HEAD + WORDMARK_TAIL,
+      "the split must reassemble into the brand name").toBe(BRAND_NAME);
+    expect(WORDMARK_HEAD.length, "an empty head would tint the whole name")
+      .toBeGreaterThan(0);
+    const head = ui.indexOf("WORDMARK_HEAD"), tail = ui.indexOf("WORDMARK_TAIL");
+    expect(head, "BrandLogo must render the head").toBeGreaterThan(-1);
+    expect(tail, "the tail must follow the head").toBeGreaterThan(head);
+  });
+
+  // The tint is derived, never written out. A hardcoded "Hear"/"fy" pair
+  // would colour the wrong letters after a rename — and mock-data's own note
+  // says the name is expected to change again (RightHear, HearMi came before).
+  it("derives the tinted letters from BRAND_NAME rather than a literal", () => {
+    const data = sourceOf("lib/mock-data.ts")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    expect(data, "WORDMARK_TAIL must be sliced off the shared constant")
+      .toMatch(/WORDMARK_TAIL\s*=\s*BRAND_NAME\.slice/);
+    expect(data, "WORDMARK_HEAD must be sliced off the shared constant")
+      .toMatch(/WORDMARK_HEAD\s*=\s*BRAND_NAME\.slice/);
+  });
+
+  // The mark is the owner's logo file rebuilt as vector (2026-09-02). Shipping
+  // the JPEG instead would show a white box on the welcome screen's teal
+  // gradient card, ignore the brand tokens, and blur on retina.
+  it("draws the mark as inline SVG, not the raster logo file", () => {
+    expect(ui, "BrandLogo must draw the mark inline").toMatch(/<svg[^>]*viewBox/);
+    expect(ui, "the logo must not be an <img> of the source JPEG")
+      .not.toMatch(/<img[^>]*(Logo|logo)[^>]*>/);
+    expect(ui, "the arc opens to the right; a bordered circle cannot make it")
+      .toMatch(/<motion\.path[^>]*d="M13 3a13\.5 13\.5 0 0 0 0 26"/);
+  });
+
+  // The Next button's label swaps between "Next" and a sentence about five
+  // times its width. In a flex row that resize pushed everything to its LEFT
+  // — the role tabs gave up space and the whole bar, logo included, slid
+  // sideways on the beat where a persona's walk ended (owner, 2026-09-02:
+  // "the bar at the top is moving — it should not"). Both labels now sit in
+  // one grid cell so the wider one reserves the width permanently.
+  it("holds the top bar still when the Next button changes its label", () => {
+    const shell = sourceOf("components/shell/demo-shell.tsx");
+    const btn = shell.slice(shell.indexOf("onClick={next}"));
+    const end = btn.slice(0, btn.indexOf("</button>"));
+    expect(end, "both labels must share one grid cell so the wider one sets the width")
+      .toMatch(/col-start-1 row-start-1/);
+    // `hidden` would remove the label from layout and the width would collapse
+    // back to whichever label is showing — the bug all over again.
+    expect(end, "the inactive label must keep its space, not be removed")
+      .toMatch(/invisible/);
+    expect(end, "a hidden label reserves no width").not.toMatch(/&&\s*"hidden"/);
+    // A ternary that swaps ONE child is the shape that caused the shift.
+    expect(end, "the button must not swap its whole content on atWalkEnd")
+      .not.toMatch(/\{atWalkEnd \? "End of this persona/);
+  });
+
+  // Vital Teal on white is 2.87:1 — below the 4.5:1 floor for text. The logo
+  // file tints these letters in it; the app uses Teal Ink (4.97:1) for teal
+  // text everywhere else, so the wordmark matches its surroundings and the
+  // contrast suite stays green. The MARK keeps Vital Teal: it is decoration.
+  it("tints the wordmark with Teal Ink, not the lighter Vital Teal", () => {
+    const word = ui.slice(ui.indexOf("{WORDMARK_HEAD}"));
+    expect(word, "the tail must use the readable teal")
+      .toMatch(/<span className="text-teal-ink">\{WORDMARK_TAIL\}/);
+    const mark = ui.slice(ui.indexOf("<svg"), ui.indexOf("</svg>"));
+    expect(mark, "the mark itself stays Vital Teal").toMatch(/brand-teal/);
+  });
+
+  // The cover is the one screen where the brand is the subject rather than a
+  // label (owner, 2026-09-02). Every other call site stays at the working size.
+  it("enlarges the lockup on the cover and nowhere else", () => {
+    expect(sourceOf("components/shell/cover.tsx"),
+      "the cover's lockup is the hero").toMatch(/<BrandLogo[^/>]*size="lg"/);
+    expect(sourceOf("components/shell/demo-shell.tsx"),
+      "the chrome bar must not use the hero size").not.toMatch(/size="lg"/);
+    expect(ui, "sm is the default so no call site grows by accident")
+      .toMatch(/size\s*=\s*"sm"/);
+  });
+
+  // A size built by interpolation compiles to nothing — the same trap that
+  // once hid the wordmark at every width. Both sizes must be literal classes.
+  it("declares both lockup sizes as literal Tailwind classes", () => {
+    const table = ui.slice(ui.indexOf("const SIZES"), ui.indexOf("} as const;"));
+    expect(table, "no interpolated size can reach the compiled CSS")
+      .not.toMatch(/\$\{/);
+    for (const key of ["h-8", "h-14"]) {
+      expect(table, `${key} must appear literally`).toContain(key);
+    }
+  });
+
+  // The mark animates in reading order — arc, three bars, dot — because that
+  // is the logo's own story: the ear catches the sound, the waves carry it,
+  // the dot releases it. Shuffling the delays would animate nonsense.
+  it("staggers the mark's parts left to right, in source order", () => {
+    const mark = ui.slice(ui.indexOf("<svg"), ui.indexOf("</svg>"));
+    const order = [...mark.matchAll(/anim\((\d)/g)].map(m => Number(m[1]));
+    expect(order, "each element animates one step after the one to its left")
+      .toEqual([0, 1, 2, 3, 4]);
+  });
+
+  // The faded fourth bar is 45% in the source file. It must ANIMATE TO .45,
+  // not to 1 — landing at full strength turns the mark's fade-out into a
+  // solid block, which is a different logo.
+  it("lands the faded bar at its own opacity, not full strength", () => {
+    expect(ui, "the fourth bar keeps its 45% weight through the animation")
+      .toMatch(/anim\(3,\s*\.45\)/);
+  });
+
+  // The chrome bar's logo sits on every screen. Animating it there would
+  // replay the entry on every navigation — the owner asked for movement at
+  // the start (2026-09-02), not a permanent twitch.
+  it("animates the mark only where the brand performs, never in the chrome", () => {
+    expect(sourceOf("components/shell/demo-shell.tsx"),
+      "the shell's logo must not animate").not.toMatch(/<BrandLogo[^/>]*\banimate\b/);
+    expect(sourceOf("components/shell/cover.tsx"),
+      "the cover is where the brand performs").toMatch(/<BrandLogo[^/>]*\banimate\b/);
+  });
+
+  // Motion is opt-in. A default-on entry would animate every call site,
+  // including the chrome, the moment someone adds one.
+  it("keeps the entry animation off by default", () => {
+    expect(ui, "animate must default to false")
+      .toMatch(/animate\s*=\s*false/);
+  });
+
+  // Framer's reducedMotion="user" only drops transforms — a fade still plays.
+  // The gate has to be explicit or the mark still moves for viewers who asked
+  // it not to.
+  it("holds the mark still for prefers-reduced-motion", () => {
+    expect(ui, "the mark must consult the reduced-motion preference")
+      .toMatch(/prefers-reduced-motion: reduce/);
+    expect(ui, "motion plays only when animate is on AND motion is allowed")
+      .toMatch(/animate\s*&&\s*!still/);
+  });
+
+  // Every part of the mark is teal, and it must stay token-driven: a raw hex
+  // here would drift the moment DESIGN.md's Vital Teal moves.
+  it("colours the mark from the brand token, never a raw hex", () => {
+    const mark = ui.slice(ui.indexOf("<svg"), ui.indexOf("</svg>"));
+    expect(mark, "the mark must use the teal token").toMatch(/brand-teal/);
+    expect(mark, "no hardcoded colour inside the mark").not.toMatch(/#[0-9a-fA-F]{3,8}/);
   });
 
   // The top bar's contents (mark, four role tabs, Back, Next) fill 768px on
@@ -3698,5 +3847,56 @@ describe("the browser sweeps cannot pass without doing any work", () => {
   it("fails the role-lock sweep when it reaches no screens at all", () => {
     expect(roleLock, "the sweep must treat a zero-screen walk as a failure")
       .toMatch(/screens\s*===?\s*0|!screens|screens\s*<\s*1/);
+  });
+});
+
+/**
+ * The mark animates on entry, and only where the brand is allowed to perform
+ * (asked 2026-09-02; DESIGN.md §5 sanctions the cover and welcome screens).
+ * Each element arrives in reading order — ear, waves, dot — which is the
+ * logo's own story, not decoration.
+ */
+describe("the brand mark's entry animation", () => {
+  const ui = sourceOf("components/ui.tsx");
+
+  it("is opt-in, so the chrome bar's logo never replays it", () => {
+    expect(ui, "animation must default to off").toMatch(/animate\s*=\s*false/);
+    const shell = sourceOf("components/shell/demo-shell.tsx");
+    const call = /<BrandLogo[^/>]*/.exec(shell)?.[0] ?? "";
+    expect(call, "the persistent chrome logo must not animate")
+      .not.toMatch(/\banimate\b/);
+  });
+
+  it("plays on the cover and the welcome screen", () => {
+    for (const f of ["components/shell/cover.tsx",
+                     "components/screens/patient/welcome.tsx"]) {
+      const calls = [...sourceOf(f).matchAll(/<BrandLogo\b[^/>]*/g)].map(m => m[0]);
+      expect(calls.length, `${f} should render the mark`).toBeGreaterThan(0);
+      expect(calls.some(c => /\banimate\b/.test(c)),
+        `${f} should play the entry animation`).toBe(true);
+    }
+  });
+
+  // Every element must be reachable by the stagger, or the mark arrives
+  // half-drawn: the delay is index-based, so the count and the parts must agree.
+  it("staggers exactly as many elements as the mark has", () => {
+    const parts = (ui.match(/<motion\.(path|rect|circle)\b/g) ?? []).length;
+    const declared = Number(/MARK_PARTS\s*=\s*(\d+)/.exec(ui)?.[1] ?? 0);
+    expect(parts, "every mark element must be animatable").toBe(declared);
+  });
+
+  // Reduced motion must leave the mark VISIBLE, not stuck at its `initial`
+  // opacity of 0 — an early version returned `{}` there and the logo vanished.
+  it("shows the finished mark when the viewer asks for less motion", () => {
+    expect(ui, "the still branch must pin the final state, not fall through")
+      .toMatch(/initial:\s*false[\s\S]{0,120}?opacity:\s*o/);
+    expect(ui, "reduced motion must be honoured explicitly")
+      .toMatch(/prefers-reduced-motion/);
+  });
+
+  // The fourth bar is 45% in the source logo; the animation must land there.
+  it("keeps the faded bar faded", () => {
+    expect(ui, "the fade-out bar's target opacity must survive the animation")
+      .toMatch(/anim\(3,\s*\.45\)/);
   });
 });

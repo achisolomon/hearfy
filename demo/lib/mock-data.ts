@@ -2,6 +2,21 @@
 // All UI must read it from this one constant so a rename is a one-line edit.
 export const BRAND_NAME = "Hearfy";
 
+/**
+ * The wordmark is two-tone in the owner's logo file: the name sits in Harbor
+ * Navy with its last two letters in Vital Teal. Split here, off BRAND_NAME,
+ * rather than written out in the component — the name above is expected to
+ * change again, and a hardcoded "Hear"/"fy" pair would then colour the wrong
+ * letters (or, worse, spell a stale name that the brand-spelling tests read
+ * as correct because it never passed through this constant).
+ *
+ * Two characters, taken from the end, so any future name keeps the same
+ * proportion of tint. Names of two letters or fewer would leave the head
+ * empty and tint the lot, which is the sane degradation rather than a crash.
+ */
+export const WORDMARK_TAIL = BRAND_NAME.slice(-2);
+export const WORDMARK_HEAD = BRAND_NAME.slice(0, -2);
+
 export const patient = { name: "Alex", city: "Miami, FL" };
 
 /**

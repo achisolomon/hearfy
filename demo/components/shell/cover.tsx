@@ -26,7 +26,7 @@ export function Cover() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full max-w-md text-center">
-        <div className="mb-8 flex justify-center"><BrandLogo /></div>
+        <div className="mb-8 flex justify-center"><BrandLogo animate size="lg" /></div>
         <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-[-.03em] text-brand-navy">
           Hearing diagnostics, at home
         </h1>
@@ -73,7 +73,7 @@ export function EndCap() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6">
       <div className="w-full max-w-md text-center">
-        <div className="mb-8 flex justify-center"><BrandLogo /></div>
+        <div className="mb-8 flex justify-center"><BrandLogo animate size="lg" /></div>
         <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-.03em] text-brand-navy">
           One journey, end to end
         </h1>

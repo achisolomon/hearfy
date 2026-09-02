@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "mobile-sweep": "node scripts/mobile-sweep.mjs",
-    "role-lock-sweep": "node scripts/role-lock-sweep.mjs"
+    "role-lock-sweep": "node scripts/role-lock-sweep.mjs",
+    "stability-sweep": "node scripts/stability-sweep.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -5,3 +5,6 @@ out/
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# A second dev server's build dir (see DIST_DIR in next.config.mjs).
+.next-review/

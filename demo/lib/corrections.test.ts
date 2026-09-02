@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, beatIndexById, isTerminalBeat } from "./story";
+import { BEATS, ROLES, beatIndexById, isConditionalBeat, isTerminalBeat, nextBeat, nextBeatForRole, prevBeat } from "./story";
 import { EXAM_STEPS } from "./exam";
 import { clearanceOf, visitClearance, visitGates } from "./clearance";
 import { compareCategories, devices, deviceDetail, tiers } from "./mock-data";
@@ -731,6 +731,53 @@ describe("the referral termination beat", () => {
       const src = sourceOf(f);
       expect(src, `${f} must not take a next prop`).not.toMatch(/next=\{|next:\s*\(\)/);
       expect(src, `${f} must not offer a primary action`).not.toMatch(/<PrimaryButton/);
+    }
+  });
+
+  // Owner, 2026-09-02: "tell him what failed, which issue did we find in the
+  // exam, so that he can go to the doctor with that." Dr. Reed's screen listed
+  // the flagged checks; Maya's and Alex's showed only the summary sentence, so
+  // the person actually going to the doctor could not say what was found.
+  it("shows the specific finding on the CMA's and the patient's screens", () => {
+    for (const f of ["components/screens/cma/referral.tsx",
+                     "components/screens/patient/exam.tsx"]) {
+      expect(sourceOf(f), `${f} must list the flagged findings`)
+        .toMatch(/patientFindings\(/);
+    }
+  });
+
+  // He needs the clinical wording to hand over, not just the plain version.
+  it("gives the patient the wording for his doctor", () => {
+    const src = sourceOf("components/screens/patient/exam.tsx");
+    expect(src).toMatch(/For your doctor:/);
+    expect(src).toMatch(/This is not a diagnosis/);
+  });
+
+  // Found walking Alex's own story (2026-09-02): with NOTHING flagged, Next
+  // carried him from the clearance screen straight onto "Your visit stops here
+  // today" and told a cleared patient to see a doctor. The referral is opened
+  // by a decision, never reached by walking.
+  it("never walks into the referral when nothing was flagged", () => {
+    const clearance = beatIndexById("clearance");
+    const referral = beatIndexById("referral");
+    expect(isConditionalBeat(referral)).toBe(true);
+    // Guided walk steps over it.
+    expect(nextBeat(clearance)).toBe(beatIndexById("puretone"));
+    // Back does too, or undoing a Next lands on a referral that never happened.
+    expect(prevBeat(beatIndexById("puretone"))).toBe(clearance);
+    // And no role's solo walk includes it.
+    for (const role of ROLES) {
+      expect(nextBeatForRole(clearance, role), `${role} must not walk into the referral`)
+        .not.toBe(referral);
+    }
+  });
+
+  // A card that frames a heading and a disclaimer around nothing.
+  it("hides the findings card when there is nothing to list", () => {
+    for (const f of ["components/screens/patient/exam.tsx",
+                     "components/screens/cma/referral.tsx"]) {
+      expect(sourceOf(f), `${f} must guard the empty case`)
+        .toMatch(/patientFindings\(review, visitGates\(\)\)\.length > 0 &&/);
     }
   });
 });

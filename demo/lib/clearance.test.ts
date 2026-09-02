@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GATE_ORDER, clearanceOf, gateFor, questionnaireGate, referralReason,
   verdictForTone, visitClearance, visitGates, worst,
-  NO_REVIEW, REVIEWABLE, criticalGates, markReview, reviewOutcome, reviewReferralReason,
+  NO_REVIEW, REVIEWABLE, criticalGates, markReview, patientFindings, reviewOutcome, reviewReferralReason,
   type GateResult, type ReviewMark,
 } from "./clearance";
 
@@ -248,5 +248,62 @@ describe("the audiologist's review", () => {
 
   it("says nothing when she has flagged nothing", () => {
     expect(reviewReferralReason(NO_REVIEW, visitGates())).toBe("");
+  });
+});
+
+describe("what the patient takes to the doctor", () => {
+  const flagged = (...ids: string[]) => {
+    let s = NO_REVIEW;
+    for (const id of ids) s = markReview(s, id as any, "critical");
+    return s;
+  };
+
+  it("lists only the checks she flagged", () => {
+    const f = patientFindings(flagged("tympanometry"), visitGates());
+    expect(f.map(x => x.id)).toEqual(["tympanometry"]);
+  });
+
+  it("says nothing when nothing was flagged", () => {
+    expect(patientFindings(NO_REVIEW, visitGates())).toEqual([]);
+  });
+
+  // He should not have to read "Type As, 0.3 ml" to learn something is wrong.
+  it("gives every finding plain wording and the clinical line", () => {
+    for (const id of ["otoscopy", "tympanometry"]) {
+      const [f] = patientFindings(flagged(id), visitGates());
+      expect(f.plain.length, `${id} needs plain wording`).toBeGreaterThan(20);
+      expect(f.clinical.length, `${id} needs the clinical line`).toBeGreaterThan(0);
+      expect(f.plain).not.toBe(f.clinical);
+    }
+  });
+
+  // Names a patient recognises, not the instrument's name.
+  it("renames the checks for the patient", () => {
+    expect(patientFindings(flagged("otoscopy"), visitGates())[0].label).toBe("Ear examination");
+    expect(patientFindings(flagged("tympanometry"), visitGates())[0].label)
+      .toBe("Middle ear pressure test");
+  });
+
+  // THE constraint: it describes what was seen, never what it might mean.
+  // Naming a cause is a diagnosis, and nobody in this product is making one.
+  it("never names a cause or a diagnosis", () => {
+    for (const id of ["otoscopy", "tympanometry"]) {
+      const [f] = patientFindings(flagged(id), visitGates());
+      expect(f.plain, `${id} must not diagnose`)
+        .not.toMatch(/infection|effusion|perforat|tumou?r|cancer|disease|damage|wax buildup causing/i);
+      expect(f.plain, `${id} must not predict`).not.toMatch(/probably|likely|may be caused by/i);
+    }
+  });
+
+  it("never promises or forecloses a hearing device", () => {
+    for (const id of ["otoscopy", "tympanometry"]) {
+      const [f] = patientFindings(flagged(id), visitGates());
+      expect(f.plain).not.toMatch(/hearing aid|device|price|refund/i);
+    }
+  });
+
+  it("covers both flagged checks at once", () => {
+    const f = patientFindings(flagged("otoscopy", "tympanometry"), visitGates());
+    expect(f.map(x => x.id)).toEqual(["otoscopy", "tympanometry"]);
   });
 });

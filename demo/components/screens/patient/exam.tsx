@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { Check,FileHeart,Phone,Stethoscope,Video,Volume2 } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { BRAND_NAME } from "@/lib/mock-data";
+import { BRAND_NAME, clinician } from "@/lib/mock-data";
 import { OtoscopyStep } from "../../exam/otoscopy-step";
 import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
-import { reviewOutcome, reviewReferralReason, visitGates } from "@/lib/clearance";
+import { patientFindings, reviewOutcome, reviewReferralReason, visitGates } from "@/lib/clearance";
 import { useReview } from "@/lib/review-store";
 
 // The visit's patient-facing steps, counted from one list so adding a step
@@ -121,6 +121,32 @@ export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         </div>
       </div>
     </Card>
+    {/* WHAT WE FOUND (owner, 2026-09-02: "tell him which issue did we find in
+        the exam, so that he can go to the doctor with that"). Alex arrives at
+        a doctor able to say what was seen, rather than "the hearing people
+        sent me". Each item is what was SEEN, never what it might mean — a
+        cause is a diagnosis, and nobody here is making one. The clinical
+        wording sits underneath, marked as the bit for the doctor, so he can
+        hand it over without having to translate his own screen. */}
+    {/* Only when there is something to list: an empty card would frame a
+        heading and a disclaimer around nothing. */}
+    {patientFindings(review, visitGates()).length > 0 && <Card className="mt-4 p-5">
+      <b className="text-sm">What today&rsquo;s checks found</b>
+      <div className="mt-4 space-y-4">
+        {patientFindings(review, visitGates()).map(f=>
+          <div key={f.id} className="rounded-2xl border border-[#f0d6d6] bg-[#fffafa] p-4">
+            <b className="text-sm text-brand-navy">{f.label}</b>
+            <p className="mt-1 text-sm leading-6 text-slate-600">{f.plain}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              <span className="font-bold text-slate-600">For your doctor:</span> {f.clinical}
+            </p>
+          </div>)}
+      </div>
+      <p className="mt-4 text-sm leading-6 text-slate-500">
+        This is not a diagnosis. It is what your audiologist saw and wants a doctor to
+        examine properly.
+      </p>
+    </Card>}
     <Card className="mt-4 p-5">
       <b className="text-sm">What happens now</b>
       <div className="mt-4 space-y-4">
@@ -134,6 +160,14 @@ export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             <div><b className="text-sm">{t}</b><p className="mt-0.5 text-sm leading-6 text-slate-500">{d}</p></div>
           </div>)}
       </div>
+    </Card>
+    <Card className="mt-4 p-5">
+      <b className="text-sm">Taking this to your doctor</b>
+      <p className="mt-1 text-sm leading-6 text-slate-500">
+        Your visit summary — today&rsquo;s ear images, the pressure traces and the wording
+        above — is saved in this app under Messages, and {clinician.name} is sending a copy
+        to the doctor you choose. Show them this screen if it is easier.
+      </p>
     </Card>
     <Card className="mt-4 p-5">
       <b className="text-sm">Today&rsquo;s visit fee</b>

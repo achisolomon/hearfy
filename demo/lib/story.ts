@@ -233,11 +233,21 @@ export function firstBeatOfStage(stage: StageNumber): number {
 }
 
 export function nextBeat(i: number): number {
-  return clamp(i + 1);
+  // Step over conditional beats: guided mode walks the story that happens,
+  // and the referral only happens when a clinician stops the visit.
+  let n = clamp(i + 1);
+  while (n < BEATS.length - 1 && isConditionalBeat(n)) n = clamp(n + 1);
+  return isConditionalBeat(n) ? clamp(i) : n;
 }
 
 export function prevBeat(i: number): number {
-  return clamp(i - 1);
+  // Symmetric with `nextBeat`: Back must not step into a conditional beat
+  // either, or undoing a Next lands on a referral the visit never had. The
+  // existing "Back returns to the screen Next left" guard caught exactly this
+  // when only the forward direction was skipped (2026-09-02).
+  let n = clamp(i - 1);
+  while (n > 0 && isConditionalBeat(n)) n = clamp(n - 1);
+  return isConditionalBeat(n) ? clamp(i) : n;
 }
 
 export function isLastBeat(i: number): boolean {
@@ -382,14 +392,15 @@ export function beatsForRole(role: Role): number[] {
  */
 export function nextBeatForRole(i: number, role: Role): number {
   const beats = beatsForRole(role);
-  const nextIdx = beats.find(b => b > i);
-  return nextIdx ?? beats[beats.length - 1] ?? i;
+  // Conditional beats are opened by a decision, not walked into.
+  const nextIdx = beats.find(b => b > i && !isConditionalBeat(b));
+  return nextIdx ?? beats.filter(b => !isConditionalBeat(b)).pop() ?? i;
 }
 
 /** The previous beat in a role's solo walk; stays put at the start. */
 export function prevBeatForRole(i: number, role: Role): number {
   const beats = beatsForRole(role);
-  const earlier = beats.filter(b => b < i);
+  const earlier = beats.filter(b => b < i && !isConditionalBeat(b));
   return earlier.length ? earlier[earlier.length - 1] : (beats[0] ?? i);
 }
 
@@ -499,4 +510,25 @@ export const TERMINAL_BEATS = ["referral"] as const;
 
 export function isTerminalBeat(i: number): boolean {
   return (TERMINAL_BEATS as readonly string[]).includes(BEATS[clamp(i)].id);
+}
+
+/**
+ * Beats that only a specific decision opens — never reached by walking.
+ *
+ * The referral is in the script so every role has a screen for it, but it is
+ * NOT part of anyone's story until a clinician stops the visit. Left walkable,
+ * plain forward navigation carried a perfectly cleared patient from the
+ * clearance screen straight onto "Your visit stops here today" and told him to
+ * see a doctor about findings nobody had flagged (found walking Alex's own
+ * story, 2026-09-02).
+ *
+ * So the walk skips it and the stop button jumps to it directly
+ * (`goToScreen`), which is what makes it conditional rather than sequential.
+ * Kept beside `isTerminalBeat` because the two are halves of one idea: nothing
+ * walks IN, and nothing walks OUT.
+ */
+export const CONDITIONAL_BEATS = ["referral"] as const;
+
+export function isConditionalBeat(i: number): boolean {
+  return (CONDITIONAL_BEATS as readonly string[]).includes(BEATS[clamp(i)].id);
 }

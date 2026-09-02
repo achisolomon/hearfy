@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
+import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, isConditionalBeat, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
 import { brandScopeFiles, componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
 import { BRAND_NAME, WORDMARK_HEAD, WORDMARK_TAIL, audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
@@ -1628,6 +1628,11 @@ describe("back returns to the screen the viewer came from", () => {
   it("undoes a guided Next, at every beat including every handoff", () => {
     const broken: string[] = [];
     for (let i = 0; i < BEATS.length - 1; i++) {
+      // Conditional beats are not part of anyone's walk: the referral is
+      // opened by a clinician stopping the visit and is terminal once there,
+      // so "Next then Back" is not a journey a viewer can make from it. The
+      // invariant is about beats you can actually walk through (2026-09-02).
+      if (isConditionalBeat(i)) continue;
       const role = BEATS[i].lead;
       const before = screenFor(i, role);
       const fwd = guidedNext(i, role);

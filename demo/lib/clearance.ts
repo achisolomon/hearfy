@@ -249,3 +249,48 @@ export function reviewReferralReason(s: ReviewState, gates: GateResult[]): strin
     : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   return `Dr. Reed flagged today's ${list} finding as needing a physician's assessment before any hearing test or device fitting can go ahead.`;
 }
+
+/* ------------------------------------------------------------------------ *
+ * What the patient is told he is taking to the doctor (owner, 2026-09-02):
+ * "tell him what failed, which issue did we find in the exam, so that he can
+ * go to the doctor with that."
+ * ------------------------------------------------------------------------ */
+
+/**
+ * A flagged check, in words Alex can repeat to a physician.
+ *
+ * Two layers on purpose. `clinical` is what the instrument recorded and what
+ * the doctor actually needs — it goes on the summary Alex hands over, verbatim,
+ * because a referral that arrives paraphrased is a referral the physician has
+ * to redo. `plain` is what the screen says to Alex himself: "Type As, 0.3 ml"
+ * tells him nothing except that something is wrong with him, which is how a
+ * referral turns into a fright.
+ *
+ * `plain` deliberately describes what was SEEN and never what it might mean.
+ * Naming a cause would be a diagnosis, and no one in this product — not the
+ * CMA, not the audiologist — is referring him because they know what it is.
+ * They are referring him because a physician needs to look.
+ */
+export interface PatientFinding {
+  id: string;
+  /** The check's patient-facing name. */
+  label: string;
+  /** What was seen, in plain language. Never an interpretation. */
+  plain: string;
+  /** The clinical wording, for the summary he hands the doctor. */
+  clinical: string;
+}
+
+const PLAIN_BY_GATE: Record<string, string> = {
+  otoscopy: "The picture of the inside of your ear showed something your audiologist wants a doctor to look at directly.",
+  tympanometry: "The pressure test showed one of your eardrums is not moving the way it usually should.",
+};
+
+export function patientFindings(s: ReviewState, gates: GateResult[]): PatientFinding[] {
+  return criticalGates(s, gates).map(g => ({
+    id: g.id,
+    label: g.label === "Otoscopy" ? "Ear examination" : g.label === "Tympanometry" ? "Middle ear pressure test" : g.label,
+    plain: PLAIN_BY_GATE[g.id] ?? "Your audiologist wants a doctor to look at this before we go further.",
+    clinical: g.detail,
+  }));
+}

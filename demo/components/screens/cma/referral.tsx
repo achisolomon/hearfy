@@ -3,7 +3,7 @@ import { Check, Stethoscope } from "lucide-react";
 import { Card, PageHeader } from "../../ui";
 import { CallShell } from "../video-split";
 import { CallSplit } from "./call-tile";
-import { reviewReferralReason, visitGates } from "@/lib/clearance";
+import { patientFindings, reviewReferralReason, visitGates } from "@/lib/clearance";
 import { useReview } from "@/lib/review-store";
 import { clinician, patient } from "@/lib/mock-data";
 
@@ -43,6 +43,25 @@ export function CmaReferral() {
               </p>
             </div>
           </div>
+          {/* The specific checks, so Maya can answer "what did you find?" in
+              the room without guessing or having to call Dr. Reed back
+              (owner, 2026-09-02). Each carries the plain wording she may
+              safely repeat AND the clinical line, which is what goes to the
+              physician — she reads the first aloud and hands over the second. */}
+          {patientFindings(review, visitGates()).length > 0 && <div className="mt-4 space-y-3">
+            {patientFindings(review, visitGates()).map(f => (
+              <div key={f.id} className="rounded-xl border border-[#f0d6d6] bg-[#fffafa] p-3">
+                <b className="text-xs text-brand-navy">{f.label}</b>
+                <p className="mt-1 text-xs leading-5 text-slate-600">{f.plain}</p>
+                <p className="mt-1.5 text-[11px] leading-4 text-slate-500">
+                  <span className="font-bold">On the referral:</span> {f.clinical}
+                </p>
+              </div>
+            ))}
+          </div>}
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            Say what was seen, not what it might be. The diagnosis is the doctor&rsquo;s.
+          </p>
         </Card>
 
         <Card className="mt-4 p-5">

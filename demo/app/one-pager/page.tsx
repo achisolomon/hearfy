@@ -20,7 +20,6 @@ import {
   HERO,
   HOW,
   MEDIA,
-  OFFER,
   PROBLEM,
   SYSTEM,
   TRUST,
@@ -225,13 +224,16 @@ export default function OnePagerPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {PROBLEM.stats.map((stat, i) => (
             <Reveal key={stat.label} delay={i * 0.08}>
-              <Card className="flex h-full items-center gap-4">
+              {/* `min-w-0` on the flex child and no `shrink-0` on the figure:
+                  at 320px with a large accessibility font the old row could not
+                  fit, and pushed the card past the viewport. */}
+              <Card className="flex h-full items-center gap-4 !p-5">
                 <CountUp
                   value={stat.value}
-                  className="shrink-0 text-[30px] font-extrabold leading-none tracking-[-0.03em] text-brand-navy"
+                  className="text-[30px] font-extrabold leading-none tracking-[-0.03em] text-brand-navy"
                 />
-                <span>
-                  <span className="block text-[14px] leading-snug text-slate-500">
+                <span className="min-w-0">
+                  <span className="block break-words text-[14px] leading-snug text-slate-500">
                     {stat.label}
                   </span>
                   <span className="mt-1 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
@@ -295,13 +297,21 @@ export default function OnePagerPage() {
           <SectionTitle>{CONTRAST.title}</SectionTitle>
         </Reveal>
 
-        {/* Both columns are full-height cards of equal weight. Previously the
-            HearFy card carried a photo and the clinic card did not, so one was
-            twice the height of the other and the row read as unfinished
-            whichever way it was aligned. Now the media sits BELOW both, spanning
-            the full width, and the two lists balance each other exactly. */}
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
-          <Reveal>
+        {/* Three cells of equal size on ONE row: the clinic list, the HearFy
+            list, and the exam running (owner, 2026-09-02: "don't take space,
+            put this like three evenly size square on the same row"). The video
+            used to sit full-width BELOW the pair, which cost a whole band of
+            page height for one picture.
+
+            `auto-rows-fr` equalises them, and the video is positioned
+            `absolute inset-0` inside a `relative` cell for the same reason the
+            step grid's photo is: media has an intrinsic aspect ratio, and left
+            in flow it becomes the floor for the row and pads the two lists out
+            with dead space. Out of flow it simply fills whatever the lists
+            need. Being a third of the row also holds it near its native 640px
+            rather than upscaling it. */}
+        <div className="mt-8 grid auto-rows-fr gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <Reveal className="h-full">
             <Card className="flex h-full flex-col bg-[#F7FAFB]">
               <p className="text-[15px] font-extrabold text-slate-500">
                 {CONTRAST.clinic.label}
@@ -318,7 +328,7 @@ export default function OnePagerPage() {
           </Reveal>
 
           {/* Teal marks what has been chosen, per the colour rule. */}
-          <Reveal delay={0.1}>
+          <Reveal delay={0.1} className="h-full">
             <Card className="flex h-full flex-col border-[#12AAA5]/35 bg-[#F4FCFC]">
               <p className="text-[15px] font-extrabold text-teal-ink">
                 {CONTRAST.home.label}
@@ -333,25 +343,33 @@ export default function OnePagerPage() {
               </ul>
             </Card>
           </Reveal>
-        </div>
 
-        {/* The exam running, full width under the comparison: it is the
-            evidence for "tested in your own room", and its motion draws the
-            eye to the HearFy side without unbalancing the two cards. */}
-        <Reveal delay={0.15}>
-          <div className="relative mt-5 overflow-hidden rounded-[24px] bg-white p-2 shadow-card print:shadow-none">
-            <LoopVideo
-              src={MEDIA.visitVideo.src}
-              poster={MEDIA.visitVideo.poster}
-              alt={MEDIA.visitVideo.alt}
-              className="aspect-[16/7] w-full rounded-[18px] object-cover object-[50%_35%]"
-            />
-            <span className="absolute left-6 top-6 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[12px] font-extrabold text-teal-ink shadow-soft">
-              <span className="h-2 w-2 rounded-full bg-brand-teal" />
-              Exam in progress
-            </span>
-          </div>
-        </Reveal>
+          {/* The exam running: the evidence for "tested in your own room", now
+              a peer of the two lists rather than a band beneath them. On a
+              phone (one column) and a tablet (two) it falls to the end, which
+              is the right reading order — the claim, then the proof. */}
+          <Reveal delay={0.15} className="h-full">
+            {/* `h-full`, not a min-height: the cell has to FILL the row so the
+                video matches the two lists exactly (owner, 2026-09-02: "the
+                video and the text same size"). A min-height lets it settle at
+                its own smaller size and the row reads as ragged. */}
+            <div className="relative h-full overflow-hidden rounded-[24px] bg-white p-2 shadow-card print:shadow-none">
+              <LoopVideo
+                src={MEDIA.visitVideo.src}
+                poster={MEDIA.visitVideo.poster}
+                alt={MEDIA.visitVideo.alt}
+                className="absolute inset-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)] rounded-[18px] object-cover object-[50%_35%]"
+              />
+              {/* Bottom-left, not top-left: at a third of the row the frame is
+                  narrow enough that a top badge lands across the patient's
+                  face. The lower band is empty in this footage. */}
+              <span className="absolute bottom-5 left-5 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[12px] font-extrabold text-teal-ink shadow-soft">
+                <span className="h-2 w-2 rounded-full bg-brand-teal" />
+                Exam in progress
+              </span>
+            </div>
+          </Reveal>
+        </div>
       </section>
 
       {/* ---------------------------------------------------------- *
@@ -364,25 +382,32 @@ export default function OnePagerPage() {
           <p className="mt-3 text-[16px] text-slate-500">{HOW.subtitle}</p>
         </Reveal>
 
-        <ol className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* `auto-rows-fr` makes every row the same height, so all six cells are
+            one size regardless of how long a step's copy runs (owner, 2026-09-02:
+            "make all these square the same size"). The stretch has to be carried
+            all the way down — the `Reveal` wrapper is the actual grid item, so
+            without `h-full` on it the cards' own `h-full` resolves against a
+            wrapper that never grew, and the row height is set by the video
+            alone. */}
+        <ol className="mt-8 grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
           {HOW.steps.map((step, i) => {
             const Icon = HOW_ICONS[i];
             return (
-              <Reveal key={step.n} delay={i * 0.06}>
+              <Reveal key={step.n} delay={i * 0.06} className="h-full">
                 <li className="h-full list-none">
-                  <Card className="h-full">
+                  <Card className="h-full !p-5">
                     <div className="flex items-center justify-between">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[#E8F9F8]">
-                        <Icon aria-hidden className="h-5 w-5 text-teal-ink" />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#E8F9F8]">
+                        <Icon aria-hidden className="h-[18px] w-[18px] text-teal-ink" />
                       </span>
                       <span className="text-[13px] font-extrabold tracking-[0.12em] text-slate-400">
                         {step.n}
                       </span>
                     </div>
-                    <p className="mt-4 text-[17px] font-extrabold leading-tight text-brand-navy">
+                    <p className="mt-3 text-[17px] font-extrabold leading-tight text-brand-navy">
                       {step.name}
                     </p>
-                    <p className="mt-2 text-[14px] leading-[1.55] text-slate-500">
+                    <p className="mt-1.5 text-[14px] leading-[1.5] text-slate-500">
                       {step.line}
                     </p>
                   </Card>
@@ -392,13 +417,21 @@ export default function OnePagerPage() {
           })}
 
           {/* The sixth cell of a five-step grid: the exam photograph, so the
-              row completes instead of ending on a gap. */}
-          <Reveal delay={0.3}>
-            <li className="h-full list-none">
+              row completes instead of ending on a gap.
+
+              `absolute inset-0` inside a `relative` cell is load-bearing. The
+              photo has an intrinsic height, and with `auto-rows-fr` that height
+              became the floor for EVERY row — five text cards were padded out
+              to match a picture, which is the empty space the owner flagged.
+              Taken out of flow, the photo contributes no height of its own and
+              simply fills whatever the copy asks for. */}
+          <Reveal delay={0.3} className="h-full">
+            <li className="relative h-full list-none">
               <Photo
                 src={MEDIA.examLive.src}
                 alt={MEDIA.examLive.alt}
-                className="h-full min-h-[190px]"
+                className="absolute inset-0"
+                imgClassName="object-[50%_40%]"
               />
             </li>
           </Reveal>
@@ -476,81 +509,6 @@ export default function OnePagerPage() {
               </Reveal>
             );
           })}
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------- *
-       * What it costs
-       * ---------------------------------------------------------- */}
-      <section className="mt-16">
-        <Reveal>
-          <SectionLabel>Pricing</SectionLabel>
-          <SectionTitle>{OFFER.title}</SectionTitle>
-        </Reveal>
-
-        <div className="mt-8 grid items-start gap-5 lg:grid-cols-[1fr_1.1fr]">
-          <Reveal>
-            <Card className="border-[#12AAA5]/35 bg-[#F4FCFC]">
-              <div className="flex items-baseline gap-2">
-                <p className="text-[46px] font-extrabold leading-none tracking-[-0.03em] text-brand-navy">
-                  {OFFER.price}
-                </p>
-                <p className="text-[15px] font-bold text-slate-500">
-                  {OFFER.priceLabel}
-                </p>
-              </div>
-              <p className="mt-4 text-[15px] leading-[1.55] text-teal-ink">
-                {OFFER.deposit}
-              </p>
-
-              <p className="mt-6 text-[13px] font-bold text-brand-navy">
-                {OFFER.includedTitle}
-              </p>
-              <ul className="mt-3 space-y-2.5">
-                {OFFER.included.map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-[14px] leading-snug text-slate-500">
-                    <Ear aria-hidden className="mt-[3px] h-4 w-4 shrink-0 text-brand-teal" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </Reveal>
-
-          <Reveal delay={0.1}>
-            <Card>
-              <p className="text-[17px] font-extrabold text-brand-navy">
-                {OFFER.membershipTitle}
-              </p>
-              <p className="mt-2 text-[15px] leading-[1.55] text-slate-500">
-                {OFFER.membershipLine}
-              </p>
-
-              <ul className="mt-5 space-y-3">
-                {OFFER.tiers.map((tier) => (
-                  <li
-                    key={tier.name}
-                    className="flex items-center justify-between gap-4 rounded-[12px] bg-[#F2F7F7] px-4 py-3"
-                  >
-                    <span>
-                      <span className="block text-[15px] font-extrabold text-brand-navy">
-                        {tier.name}
-                      </span>
-                      <span className="block text-[13px] text-slate-500">
-                        {tier.line}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-[17px] font-extrabold text-brand-navy">
-                      {tier.price}
-                      <span className="text-[13px] font-bold text-slate-500">
-                        {tier.per}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </Reveal>
         </div>
       </section>
 

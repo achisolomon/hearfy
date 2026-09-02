@@ -15,6 +15,7 @@
  *   - per-unit economics (device gross profit, conversion, CMA share) — these
  *     have no source at all; see the economics memory note
  *   - founder names and the investor-deck team slide
+ *   - every price: the visit fee, the membership tiers, and any monthly figure
  * `lib/one-pager.test.ts` fails the build if any of them reappear.
  *
  * WHAT IS ALLOWED, and why:
@@ -22,13 +23,24 @@
  *     public-health statistics, not HearFy business information, and the deck
  *     itself cites them as WHO figures. They are the public case for the
  *     product existing.
- *   - $99 for the visit and the membership tier prices. These are already
- *     consumer-facing in the shipped demo (lib/mock-data.ts, lib/commerce.ts)
- *     and are what a patient is quoted. The public/private split note names
- *     $99 as the intentional public exception.
+ *
+ * NO PRICES. The page carried a pricing section — $99 for the visit and the
+ * three membership tiers — on the reasoning that those are consumer-facing in
+ * the shipped demo. The owner removed it on 2026-09-02: "remove the business
+ * numbers". Every price is now a forbidden figure like the rest, and the whole
+ * section went with them rather than leaving an empty frame. If pricing is
+ * ever wanted back, it is a deliberate decision to re-open, not a tidy-up.
  *
  * Product substance is drawn from the founders' deck (slides 3, 4, 6, 7, 9,
  * 11) — the product story only, with every business slide left behind.
+ *
+ * VOICE, in `HOW` specifically. The owner's instruction, 2026-09-02: that
+ * section "would talk to an investor versus talking to a patient", so it
+ * describes the visit in the third person — "results are shown", not "you see
+ * your own audiogram". A reader evaluating the business is watching a process
+ * run; being addressed as the patient puts them in the wrong seat. The rest of
+ * the page still speaks to the reader directly, which is deliberate: the hero
+ * and the offer are an invitation, and `HOW` is a description.
  */
 
 /** The masthead: what HearFy is, in the deck's own words. */
@@ -84,40 +96,40 @@ export const CONTRAST = {
  */
 export const HOW = {
   title: "How a visit works",
-  subtitle: "One appointment, about an hour, in your own home.",
+  subtitle: "One appointment, about an hour, in the patient's own home.",
   steps: [
     {
       n: "01",
-      name: "Book a time",
-      line: "Pick a slot that suits you. We answer a few questions first so the visit is set up for your needs before anyone arrives.",
+      name: "Booking time",
+      line: "A slot is booked online. A short intake beforehand sets the visit up for the patient's needs before anyone arrives.",
     },
     {
       n: "02",
       /**
-       * "Your CMA arrives", with the abbreviation expanded in the body copy.
-       * The owner's wording, 2026-09-02: the role has a name and the page
-       * should use it. CMA is the industry term the deck uses throughout
-       * (slide 7, "A CMA at home"), so introducing it here — rather than
-       * calling them a generic "assistant" — is what makes the rest of the
-       * page's language consistent with the product.
+       * "We arrive at your home", not "Your CMA arrives". The owner's wording,
+       * 2026-09-02: an abbreviation in a heading makes the reader stop and
+       * decode before they learn anything. "We" is who is coming, and it is
+       * the promise the whole page rests on — the travelling is ours. The full
+       * role title still appears in the body copy, where there is room to say
+       * it properly.
        */
-      name: "Your CMA arrives",
-      line: "A Certified Medical Assistant comes to your door with the full exam kit and sets it up on your table.",
+      name: "We arrive at the home",
+      line: "A Certified Medical Assistant arrives with the full exam kit and sets it up on the table.",
     },
     {
       n: "03",
       name: "The exam, guided live",
-      line: "A licensed audiologist joins by video and runs the exam: an ear inspection, a full hearing test, and a speech test in the room where you actually listen.",
+      line: "A licensed audiologist joins by video and runs the exam: an ear inspection, a full hearing test, and a speech test in the room where the patient actually listens.",
     },
     {
       n: "04",
       name: "Results, explained",
-      line: "You see your own audiogram and the audiologist talks you through what it means — while they are still with you.",
+      line: "Results are shown on screen and the audiologist talks through what they mean — while still in the room.",
     },
     {
       n: "05",
       name: "Fitted the same day",
-      line: "If hearing aids are the right answer, they are matched to your results, fitted, and tuned before the visit ends.",
+      line: "If hearing aids are the right answer, they are matched to the results, fitted, and tuned before the visit ends.",
     },
   ],
 };
@@ -133,7 +145,7 @@ export const SYSTEM = {
   parts: [
     {
       name: "In your home",
-      role: "Your CMA and the kit",
+      role: "We bring the kit",
       line: "A Certified Medical Assistant handles the equipment, so nothing is asked of you that you would not be asked in a clinic chair.",
     },
     {
@@ -146,34 +158,6 @@ export const SYSTEM = {
       role: "One continuous chart",
       line: "Your exam, results, fitting, and follow-up care live in one record — so the next visit starts where this one ended.",
     },
-  ],
-};
-
-/**
- * The commercial promise, kept to what a patient is actually quoted.
- * $99 and the tier prices are already public in the shipped demo.
- */
-export const OFFER = {
-  title: "What it costs",
-  price: "$99",
-  priceLabel: "for the visit",
-  /** The deposit rule, spec §9a — the consumer-facing half of it. */
-  deposit:
-    "If you go ahead with hearing aids, that $99 becomes your first month of membership — so the visit costs you nothing.",
-  includedTitle: "The visit includes",
-  included: [
-    "A full diagnostic exam in your home",
-    "A licensed audiologist supervising live",
-    "Your audiogram, explained in plain language",
-    "A clear recommendation, with no obligation",
-  ],
-  membershipTitle: "If you go ahead",
-  membershipLine:
-    "Membership bundles the devices, the ongoing care, and the app into one monthly payment — instead of a large bill on the day.",
-  tiers: [
-    { name: "Essential", price: "$99", per: "/mo", line: "Remote-first care" },
-    { name: "Premium", price: "$149", per: "/mo", line: "Hybrid care" },
-    { name: "VIP", price: "$299", per: "/mo", line: "Audiologist at home" },
   ],
 };
 

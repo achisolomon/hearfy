@@ -19,10 +19,16 @@
  * `lib/one-pager.test.ts` fails the build if any of them reappear.
  *
  * WHAT IS ALLOWED, and why:
- *   - the WHO prevalence figures (1.5B / 430M / 17%). These are published
- *     public-health statistics, not HearFy business information, and the deck
- *     itself cites them as WHO figures. They are the public case for the
- *     product existing.
+ *   - the public-health prevalence figures (1.5B / 430M from WHO, 17% from
+ *     NIDCD). These are published statistics, not HearFy business
+ *     information, and they are the public case for the product existing.
+ *     The deck cites all three as WHO; the 17% is NIDCD's, for US adults
+ *     only, and was corrected here on 2026-09-02 — see PROBLEM.stats.
+ *   - third-party MARKET SIZE figures (see MARKET below). These are published
+ *     analyst forecasts of an industry, not HearFy's own numbers: they say how
+ *     big hearing care is, never what HearFy earns, charges, or projects. The
+ *     forbidden list above is about OUR figures, and none of these are ours.
+ *     Every one carries the firm that published it.
  *
  * NO PRICES. The page carried a pricing section — $99 for the visit and the
  * three membership tiers — on the reasoning that those are consumer-facing in
@@ -63,7 +69,22 @@ export const PROBLEM = {
   stats: [
     { value: "1.5B", label: "people live with hearing loss", source: "WHO" },
     { value: "430M", label: "need rehabilitation today", source: "WHO" },
-    { value: "17%", label: "of those who need aids use them", source: "WHO" },
+    /**
+     * NIDCD, not WHO, and US adults, not the world.
+     *
+     * This shipped as a WHO figure until 2026-09-02. It is not one: 17% is
+     * NIDCD's number for US adults aged 20-69 who could benefit from hearing
+     * aids and have ever used them. WHO's global equivalent is far starker —
+     * production meets under 10% of need worldwide, and about 3% in low- and
+     * middle-income countries.
+     *
+     * The error mattered more than a stray label: the stat sits directly
+     * above a section that sizes the market WORLDWIDE, so a US rate was
+     * being read as a global one. The owner's call was to keep 17% and fix
+     * the citation, so the label now says "US adults" in words — the source
+     * pill alone would not stop the same misreading.
+     */
+    { value: "17%", label: "of US adults who need aids use them", source: "NIDCD" },
   ],
   /** Slide 4's four barriers — why the other 83% stay untreated. */
   barriersTitle: "What stops people",
@@ -73,6 +94,111 @@ export const PROBLEM = {
     { name: "Cost", line: "The full journey runs well past what people expect." },
     { name: "Bureaucracy", line: "Referrals, paperwork, and repeat visits before anyone is helped." },
   ],
+};
+
+/**
+ * The market, as a single held number — "One Number, Held".
+ *
+ * Chosen by the owner on 2026-09-02 from five rendered options (initially
+ * "Where HearFy Sits", changed the same day). The whole section is the
+ * figure: no chart, no bars, no rings. It is the owner's own investor line —
+ * "A $36B global hearing care market by 2030, growing at approximately 6%
+ * annually" — rendered literally, and it is the fastest read on the page.
+ *
+ * THE FIGURES ARE THIRD-PARTY ANALYST FORECASTS, not HearFy's. That is what
+ * makes them publishable here at all; see the header's WHAT IS ALLOWED note.
+ *
+ * Because a lone number asserts rather than demonstrates, the qualifiers are
+ * not optional decoration — the breakdown and the footnote are what keep it
+ * from reading as a bare boast, and `sources` is what keeps it from reading
+ * as HearFy's own projection. A future edit that strips them for tidiness
+ * turns a cited market fact into an unsourced claim on a public page.
+ *
+ * The owner's segment model, from which the $36B is cut:
+ *
+ *   Devices & equipment      $16.6B → $21.1B   6.2%
+ *   Audiology services       $11.4B → $14.7B   6.6%
+ *   Accessories & protection  ~$2.6B →  ~$3.6B  ~8.2%
+ *   ------------------------------------------------
+ *   Total broad market       ~$30.6B → ~$39.4B ~6.5%
+ *
+ * Two rules that must survive any future edit:
+ *
+ *  1. HEARING AIDS ALONE ($10.35B → $14.42B, MarketsandMarkets) are ALREADY
+ *     INSIDE the devices segment. Never add that figure to a total — it is
+ *     double-counting, and the owner flagged it explicitly.
+ *  2. CONSUMER HEARABLES ARE EXCLUDED throughout. Including them would inflate
+ *     the number and make it less credible, which is the opposite of the point.
+ *
+ * $36B drops hearing protection from the broad market as less relevant to
+ * HearFy, and is the figure the section leads with.
+ */
+export const MARKET = {
+  /**
+   * The number, split so the unit can be coloured separately from the digits.
+   * "$36B" is the clinical market — devices, implants, diagnostics, and the
+   * services around them — in 2030.
+   */
+  /**
+   * The section needs a real H2. Every other section on the page has one; the
+   * market shipped with an eyebrow and a bare slab, which is a large part of
+   * why it read as an orphan rather than a section.
+   */
+  title: "A market that is growing, and underserved",
+  figure: "$36",
+  unit: "B",
+  headline: "Global hearing care market by 2030",
+  /**
+   * The qualifiers, as a labelled list rather than pills.
+   *
+   * These were chips ("~6% a year", "Devices + services", "Clinical, not
+   * consumer"). Chips read as filter controls — an interactive affordance on
+   * a page with no interaction — and they could not carry the reason behind
+   * each qualifier. As name + line they match the barriers list directly
+   * above them, which is the page's established pattern for exactly this:
+   * short label, one line of explanation.
+   *
+   * "Clinical, not consumer" earns its place most: it is why this figure is
+   * smaller than the ~$39B ecosystem number, and why hearables are absent.
+   */
+  breakdownTitle: "What the number covers",
+  breakdown: [
+    {
+      name: "Devices and services",
+      line: "Hearing aids, implants, and diagnostics, plus the testing and fitting around them.",
+    },
+    {
+      name: "Clinical, not consumer",
+      line: "Prescribed and professionally fitted care. Consumer hearables are a separate market.",
+    },
+    {
+      name: "Growing about 6% a year",
+      line: "Steady growth to 2030 across both the device and service halves.",
+    },
+  ],
+  /**
+   * Tightened 2026-09-02 ("the one pager should be very concentrated"). The
+   * long form opened with "Clinical products and audiology services
+   * worldwide" — which the chips already say twice over ("Devices +
+   * services", "Clinical, not consumer") — so it spent two lines restating
+   * the row above it.
+   *
+   * What survives is the only thing the chips do NOT carry: what the figure
+   * leaves out. That has to stay stated, or "$36B hearing market" is read as
+   * including consumer hearables.
+   */
+  /**
+   * Kept deliberately alongside the breakdown: that list says what the figure
+   * COVERS, and this says what it leaves out. Without it, "$36B hearing
+   * market" is read as including the consumer earbud market.
+   */
+  /**
+   * Kept deliberately alongside the breakdown: that list says what the figure
+   * COVERS, and this says what it leaves out. Without it, "$36B hearing
+   * market" is read as including the consumer earbud market.
+   */
+  footnote: "Excludes hearing protection and consumer hearables.",
+  sources: "Grand View Research · Research and Markets",
 };
 
 /** Slide 3 — the clinic today versus the visit at home. */

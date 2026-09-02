@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONTRAST, CTA, HERO, HOW, PROBLEM, SYSTEM, TRUST } from "./one-pager";
+import { CONTRAST, CTA, HERO, HOW, MARKET, PROBLEM, SYSTEM, TRUST } from "./one-pager";
 
 /**
  * The public one-pager must never carry business information.
@@ -72,6 +72,16 @@ describe("public one-pager carries no business information", () => {
     ["investor framing", /\binvestors?\b|\bpitch deck\b|\bcap table\b|\bARR\b|\bMRR\b/i],
   ];
 
+  /**
+   * NOTE ON MARKET FIGURES. The page carries third-party analyst forecasts of
+   * the hearing industry ($36B / $39B / $15B). Those are deliberately NOT on
+   * this list: they describe an industry, not HearFy. The prohibition is on
+   * OUR numbers — what we earn, charge, or project — and the deck's own
+   * sizing ($31B/$15B/$1.5B TAM/SAM/SOM) stays barred above, including the
+   * "$15B" spelling, which is why the market section says "~$15B" and is
+   * covered by its own guards below.
+   */
+
   it.each(FORBIDDEN)("never ships %s", (_label, pattern) => {
     expect(SHIPPED).not.toMatch(pattern);
   });
@@ -104,10 +114,40 @@ describe("the content the page is allowed to carry", () => {
    * every number would gut the problem section, so the allowance is pinned as
    * deliberately as the prohibitions.
    */
-  it("keeps the WHO prevalence figures, attributed", () => {
+  it("keeps the prevalence figures, attributed", () => {
     const values = PROBLEM.stats.map((s) => s.value);
     expect(values).toEqual(["1.5B", "430M", "17%"]);
-    for (const stat of PROBLEM.stats) expect(stat.source).toBe("WHO");
+    for (const stat of PROBLEM.stats) expect(stat.source.length).toBeGreaterThan(2);
+  });
+
+  /**
+   * The 17% is NIDCD's, and it is about US adults.
+   *
+   * It shipped credited to WHO until 2026-09-02. That was wrong twice over:
+   * wrong organisation, and a US rate presented as a global one — directly
+   * above a section that sizes the market worldwide. WHO's own global figure
+   * is under 10%, so the mistake also flattered the industry by roughly two
+   * to one.
+   *
+   * This pins both halves of the correction, because either could be undone
+   * alone: someone tidying sources back to a single "WHO" would restore the
+   * mis-citation, and someone shortening the label would drop the scope and
+   * leave a US number reading as global.
+   */
+  it("credits the 17% to NIDCD and says it is US adults", () => {
+    const stat = PROBLEM.stats.find((s) => s.value === "17%");
+    expect(stat, "the 17% stat is gone").toBeDefined();
+    expect(stat!.source, "the 17% is NIDCD's figure, not WHO's").toBe("NIDCD");
+    expect(stat!.label, "the 17% must say it is US adults, or it reads as global")
+      .toMatch(/\bUS\b/);
+  });
+
+  /** The two genuine WHO figures must keep saying WHO. */
+  it("keeps WHO on the figures that are WHO's", () => {
+    for (const value of ["1.5B", "430M"]) {
+      const stat = PROBLEM.stats.find((s) => s.value === value);
+      expect(stat!.source).toBe("WHO");
+    }
   });
 
   /**
@@ -142,6 +182,139 @@ describe("the content the page is allowed to carry", () => {
   it("describes no membership or deposit offer", () => {
     expect(SHIPPED).not.toMatch(/first month/i);
     expect(SHIPPED).not.toMatch(/\bper month\b|\/mo\b/i);
+  });
+});
+
+/**
+ * The market section: "One Number, Held".
+ *
+ * A single $36B figure with qualifying chips. The first two tests exist
+ * because the owner flagged those exact mistakes on 2026-09-02 while
+ * supplying the segment model, and both are SILENT errors — a page with a
+ * double-counted market size looks completely normal and is simply wrong.
+ *
+ * The rest guard the specific fragility of this option: a lone number
+ * asserts where a chart demonstrates, so everything that qualifies and
+ * sources it is load-bearing, not decoration.
+ */
+describe("the market section is honest about its figures", () => {
+  /**
+   * Hearing aids alone ($10.35B → $14.42B) sit INSIDE the devices segment.
+   * The owner's instruction: "do not add this number to the total, because it
+   * is already included in the equipment category." Quoting it beside the
+   * $36B invites exactly that addition.
+   */
+  it("never quotes the hearing-aids-only figure", () => {
+    expect(SHIPPED, "the hearing-aids-only figure risks being double-counted")
+      .not.toMatch(/\$\s?10\.35|\$\s?14\.42/);
+  });
+
+  /**
+   * Consumer hearables are excluded on purpose. The owner: including them
+   * "would significantly increase the number, but would also make the TAM
+   * less credible and less relevant." The exclusion has to be STATED, since
+   * a bare "$36B hearing market" would otherwise be read as including them.
+   */
+  it("states that consumer hearables are excluded", () => {
+    expect(MARKET.footnote, "the hearables exclusion is no longer stated")
+      .toMatch(/hearables/i);
+    expect(MARKET.headline, "the headline itself must not claim consumer devices")
+      .not.toMatch(/hearables|earbuds|consumer headphones/i);
+  });
+
+  /**
+   * The number is an analyst forecast, and that is the only reason it may
+   * appear on a page that bars business figures. Unattributed, it reads as
+   * HearFy's own projection — which is precisely the content boundary.
+   */
+  it("attributes the figure to the firms that published it", () => {
+    expect(MARKET.sources.length, "the market figure has no source").toBeGreaterThan(8);
+    expect(SHIPPED).toMatch(/Grand View Research/);
+  });
+
+  /**
+   * The qualifiers are what stop a lone number reading as a boast. This
+   * option has no chart to carry nuance, so the chips and footnote are the
+   * only things doing that work — a tidy-up that strips them changes what
+   * the page claims.
+   */
+  it("keeps the qualifiers that bound the number", () => {
+    expect(MARKET.breakdown.length).toBeGreaterThanOrEqual(3);
+    // The scope of the figure — clinical, not the wider ecosystem — and its
+    // growth rate must both survive.
+    const prose = MARKET.breakdown.map((b) => `${b.name} ${b.line}`).join(" ");
+    expect(prose).toMatch(/clinical/i);
+    expect(prose).toMatch(/%/);
+
+    // The footnote's job is to say what the figure EXCLUDES — the one thing
+    // the chips do not carry. Asserted by content, not by length: the first
+    // version of this test pinned `length > 40`, which failed the moment the
+    // footnote was tightened for concision even though every qualifier
+    // survived. Length was a proxy; this is the actual invariant.
+    expect(MARKET.footnote, "the footnote no longer says what is excluded")
+      .toMatch(/exclude/i);
+  });
+
+  /** The figure must carry a year, or "$36B" is a number about nothing. */
+  it("says which year the forecast is for", () => {
+    expect(MARKET.headline).toMatch(/20\d\d/);
+  });
+
+  /**
+   * The market section sits on the page's card grid like every other section.
+   *
+   * It first shipped as a single full-bleed slab: 1080px wide at a 6.4:1
+   * aspect, on a page where every other card measures ~348px. The owner's
+   * reading (2026-09-02) was "white space on the right" and "it does not look
+   * good, match the design rules on the page" — both symptoms of the same
+   * cause, which is that the section had abandoned the modular grid.
+   *
+   * Pinned as structure, not as a class string: what must hold is that the
+   * section lays its cards out in a multi-column grid rather than one
+   * full-width element.
+   */
+  it("lays the market out on the page's card grid", () => {
+    const src = stripComments(PAGE_SRC);
+    const start = src.indexOf("MARKET.title");
+    const end = src.indexOf("CONTRAST.title");
+    expect(start, "the market section is gone").toBeGreaterThan(-1);
+    expect(end, "the contrast section is gone").toBeGreaterThan(start);
+
+    const section = src.slice(start, end);
+    expect(section, "the market section is a full-width slab again")
+      .toMatch(/(?:sm|md|lg):grid-cols-/);
+  });
+
+  /**
+   * The figure must not out-shout the page's own section headings.
+   *
+   * At clamp() ceilings of 88-104px it rendered visibly larger than the H2s
+   * above it, which put a supporting statistic at the top of the page's
+   * visual hierarchy. The section titles are 30px; the figure is display
+   * type, so it is legitimately much larger, but it has a ceiling.
+   */
+  it("keeps the figure below a shouting size", () => {
+    const src = stripComments(PAGE_SRC);
+    const i = src.indexOf("MARKET.figure");
+    const clamp = src.slice(Math.max(0, i - 400), i).match(/clamp\((\d+)px,[^,]+,\s*(\d+)px\)/);
+    expect(clamp, "the market figure lost its clamp() sizing").not.toBeNull();
+    expect(Number(clamp![2]), "the market figure is shouting over the section headings")
+      .toBeLessThanOrEqual(80);
+  });
+
+  /**
+   * The section describes an industry, never HearFy's position in it. A
+   * share, a capture claim, or a projection would turn a public market fact
+   * into the business information this page exists to keep out.
+   */
+  it("makes no claim about HearFy's share of it", () => {
+    const prose = [
+      MARKET.title,
+      MARKET.headline,
+      MARKET.footnote,
+      ...MARKET.breakdown.map((b) => `${b.name} ${b.line}`),
+    ].join(" ");
+    expect(prose).not.toMatch(/market share|we (will )?capture|our share|penetration/i);
   });
 });
 

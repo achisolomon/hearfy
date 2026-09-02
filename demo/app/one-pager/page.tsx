@@ -19,6 +19,7 @@ import {
   CTA,
   HERO,
   HOW,
+  MARKET,
   MEDIA,
   PROBLEM,
   SYSTEM,
@@ -283,6 +284,85 @@ export default function OnePagerPage() {
                   </li>
                 ))}
               </ul>
+            </Card>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- *
+       * Market — where HearFy sits
+       * ---------------------------------------------------------- */}
+      <section className="mt-16">
+        <Reveal>
+          <SectionLabel>The market</SectionLabel>
+        </Reveal>
+
+        <Reveal>
+          <SectionTitle>{MARKET.title}</SectionTitle>
+        </Reveal>
+
+        {/* The page's rhythm is a modular grid of small cards: three-up stat
+            rows and two-up split rows, every card 345-348px wide. The first
+            version of this section was a single 1080px slab at a 6.4:1 aspect
+            — the only full-bleed element on the page — which is what read as
+            "white space on the right" and as not matching the page (owner,
+            2026-09-02). The problem was never the gap; it was that the
+            section had abandoned the grid everything else is built on.
+
+            So: the same two-column split the problem section uses above it.
+            The figure takes the narrower cell, its qualifiers the wider one,
+            and both cards match the height and width of every other card on
+            the page. */}
+        <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
+          <Reveal>
+            {/* The number, given a card of its own so it reads as a single
+                fact rather than a banner. `items-center` + `flex-1` centres
+                it optically in whatever height the row settles at. */}
+            <Card className="flex h-full flex-col">
+              <p className="text-[13px] font-bold text-brand-navy">
+                {MARKET.headline}
+              </p>
+              <div className="flex flex-1 items-center justify-center py-6">
+                {/* Capped at 76px, below the 30px section H2's optical weight
+                    at display scale. The earlier 88-104px made a supporting
+                    statistic louder than the page's own headings. */}
+                <p className="text-[clamp(52px,9vw,76px)] font-extrabold leading-[0.9] tracking-[-0.04em] text-brand-navy">
+                  {MARKET.figure}
+                  {/* Teal on the unit: the "alive or chosen" colour marking
+                      the one thing the section exists to say. */}
+                  <span className="text-brand-teal">{MARKET.unit}</span>
+                </p>
+              </div>
+              <p className="text-[13px] leading-[1.5] text-slate-500">
+                {MARKET.footnote}
+              </p>
+            </Card>
+          </Reveal>
+
+          {/* The qualifiers answer the question the number raises ("$36B of
+              what?"), so they pair with it the way the barriers pair with the
+              17-in-100 figure above — a neighbour of its own height, nothing
+              stretched. */}
+          <Reveal delay={0.1}>
+            <Card className="flex h-full flex-col">
+              <p className="text-[13px] font-bold text-brand-navy">
+                {MARKET.breakdownTitle}
+              </p>
+              <ul className="mt-4 flex flex-1 flex-col justify-between gap-4">
+                {MARKET.breakdown.map((item) => (
+                  <li key={item.name}>
+                    <p className="text-[15px] font-extrabold text-brand-navy">
+                      {item.name}
+                    </p>
+                    <p className="mt-1 text-[14px] leading-[1.5] text-slate-500">
+                      {item.line}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
+                {MARKET.sources}
+              </p>
             </Card>
           </Reveal>
         </div>

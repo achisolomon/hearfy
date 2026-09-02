@@ -149,9 +149,8 @@ export default function OnePagerPage() {
       <header className="flex items-center justify-between gap-4">
         {/* The mark arrives (arc, bars, dot, in reading order) and then keeps
             breathing — the shared BrandLogo stops after its entry, which reads
-            as an animation that broke. LiveBrandLogo adds the loop for this
-            page only. If the parallel session's animated asset lands, swap it
-            in HERE and nowhere else. */}
+            as an animation that broke. LiveBrandLogo now lives in components/ui
+            and is shared with the demo's cover and end-cap. */}
         <LiveBrandLogo size="lg" />
         <p className="hidden text-right text-[13px] font-semibold leading-snug text-slate-500 sm:block">
           {HERO.eyebrow}

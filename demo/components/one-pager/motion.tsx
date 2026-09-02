@@ -2,7 +2,6 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { asset } from "@/lib/asset";
-import { BrandLogo } from "@/components/ui";
 
 /**
  * The one-pager's motion and media primitives.
@@ -267,34 +266,14 @@ export function DotGrid({ cells }: { cells: boolean[] }) {
 }
 
 /**
- * The brand mark, alive.
+ * The living brand mark now lives in `components/ui.tsx`, beside the mark it
+ * wraps, and is worn by the cover and the end-cap as well as this page.
  *
- * The owner's note, 2026-09-02: "make the Hearfy logo move… again, then they
- * stopped" — the shared `BrandLogo` plays its entry once (arc, bars, dot, in
- * reading order) and then sits still, which reads as an animation that broke
- * rather than one that finished.
- *
- * So this wraps the shared mark and adds a continuous second layer: the three
- * sound bars breathe, staggered, the way a level meter does. That is the one
- * loop on the page that earns itself — this is a hearing brand, and the bars
- * are a signal, so motion there means "sound", not "decoration". Nothing else
- * on the page loops.
- *
- * Why wrap rather than edit `components/ui.tsx`: that component is shared by
- * every screen in the demo (a chrome-bar logo that pulsed on all 27 screens
- * would be exactly the toy-app register PRODUCT.md rules out) AND it is being
- * edited concurrently in another session. Scaling the bars from here keeps
- * the loop on this page only, and keeps this change out of their diff.
- *
- * The animation targets the three <rect> bars by their position in the SVG —
- * the mark is arc, bar, bar, bar, dot — via CSS on nth-of-type, so no change
- * to the shared component is needed. `motion-safe:` means the whole thing is
- * dropped for a viewer who asked for reduced motion, with no JS check.
+ * It started here because the shared component was being edited in a parallel
+ * session and the loop was wanted on one page only. Both reasons are gone: that
+ * session landed, and the owner asked for the same mark on the demo's first and
+ * last screens (2026-09-02) — which is exactly where DESIGN.md already allowed
+ * the brandmark to perform. Re-exported rather than moved-and-rewritten so the
+ * page's import keeps working and there is still one definition.
  */
-export function LiveBrandLogo({ size = "lg" }: { size?: "sm" | "lg" }) {
-  return (
-    <span className="op-live-logo inline-flex">
-      <BrandLogo size={size} animate />
-    </span>
-  );
-}
+export { LiveBrandLogo } from "@/components/ui";

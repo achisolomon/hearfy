@@ -48,10 +48,10 @@ export const HERO = {
   eyebrow: "Hearing care at home",
   title: ["Bringing hearing care", "home."],
   /** Slide 6's line, which is the whole thesis in one sentence. */
-  thesis: "Hearing loss starts at home. So should care.",
+  thesis: "The operating platform for at-home hearing care.",
   lede:
     "A full diagnostic hearing exam at your kitchen table. A Certified Medical Assistant brings the clinic to you; a licensed audiologist runs the exam live from their office. No booth, no waiting list, no trip across town.",
-  chips: ["Private", "On demand", "Expert-guided"],
+  chips: ["Private", "On demand", "Clinical-guided"],
 };
 
 /**
@@ -77,16 +77,16 @@ export const PROBLEM = {
 
 /** Slide 3 — the clinic today versus the visit at home. */
 export const CONTRAST = {
-  title: "The clinic, or your kitchen table",
+  title: "Turning every home into a point of care",
   clinic: {
-    label: "A clinic visit today",
+    label: "A Traditional Clinic Visit",
     tone: "muted" as const,
-    points: ["Book months ahead", "Arrange the trip", "Sit in a sound booth", "Come back for the fitting"],
+    points: ["Wait weeks or months", "Travel to the clinic", "Test in a sound booth", "Return for the fitting"],
   },
   home: {
-    label: "A HearFy visit",
+    label: "A HearFy Home Visit",
     tone: "brand" as const,
-    points: ["Booked for this week", "We come to you", "Tested in your own room", "Fitted the same day"],
+    points: ["Book within days", "We come to you", "Test in your own home", "Get fitted in the same visit"],
   },
 };
 
@@ -139,19 +139,19 @@ export const HOW = {
  * the public reader cares who is in the room and who is responsible.
  */
 export const SYSTEM = {
-  title: "A clinic, rearranged",
+  title: "The clinic, distributed",
   subtitle:
-    "The same people and the same equipment as a hearing clinic — just distributed, so the travelling is ours instead of yours.",
+    "HearFy coordinates qualified professionals, clinic-grade equipment and remote clinical expertise into one seamless home visit — bringing the care to the patient, instead of the patient to the clinic.",
   parts: [
     {
       name: "In your home",
-      role: "We bring the kit",
-      line: "A Certified Medical Assistant handles the equipment, so nothing is asked of you that you would not be asked in a clinic chair.",
+      role: "We bring and operate the clinical equipment",
+      line: "A Certified Medical Assistant sets up and operates everything, while the patient simply follows the same steps as in a traditional hearing clinic.",
     },
     {
-      name: "On the call",
-      role: "Your audiologist",
-      line: "A licensed audiologist supervises the whole exam in real time, sees every result as it is captured, and signs off on it.",
+      name: "Connected in real time",
+      role: "Led by a licensed audiologist",
+      line: "A licensed audiologist remotely supervises the entire exam, reviews each result as it is captured, and provides the final clinical sign-off.",
     },
     {
       name: "On the record",
@@ -163,17 +163,22 @@ export const SYSTEM = {
 
 /** Closing reassurance — the trust checklist, then the call to action. */
 export const TRUST = [
-  "Licensed audiologists on every exam",
-  "Clinical-grade equipment, brought to you",
-  "Your results are yours, and portable",
-  "No obligation to buy anything",
+  "Licensed audiologist oversight throughout every exam",
+  "Clinic-grade diagnostic equipment, delivered and operated at home",
+  "Clear, clinically reviewed results that remain accessible and portable",
+  "Complete freedom to choose what happens next",
 ];
 
 export const CTA = {
-  title: "Book a hearing exam at home",
-  line: "Tell us when suits you. We will bring the clinic.",
-  action: "See how it works",
-  secondary: "Walk through the product",
+  title: "Experience HearFy",
+  line: "See how HearFy turns booking, home diagnostics and clinical review into one coordinated patient journey.",
+  /**
+   * The page used to close on a "Walk through the product" button into the
+   * demo. The owner removed it on 2026-09-02 and put a way to reach a human in
+   * its place, so the close is now a phone number rather than a product tour.
+   * `tel:` uses the E.164 form; `label` is the human spelling.
+   */
+  contact: { label: "Contact us", phone: "+972-54-3003630", tel: "+972543003630" },
 };
 
 /**

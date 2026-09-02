@@ -309,7 +309,7 @@ describe("the page is complete enough to stand alone", () => {
     expect(HOW.steps.length).toBe(5);
     expect(SYSTEM.parts.length).toBe(3);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
-    expect(CTA.action.length).toBeGreaterThan(0);
+    expect(CTA.contact.phone.length).toBeGreaterThan(0);
   });
 
   /** The visit steps are numbered in the UI; the numbering must be in order. */
@@ -494,6 +494,46 @@ describe("motion is calm and accessible", () => {
    */
   it("lands the counter on the exact quoted value", () => {
     expect(MOTION_SRC).toMatch(/setShown\(value\)/);
+  });
+});
+
+/**
+ * The page closes on a way to reach a person, not a link into the demo.
+ *
+ * Owner, 2026-09-02: "remove the button to walk to the product ... instead of
+ * that, put contact us and write the phone number". The walkthrough button is
+ * the obvious thing for a later editor to restore — it is the only outbound
+ * link a marketing page would normally carry — so the removal is pinned rather
+ * than left to memory.
+ *
+ * These assert the INVARIANT (the close reaches a human by phone), not the
+ * wording: the label and the number may be re-edited freely.
+ */
+describe("the one-pager closes on a way to reach a person", () => {
+  it("offers a dialable phone number", () => {
+    // E.164 for the href, so a phone actually dials it.
+    expect(CTA.contact.tel).toMatch(/^\+[1-9]\d{7,14}$/);
+    // The visible spelling must be the same number, punctuation aside.
+    expect(CTA.contact.phone.replace(/[^\d+]/g, "")).toBe(CTA.contact.tel);
+  });
+
+  it("renders the number as a tel: link", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect(stripped, "the phone number is not dialable").toMatch(/href=\{`tel:\$\{[^}]+\}`\}/);
+    expect(stripped, "the phone number is hardcoded in the markup")
+      .not.toMatch(/tel:\+\d/);
+  });
+
+  /**
+   * The demo walkthrough button. Its old copy ("Walk through the product") and
+   * any link back into the demo root are both barred — restoring either would
+   * undo the owner's change.
+   */
+  it("no longer links into the product demo", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect(SHIPPED).not.toMatch(/walk through the product/i);
+    expect(stripped, "the CTA links into the demo again instead of offering contact")
+      .not.toMatch(/href=\{asset\("\/"\)\}/);
   });
 });
 

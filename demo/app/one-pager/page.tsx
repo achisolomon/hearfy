@@ -7,6 +7,7 @@ import {
   FileHeart,
   Headphones,
   Home,
+  Phone,
   Stethoscope,
   Video,
 } from "lucide-react";
@@ -443,7 +444,7 @@ export default function OnePagerPage() {
        * ---------------------------------------------------------- */}
       <section className="mt-16">
         <Reveal>
-          <SectionLabel>Behind the visit</SectionLabel>
+          <SectionLabel>Behind every visit</SectionLabel>
           <SectionTitle>{SYSTEM.title}</SectionTitle>
           <p className="mt-3 max-w-2xl text-[16px] text-slate-500">
             {SYSTEM.subtitle}
@@ -520,7 +521,7 @@ export default function OnePagerPage() {
           <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-brand-teal">
-                What you can count on
+                What every patient can expect
               </p>
               <ul className="mt-5 space-y-3">
                 {TRUST.map((t) => (
@@ -540,14 +541,21 @@ export default function OnePagerPage() {
                 {CTA.line}
               </p>
 
-              {/* Links to the walkthrough rather than a booking form: this is
-                  a demo build with no backend, and a dead form would undo
-                  exactly the credibility the rest of the page is buying. */}
+              {/* A phone number, not a walkthrough link. The owner removed the
+                  "walk through the product" button on 2026-09-02: the page's
+                  close should reach a person. `tel:` is the E.164 form so it
+                  dials from a phone, while the visible text keeps the readable
+                  spelling. The number is marked LTR because it opens with "+"
+                  and would otherwise reorder beside Hebrew text. */}
               <a
-                href={asset("/")}
-                className="mt-6 inline-flex h-14 items-center justify-center rounded-[16px] bg-brand-teal px-7 text-[16px] font-extrabold text-brand-navy"
+                href={`tel:${CTA.contact.tel}`}
+                className="mt-6 inline-flex h-14 items-center justify-center gap-3 rounded-[16px] bg-brand-teal px-7 text-[16px] font-extrabold text-brand-navy"
               >
-                {CTA.secondary}
+                <Phone aria-hidden className="h-5 w-5" />
+                {CTA.contact.label}
+                <span dir="ltr" className="font-extrabold">
+                  {CTA.contact.phone}
+                </span>
               </a>
             </div>
           </div>

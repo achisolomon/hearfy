@@ -105,3 +105,47 @@ describe("the retake override", () => {
     }
   });
 });
+
+describe("her exam screens", () => {
+  const SRC = () => sourceOf("components/screens/audiologist/exam.tsx");
+
+  /**
+   * The video is the PATIENT, not Dr. Reed (owner, 2026-09-02). She is the one
+   * watching; showing her own face back at her is the mirror pointed the wrong
+   * way. `HomeFeed` already selects `room-patient.mp4` for these beats via
+   * `TESTING_BEATS`, so this is composition, not new footage.
+   */
+  it("shows the patient's feed, never Dr. Reed's", () => {
+    expect(SRC()).toMatch(/HomeFeed/);
+    expect(SRC()).not.toMatch(/ReedFeed|CallSplit|AudiologistStrip/);
+  });
+
+  /** Both beats named, so HomeFeed picks the testing clip and his lines. */
+  it("names its beat so the feed and captions follow the story", () => {
+    expect(SRC()).toMatch(/beat="otoscopy"/);
+    expect(SRC()).toMatch(/beat="tympanometry"/);
+  });
+
+  /**
+   * The call geometry is defined in ONE place. Two new screens rolling their
+   * own container is exactly the drift `CALL_HEADER_MIN` exists to stop — the
+   * call once landed at three different x positions across roles.
+   */
+  it("uses the shared call container and column", () => {
+    expect(SRC()).toMatch(/CallShell/);
+    expect(SRC()).toMatch(/VideoSplit/);
+    expect(SRC()).not.toMatch(/max-w-(4xl|5xl)/);
+  });
+
+  /** Her screen's own job: the retake decision. */
+  it("gives her an accept and a retake control", () => {
+    expect(SRC()).toMatch(/Accept both/);
+    expect(SRC()).toMatch(/retake|re-run/i);
+  });
+
+  /** The steps are shared, not re-drawn. */
+  it("reuses the shared step components", () => {
+    expect(SRC()).toMatch(/OtoscopyStep/);
+    expect(SRC()).toMatch(/TympanometryStep/);
+  });
+});

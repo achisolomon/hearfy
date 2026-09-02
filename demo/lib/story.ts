@@ -144,6 +144,34 @@ export const BEATS: Beat[] = [
   // between the ear health check and the hearing test.
   { id: "tympanometry", stage: 4, lead: "audiologist",
     screens: { patient: "tympanometry", cma: "cma-tympanometry", audiologist: "aud-tympanometry", operator: "op-dashboard" } },
+  // The formal pass gate (owner, 2026-09-02). Nothing in the script used to
+  // ASK whether otoscopy and tympanometry had passed — the exam simply carried
+  // on into the hearing test, so a failed safety check would have ended in a
+  // device sale like any other visit. This beat is where the visit either
+  // clears or stops, and it is the one beat where the CMA and the audiologist
+  // are BOTH looking at the same three checks: she reports, the licensed
+  // clinician decides. Hence `aud-clearance` rather than her idle panel — the
+  // sign-off is her act, so she leads it.
+  //
+  // It survived the merge with the audiologist-led ear check (2026-09-02):
+  // the two changes agree. She now judges each capture AS IT LANDS — sending
+  // an ear back for a retake — and then signs the whole gate off here. The
+  // per-ear control is "is this image usable"; this beat is "may the visit go
+  // on". A retake is a request to Maya; a stop ends the visit.
+  { id: "clearance", stage: 4, lead: "audiologist",
+    screens: { patient: "clearance", cma: "cma-clearance", audiologist: "aud-clearance", operator: "op-dashboard" } },
+  // Where a stopped visit ENDS (owner, 2026-09-02). The referral button used
+  // to call the shared `next()`, whose next beat is `puretone` — so pressing
+  // "Stop the visit and refer" walked everyone into the hearing test the
+  // referral had just forbidden. A stop with no destination is not a stop.
+  //
+  // It is a beat of its own rather than a state inside `clearance` because
+  // the visit genuinely ends here for all three roles: Alex is told to see a
+  // doctor, Maya is told to pack up, and the story does not continue to
+  // thresholds, results or a device. It stays in stage 4 — the visit never
+  // reached live supervision.
+  { id: "referral", stage: 4, lead: "audiologist",
+    screens: { patient: "referral", cma: "cma-referral", audiologist: "aud-referral", operator: "op-dashboard" } },
   { id: "puretone", stage: 4, lead: "cma",
     screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
 
@@ -238,11 +266,21 @@ export function firstBeatOfStage(stage: StageNumber): number {
 }
 
 export function nextBeat(i: number): number {
-  return clamp(i + 1);
+  // Step over conditional beats: guided mode walks the story that happens,
+  // and the referral only happens when a clinician stops the visit.
+  let n = clamp(i + 1);
+  while (n < BEATS.length - 1 && isConditionalBeat(n)) n = clamp(n + 1);
+  return isConditionalBeat(n) ? clamp(i) : n;
 }
 
 export function prevBeat(i: number): number {
-  return clamp(i - 1);
+  // Symmetric with `nextBeat`: Back must not step into a conditional beat
+  // either, or undoing a Next lands on a referral the visit never had. The
+  // existing "Back returns to the screen Next left" guard caught exactly this
+  // when only the forward direction was skipped (2026-09-02).
+  let n = clamp(i - 1);
+  while (n > 0 && isConditionalBeat(n)) n = clamp(n - 1);
+  return isConditionalBeat(n) ? clamp(i) : n;
 }
 
 export function isLastBeat(i: number): boolean {
@@ -387,14 +425,15 @@ export function beatsForRole(role: Role): number[] {
  */
 export function nextBeatForRole(i: number, role: Role): number {
   const beats = beatsForRole(role);
-  const nextIdx = beats.find(b => b > i);
-  return nextIdx ?? beats[beats.length - 1] ?? i;
+  // Conditional beats are opened by a decision, not walked into.
+  const nextIdx = beats.find(b => b > i && !isConditionalBeat(b));
+  return nextIdx ?? beats.filter(b => !isConditionalBeat(b)).pop() ?? i;
 }
 
 /** The previous beat in a role's solo walk; stays put at the start. */
 export function prevBeatForRole(i: number, role: Role): number {
   const beats = beatsForRole(role);
-  const earlier = beats.filter(b => b < i);
+  const earlier = beats.filter(b => b < i && !isConditionalBeat(b));
   return earlier.length ? earlier[earlier.length - 1] : (beats[0] ?? i);
 }
 
@@ -484,4 +523,80 @@ export function soloHandoffAt(i: number, role: Role): Role | null {
   const resumed = nextBeatForRole(i, role);
   if (resumed === i || BEATS[resumed].lead !== role) return null;
   return lead;
+}
+
+/**
+ * The beat a stopped visit ends on. Nothing in the script may advance past it
+ * (owner, 2026-09-02).
+ *
+ * The referral is a terminal beat, not a waypoint: the beats after it are the
+ * hearing test, the results, the prescription and the sale — every one of them
+ * a thing the referral has just ruled out. Guarding only the button that
+ * reaches it would leave the chrome's own Next walking straight through, which
+ * is exactly how the first cut let a stopped visit continue.
+ *
+ * Framework-free like the rest of this file, so `story-context.tsx` can call
+ * it from `next()` and the guard is one fact in one place rather than a
+ * condition repeated in every screen.
+ */
+export const TERMINAL_BEATS = ["referral"] as const;
+
+export function isTerminalBeat(i: number): boolean {
+  return (TERMINAL_BEATS as readonly string[]).includes(BEATS[clamp(i)].id);
+}
+
+/**
+ * Beats that only a specific decision opens — never reached by walking.
+ *
+ * The referral is in the script so every role has a screen for it, but it is
+ * NOT part of anyone's story until a clinician stops the visit. Left walkable,
+ * plain forward navigation carried a perfectly cleared patient from the
+ * clearance screen straight onto "Your visit stops here today" and told him to
+ * see a doctor about findings nobody had flagged (found walking Alex's own
+ * story, 2026-09-02).
+ *
+ * So the walk skips it and the stop button jumps to it directly
+ * (`goToScreen`), which is what makes it conditional rather than sequential.
+ * Kept beside `isTerminalBeat` because the two are halves of one idea: nothing
+ * walks IN, and nothing walks OUT.
+ */
+export const CONDITIONAL_BEATS = ["referral"] as const;
+
+export function isConditionalBeat(i: number): boolean {
+  return (CONDITIONAL_BEATS as readonly string[]).includes(BEATS[clamp(i)].id);
+}
+
+/**
+ * Who Next hands to, while sitting on a terminal beat.
+ *
+ * A stopped visit still has a story to tell — it is just told sideways rather
+ * than forwards. Dr. Reed decides and issues the referral, Maya closes the
+ * visit down in the room, and Alex is told what was found and where to take
+ * it. Three screens, one beat.
+ *
+ * The first cut froze Next entirely on a terminal beat, which conflated two
+ * different things: escaping the beat (into the hearing test, results and sale
+ * that the referral has ruled out — still forbidden) and walking the roles
+ * WITHIN it (the point of the beat — wrongly blocked). A viewer could only see
+ * the CMA's and the patient's referral screens by clicking role tabs, so on
+ * the guided walk they did not exist (owner, 2026-09-02: "when I click on
+ * next, nothing happens").
+ *
+ * The order is the order the referral actually happens in: the clinician
+ * decides, the CMA carries it out in the room, the patient receives it.
+ * Returns null at the end of the chain — the walk stops there rather than
+ * looping, because a stopped visit does not resume.
+ */
+export const TERMINAL_ROLE_ORDER: Role[] = ["audiologist", "cma", "patient"];
+
+export function nextRoleOnTerminalBeat(role: Role): Role | null {
+  const i = TERMINAL_ROLE_ORDER.indexOf(role);
+  if (i === -1 || i === TERMINAL_ROLE_ORDER.length - 1) return null;
+  return TERMINAL_ROLE_ORDER[i + 1];
+}
+
+export function prevRoleOnTerminalBeat(role: Role): Role | null {
+  const i = TERMINAL_ROLE_ORDER.indexOf(role);
+  if (i <= 0) return null;
+  return TERMINAL_ROLE_ORDER[i - 1];
 }

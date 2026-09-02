@@ -2,17 +2,19 @@
 import { useState } from "react";
 import { Check,FileHeart,Phone,Stethoscope,Video,Volume2 } from "lucide-react";
 import { Card,PageHeader,PrimaryButton } from "../../ui";
-import { BRAND_NAME } from "@/lib/mock-data";
+import { BRAND_NAME, clinician } from "@/lib/mock-data";
 import { OtoscopyStep } from "../../exam/otoscopy-step";
 import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
+import { patientFindings, reviewOutcome, reviewReferralReason, visitGates } from "@/lib/clearance";
+import { useReview } from "@/lib/review-store";
 
 // The visit's patient-facing steps, counted from one list so adding a step
 // (as tympanometry was, corrections sheet item 5) renumbers every eyebrow —
 // a hardcoded "N of 5" is exactly what lib/regressions.test.ts bans.
-const VISIT_FLOW = ["setup", "otoscopy", "tympanometry", "testing", "live"] as const;
+const VISIT_FLOW = ["setup", "otoscopy", "tympanometry", "clearance", "testing", "live"] as const;
 const visitEyebrow = (id: (typeof VISIT_FLOW)[number]) =>
   `Visit ${VISIT_FLOW.indexOf(id) + 1} of ${VISIT_FLOW.length}`;
 
@@ -33,6 +35,150 @@ export function Otoscopy({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return
 // Same reasoning as Otoscopy: a status line, not a video tile, says who is
 // acting.
 export function Tympanometry({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Tympanometry" subtitle="A gentle middle ear check — pressure on each eardrum, nothing to do but sit still." onBack={back} eyebrow={visitEyebrow("tympanometry")}/><AudiologistStatusLine className="mb-4">Dr. Reed is watching your traces with you — nothing to do but sit still.</AudiologistStatusLine><TympanometryStep framing="patient"/></Shell>}
+// The patient's own view of the safety gate (owner, 2026-09-02). He is told
+// the checks passed and that the test is about to start — or, when they did
+// not, that the visit is stopping and he is being referred to a doctor.
+//
+// Like every other clinical act in this flow, his screen carries no button:
+// clearing the visit is Dr. Reed's decision, not his. What he gets is the
+// plain-language version of the same three rows the clinicians are reading —
+// the outcome, never the raw tones and trace types.
+export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  // Alex sees the outcome of Dr. Reed's review, in his own words. Never the
+  // tones, trace types or her checklist — the outcome, and what happens next.
+  const review = useReview();
+  const outcome = reviewOutcome(review);
+  const stopped = outcome === "stopped";
+  return <Shell>
+    <PageHeader
+      title={stopped ? "We need to pause here" : outcome === "cleared" ? "Your ear checks are done" : "Your ear checks are with your audiologist"}
+      subtitle={stopped
+        ? "Your ear checks found something a doctor should look at before any hearing test."
+        : outcome === "cleared"
+          ? "Both ear checks are complete and your audiologist has cleared you for the hearing test."
+          : "Dr. Reed is looking at both ear checks now. She will clear the hearing test when she is happy with them."}
+      onBack={back}
+      eyebrow={visitEyebrow("clearance")}/>
+    {stopped ? <>
+      <Card className="border-red-300 p-5">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#fdeaea] text-[#b42318]"><Stethoscope size={18}/></span>
+          <div>
+            <b className="text-sm text-[#b42318]">Please see a doctor first</b>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{reviewReferralReason(review, visitGates())}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              We are not going ahead with the hearing test or any hearing device today.
+              Dr. Reed will call you to explain what she saw and help you arrange the visit.
+            </p>
+          </div>
+        </div>
+      </Card>
+      <div className="mt-6"><AudiologistStatusLine>Dr. Reed is calling you about the referral.</AudiologistStatusLine></div>
+    </> : <>
+      <div className="space-y-3">{[
+        ["Your questionnaire", outcome === "cleared" ? "Reviewed by your audiologist." : "Answered before today\u2019s visit."],
+        ["Ear health check","Images captured and read for both ears."],
+        ["Middle ear check","Both eardrums measured."],
+      ].map(([t,d])=><div key={t} className="flex items-start gap-3 rounded-2xl bg-white p-4">
+        <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16}/></span>
+        <div><b className="text-sm">{t}</b><p className="mt-0.5 text-xs leading-5 text-slate-500">{d}</p></div>
+      </div>)}</div>
+      <Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Anything worth a closer look is noted on your record — Dr. Reed reads it alongside your results.</p></Card>
+      <div className="mt-6"><AudiologistStatusLine>{outcome === "cleared" ? "Dr. Reed has cleared you for the hearing test." : "Dr. Reed is reviewing your ear checks."}</AudiologistStatusLine></div>
+    </>}
+  </Shell>
+}
+/**
+ * Where a stopped visit ends for Alex (owner, 2026-09-02).
+ *
+ * The referral button used to call the story's shared `next()`, which walked
+ * him straight into the hearing test he had just been told he could not have.
+ * This is the destination that was missing.
+ *
+ * The message the owner asked for, in order: you need to see a doctor; we
+ * cannot go further until you have; and once you have, we can help with
+ * hearing devices. That last part matters — a stop that reads as a rejection
+ * loses a patient who is still very much someone Hearfy can help, just not
+ * today and not before a physician has looked.
+ *
+ * No forward control at all. The visit is over; his next step is a doctor,
+ * not a button in this app.
+ */
+export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const review = useReview();
+  return <Shell>
+    <PageHeader
+      title="Your visit stops here today"
+      subtitle="Maya has packed up the kit. Nothing is wrong with what you did — this is the safe next step."
+      onBack={back}
+      eyebrow="Referred to a doctor"/>
+    <Card className="border-red-300 p-5">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#fdeaea] text-[#b42318]"><Stethoscope size={18}/></span>
+        <div>
+          <b className="text-sm text-[#b42318]">Please see a doctor about your ears</b>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{reviewReferralReason(review, visitGates())}</p>
+        </div>
+      </div>
+    </Card>
+    {/* WHAT WE FOUND (owner, 2026-09-02: "tell him which issue did we find in
+        the exam, so that he can go to the doctor with that"). Alex arrives at
+        a doctor able to say what was seen, rather than "the hearing people
+        sent me". Each item is what was SEEN, never what it might mean — a
+        cause is a diagnosis, and nobody here is making one. The clinical
+        wording sits underneath, marked as the bit for the doctor, so he can
+        hand it over without having to translate his own screen. */}
+    {/* Only when there is something to list: an empty card would frame a
+        heading and a disclaimer around nothing. */}
+    {patientFindings(review, visitGates()).length > 0 && <Card className="mt-4 p-5">
+      <b className="text-sm">What today&rsquo;s checks found</b>
+      <div className="mt-4 space-y-4">
+        {patientFindings(review, visitGates()).map(f=>
+          <div key={f.id} className="rounded-2xl border border-[#f0d6d6] bg-[#fffafa] p-4">
+            <b className="text-sm text-brand-navy">{f.label}</b>
+            <p className="mt-1 text-sm leading-6 text-slate-600">{f.plain}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              <span className="font-bold text-slate-600">For your doctor:</span> {f.clinical}
+            </p>
+          </div>)}
+      </div>
+      <p className="mt-4 text-sm leading-6 text-slate-500">
+        This is not a diagnosis. It is what your audiologist saw and wants a doctor to
+        examine properly.
+      </p>
+    </Card>}
+    <Card className="mt-4 p-5">
+      <b className="text-sm">What happens now</b>
+      <div className="mt-4 space-y-4">
+        {[
+          ["1","See a doctor","Dr. Reed is calling you to explain what she saw and help you arrange the appointment. Your ear images and traces go with you."],
+          ["2","Get their assessment","A physician needs to look at and treat what today\u2019s checks found. We cannot test your hearing until they have."],
+          ["3","Come back to us","Once they clear you, we pick up right here \u2014 the hearing test, your results, and help choosing a hearing device if you need one."],
+        ].map(([n,t,d])=>
+          <div key={n} className="flex items-start gap-3">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#e8f9f8] text-xs font-extrabold text-teal-ink">{n}</span>
+            <div><b className="text-sm">{t}</b><p className="mt-0.5 text-sm leading-6 text-slate-500">{d}</p></div>
+          </div>)}
+      </div>
+    </Card>
+    <Card className="mt-4 p-5">
+      <b className="text-sm">Taking this to your doctor</b>
+      <p className="mt-1 text-sm leading-6 text-slate-500">
+        Your visit summary — today&rsquo;s ear images, the pressure traces and the wording
+        above — is saved in this app under Messages, and {clinician.name} is sending a copy
+        to the doctor you choose. Show them this screen if it is easier.
+      </p>
+    </Card>
+    <Card className="mt-4 p-5">
+      <b className="text-sm">Today&rsquo;s visit fee</b>
+      <p className="mt-1 text-sm leading-6 text-slate-500">
+        Nothing further is charged. The ear checks you had today are yours to keep and to
+        show your doctor.
+      </p>
+    </Card>
+    <div className="mt-6"><AudiologistStatusLine>Dr. Reed is calling you about the referral.</AudiologistStatusLine></div>
+  </Shell>
+}
 // The "Complete test" button ended the whole procedure — Maya/Dr. Reed's
 // call, not Alex's, so the patient's screen carries no button for it.
 // `PureToneStep`'s own "tap when you hear a tone" button is UNTOUCHED: it is

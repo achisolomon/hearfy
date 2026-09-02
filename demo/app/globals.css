@@ -55,14 +55,20 @@ html { font-size: clamp(18px, 1.125rem, 22px); }
    the bug was plainly visible on the owner's machine. scripts/stability-sweep
    .mjs now asserts the reservation directly rather than trying to measure it. */
 html { scrollbar-gutter: stable; }
-/* The one-pager's living brand mark.
+/* The living brand mark.
    ------------------------------------------------------------------
-   The shared BrandLogo plays its entry once and then holds. On the
-   one-pager the owner asked for a mark that keeps moving, so the three
-   sound bars breathe like a level meter. Scoped to `.op-live-logo` so
-   the same component stays perfectly still everywhere else in the demo
-   — a chrome-bar logo pulsing on all 27 screens would be the toy-app
-   register PRODUCT.md rules out.
+   The shared BrandLogo plays its entry once and then holds, which reads
+   as an animation that broke rather than one that finished. So the three
+   sound bars breathe like a level meter, continuously.
+
+   Opt-in via `.live-logo`, NOT a bare rule on the component. The same
+   BrandLogo renders in the demo's chrome on every screen, and a
+   chrome-bar logo pulsing on all 27 screens is the toy-app register
+   PRODUCT.md rules out. DESIGN.md draws the line this class follows:
+   the brandmark "is the only place the brand performs — it may animate
+   gently on cover and welcome screens." So exactly three surfaces wear
+   it, each a moment where nothing else is happening and the mark is the
+   subject: the cover, the end-cap, and the one-pager masthead.
 
    The mark's SVG is: arc, bar, bar, bar, dot. `rect` targets exactly the
    three bars, so no change to the shared component is needed.
@@ -73,14 +79,14 @@ html { scrollbar-gutter: stable; }
    via framer, so this runs only after it settles (1s delay) — otherwise
    the two fight over the same property on first paint. */
 @media (prefers-reduced-motion: no-preference) {
-  .op-live-logo svg rect {
+  .live-logo svg rect {
     transform-box: fill-box;
     transform-origin: 50% 50%;
     animation: op-bar 1.9s ease-in-out infinite;
     animation-delay: 1s;
   }
-  .op-live-logo svg rect:nth-of-type(2) { animation-delay: 1.16s; }
-  .op-live-logo svg rect:nth-of-type(3) { animation-delay: 1.32s; }
+  .live-logo svg rect:nth-of-type(2) { animation-delay: 1.16s; }
+  .live-logo svg rect:nth-of-type(3) { animation-delay: 1.32s; }
 }
 
 @keyframes op-bar {

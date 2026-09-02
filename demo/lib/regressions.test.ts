@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
+import { BEATS, ROLES, beatForRoleSwitch, beatForScreen, beatForScreenNear, beatIndexById, isConditionalBeat, nextBeat, nextBeatForRole, prevBeat, screenFor, type Role } from "./story";
 import { brandScopeFiles, componentFiles, findContextNextOffences, patientNavigation, screenOrder, screensReachingContextNext, sourceOf } from "./screens";
 import { BRAND_NAME, WORDMARK_HEAD, WORDMARK_TAIL, audiogram } from "./mock-data";
 import { SPACING_UNIT_REM, TAILWIND_SPACING_SCALE, isOnSpacingScale, spacingUtilitiesIn } from "./tailwind-scale";
@@ -1628,6 +1628,11 @@ describe("back returns to the screen the viewer came from", () => {
   it("undoes a guided Next, at every beat including every handoff", () => {
     const broken: string[] = [];
     for (let i = 0; i < BEATS.length - 1; i++) {
+      // Conditional beats are not part of anyone's walk: the referral is
+      // opened by a clinician stopping the visit and is terminal once there,
+      // so "Next then Back" is not a journey a viewer can make from it. The
+      // invariant is about beats you can actually walk through (2026-09-02).
+      if (isConditionalBeat(i)) continue;
       const role = BEATS[i].lead;
       const before = screenFor(i, role);
       const fwd = guidedNext(i, role);
@@ -3788,9 +3793,11 @@ describe("the brand name is written Hearfy everywhere", () => {
 
   // The cover is the one screen where the brand is the subject rather than a
   // label (owner, 2026-09-02). Every other call site stays at the working size.
+  // `LiveBrandLogo` counts: it is the same lockup with the breathing loop
+  // added, and it forwards `size` straight through to BrandLogo.
   it("enlarges the lockup on the cover and nowhere else", () => {
     expect(sourceOf("components/shell/cover.tsx"),
-      "the cover's lockup is the hero").toMatch(/<BrandLogo[^/>]*size="lg"/);
+      "the cover's lockup is the hero").toMatch(/<(?:Live)?BrandLogo[^/>]*size="lg"/);
     expect(sourceOf("components/shell/demo-shell.tsx"),
       "the chrome bar must not use the hero size").not.toMatch(/size="lg"/);
     expect(ui, "sm is the default so no call site grows by accident")
@@ -3830,10 +3837,17 @@ describe("the brand name is written Hearfy everywhere", () => {
   // replay the entry on every navigation — the owner asked for movement at
   // the start (2026-09-02), not a permanent twitch.
   it("animates the mark only where the brand performs, never in the chrome", () => {
-    expect(sourceOf("components/shell/demo-shell.tsx"),
-      "the shell's logo must not animate").not.toMatch(/<BrandLogo[^/>]*\banimate\b/);
+    const shell = sourceOf("components/shell/demo-shell.tsx");
+    expect(shell, "the shell's logo must not animate")
+      .not.toMatch(/<BrandLogo[^/>]*\banimate\b/);
+    // LiveBrandLogo animates unconditionally, so the chrome must not reach for
+    // it either — that would be the 27-screen pulse, arriving by another name.
+    expect(shell, "the shell must not wear the living mark")
+      .not.toMatch(/\bLiveBrandLogo\b/);
+    // The cover performs via LiveBrandLogo, which sets `animate` itself.
     expect(sourceOf("components/shell/cover.tsx"),
-      "the cover is where the brand performs").toMatch(/<BrandLogo[^/>]*\banimate\b/);
+      "the cover is where the brand performs")
+      .toMatch(/<BrandLogo[^/>]*\banimate\b|<LiveBrandLogo\b/);
   });
 
   // Motion is opt-in. A default-on entry would animate every call site,
@@ -3920,12 +3934,15 @@ describe("the brand mark's entry animation", () => {
       .not.toMatch(/\banimate\b/);
   });
 
+  // `<LiveBrandLogo>` satisfies this: it renders the same mark and passes
+  // `animate` itself, so a surface wearing the living mark is a surface where
+  // the entry plays — with a breathing loop after it.
   it("plays on the cover and the welcome screen", () => {
     for (const f of ["components/shell/cover.tsx",
                      "components/screens/patient/welcome.tsx"]) {
-      const calls = [...sourceOf(f).matchAll(/<BrandLogo\b[^/>]*/g)].map(m => m[0]);
+      const calls = [...sourceOf(f).matchAll(/<(?:Live)?BrandLogo\b[^/>]*/g)].map(m => m[0]);
       expect(calls.length, `${f} should render the mark`).toBeGreaterThan(0);
-      expect(calls.some(c => /\banimate\b/.test(c)),
+      expect(calls.some(c => /\banimate\b|^<LiveBrandLogo/.test(c)),
         `${f} should play the entry animation`).toBe(true);
     }
   });
@@ -3951,5 +3968,41 @@ describe("the brand mark's entry animation", () => {
   it("keeps the faded bar faded", () => {
     expect(ui, "the fade-out bar's target opacity must survive the animation")
       .toMatch(/anim\(3,\s*\.45\)/);
+  });
+
+  /**
+   * The living mark is an opt-in, and the opt-in has a ceiling.
+   *
+   * `LiveBrandLogo` adds a continuous breathing loop to the three sound bars.
+   * It began life scoped to the one-pager; the owner then asked for it on the
+   * demo's cover and end-cap too (2026-09-02). DESIGN.md permits exactly that
+   * — the brandmark "is the only place the brand performs — it may animate
+   * gently on cover and welcome screens" — and no further.
+   *
+   * The risk this guards is drift by convenience: `LiveBrandLogo` is now a
+   * shared export sitting next to `BrandLogo` in the same module, so reaching
+   * for it on a fifth screen is one character of difference and no friction at
+   * all. A logo pulsing behind working screens is the toy-app register
+   * PRODUCT.md rules out, and it would arrive one innocuous import at a time.
+   *
+   * A walk, not a list, for the same reason `brandScopeFiles` is one: a
+   * hand-kept list is what let the intercapped name reach a public page.
+   * Adding a surface is fine — it just has to be done here, deliberately.
+   */
+  it("keeps the living mark on the surfaces that may perform", () => {
+    const ALLOWED = new Set([
+      "components/ui.tsx",               // where it is defined
+      "components/one-pager/motion.tsx", // re-export, for the page's import
+      "components/shell/cover.tsx",      // the cover AND the end-cap
+      "app/one-pager/page.tsx",          // the public one-pager's masthead
+      "app/globals.css",                 // defines the loop the class drives
+      "lib/regressions.test.ts",         // this file
+      "lib/one-pager.test.ts",           // asserts the loop stays scoped
+    ]);
+    const wearers = brandScopeFiles().filter(
+      f => !ALLOWED.has(f) && /\bLiveBrandLogo\b|\blive-logo\b/.test(sourceOf(f)),
+    );
+    expect(wearers, "a new surface may wear the living mark, but say so in ALLOWED above")
+      .toEqual([]);
   });
 });

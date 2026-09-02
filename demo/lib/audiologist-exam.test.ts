@@ -40,6 +40,28 @@ describe("the audiologist leads the ear check and tympanometry", () => {
     expect(tymp.screens.patient).toBe("tympanometry");
   });
 
+  /**
+   * She opens on her whole queue, THEN dives into one exam (owner,
+   * 2026-09-02). `aud-panel` was already her screen during arrival, consent
+   * and setup, but she led none of those, so a guided walk never landed on it
+   * — the viewer met her mid-exam having never seen there were six.
+   */
+  it("shows her six-exam overview after the kit checklist, before the ear check", () => {
+    const setup = beatIndexById("setup");
+    const overview = beatIndexById("overview");
+    const otoscopy = beatIndexById("otoscopy");
+    expect(overview).toBe(setup + 1);
+    expect(otoscopy).toBe(overview + 1);
+    expect(BEATS[overview].lead).toBe("audiologist");
+    expect(BEATS[overview].screens.audiologist).toBe("aud-panel");
+  });
+
+  /** The panel introduces her once; it is not shown again as a second beat. */
+  it("gives the six-exam panel exactly one beat that leads with it", () => {
+    const led = BEATS.filter(b => b.lead === "audiologist" && b.screens.audiologist === "aud-panel");
+    expect(led.map(b => b.id)).toEqual(["overview"]);
+  });
+
   /** Only these two beats move. The rest of Stage 4 stays the CMA's. */
   it("does not move any other Stage 4 beat", () => {
     for (const id of ["arrived", "consent", "setup", "puretone"]) {

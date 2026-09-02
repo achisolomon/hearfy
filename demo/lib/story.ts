@@ -114,6 +114,23 @@ export const BEATS: Beat[] = [
     screens: { patient: "consent", cma: "cma-consent", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "setup", stage: 4, lead: "cma",
     screens: { patient: "setup", cma: "cma-calibration", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // Her queue gets a beat of its own, right after the kit passes and before
+  // the first exam step (owner, 2026-09-02: "the six exam page should be the
+  // first page of the audiologist... after the CMA checklist. And then first,
+  // like, the overview, and then we are diving into first exam").
+  //
+  // `aud-panel` was already her screen through arrival, consent and setup —
+  // but she LED none of those, so a guided walk never landed on it. Once the
+  // ear check became hers, the first beat she led dropped the viewer straight
+  // into one exam, having never seen that there are six. That is the 1:many
+  // claim the whole model rests on, skipped.
+  //
+  // It is deliberately the LAST thing before the exam rather than the first
+  // thing of the stage: the queue reads as "here is her whole afternoon, and
+  // this is the one we are about to open", which only works if the visit it
+  // zooms into is the very next beat.
+  { id: "overview", stage: 4, lead: "audiologist",
+    screens: { patient: "setup", cma: "cma-calibration", audiologist: "aud-panel", operator: "op-dashboard" } },
   // The audiologist leads these two (owner, 2026-09-02: "these pages are not
   // CMA, it is the audiologist"). What is hers is the JUDGMENT — whether a
   // capture is adequate or the ear must be shot again — not the scope: Maya
@@ -131,8 +148,11 @@ export const BEATS: Beat[] = [
     screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
 
   // ---- Stage 5: Live supervision ----
-  { id: "supervision", stage: 5, lead: "audiologist",
-    screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // The six-exam panel used to open this stage too. It now has its own beat in
+  // stage 4 (`overview`), where it introduces her — showing the same screen
+  // again here made the panel her SECOND appearance of the same content, three
+  // beats after she had already been running exams. Stage 5 opens on the
+  // intervention instead, which is what actually escalates.
   { id: "intervention", stage: 5, lead: "audiologist",
     screens: { patient: "live", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
   { id: "speech", stage: 5, lead: "cma",

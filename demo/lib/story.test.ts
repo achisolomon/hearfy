@@ -72,8 +72,10 @@ describe("pointer maths", () => {
   });
 
   it("returns the screen a role shows at a beat", () => {
-    expect(screenFor(beatIndexById("supervision"), "audiologist")).toBe("aud-panel");
-    expect(screenFor(beatIndexById("supervision"), "patient")).toBe("testing");
+    // Was the stage-5 "supervision" beat until 2026-09-02, when her six-exam
+    // panel moved to its own stage-4 beat and the later duplicate was dropped.
+    expect(screenFor(beatIndexById("overview"), "audiologist")).toBe("aud-panel");
+    expect(screenFor(beatIndexById("overview"), "patient")).toBe("setup");
   });
 
   it("knows the last beat", () => {

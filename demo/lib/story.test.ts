@@ -481,13 +481,27 @@ describe("mirror-beat handoff, mode-agnostic (shared primitive)", () => {
     return undefined;
   }
 
-  it("finds a genuine mirror beat for the CMA and confirms it is beat 32 (signing) — sanity, not a hardcode: the script could change and this would just find a different beat", () => {
+  it("finds a genuine mirror beat for the CMA — structural, not a hardcoded beat id", () => {
     const mirrorBeat = findGenuineMirrorBeat("cma");
     expect(mirrorBeat).toBeDefined();
-    // Not asserted as a requirement — just documenting today's data for
-    // anyone reading this file, since the owner's report was specifically
-    // about beat 32.
-    expect(BEATS[mirrorBeat!].id).toBe("signing");
+    // Documenting today's data for anyone reading this file, not asserting a
+    // requirement — which is why this line moved rather than the finder.
+    //
+    // It used to name "signing" (beat 32), the owner's original report. Since
+    // 2026-09-02 the CMA's FIRST genuine mirror is "otoscopy": the audiologist
+    // leads the ear check and tympanometry, so the CMA stopped leading a beat
+    // where she still has a screen of her own — which is the definition of a
+    // mirror. "signing" is still one; it is simply no longer the earliest.
+    //
+    // The behaviour that matters is asserted by the tests below, and by
+    // `soloHandoffAt` returning null here: a viewer walking as the CMA is NOT
+    // ejected at the ear check, because her next stop (cma-tympanometry) is
+    // led by the audiologist too. One aside hands off; a run of them must not.
+    expect(["otoscopy", "signing"]).toContain(BEATS[mirrorBeat!].id);
+    // The guard that would have caught a real regression here: a mirror beat
+    // in the MIDDLE of a run led by one other role must not eject a solo
+    // viewer. soloHandoffAt's condition 4 is what enforces it.
+    expect(soloHandoffAt(beatIndexById("otoscopy"), "cma")).toBeNull();
   });
 
   it("mirrorHandoffAt returns the beat's lead role at a genuine mirror beat", () => {

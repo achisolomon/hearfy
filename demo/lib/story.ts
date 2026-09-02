@@ -114,12 +114,19 @@ export const BEATS: Beat[] = [
     screens: { patient: "consent", cma: "cma-consent", audiologist: "aud-panel", operator: "op-dashboard" } },
   { id: "setup", stage: 4, lead: "cma",
     screens: { patient: "setup", cma: "cma-calibration", audiologist: "aud-panel", operator: "op-dashboard" } },
-  { id: "otoscopy", stage: 4, lead: "cma",
-    screens: { patient: "otoscopy", cma: "cma-otoscopy", audiologist: "aud-panel", operator: "op-dashboard" } },
+  // The audiologist leads these two (owner, 2026-09-02: "these pages are not
+  // CMA, it is the audiologist"). What is hers is the JUDGMENT — whether a
+  // capture is adequate or the ear must be shot again — not the scope: Maya
+  // is still the hands in the room, which is why `cma` below is unchanged and
+  // still carries Dr. Reed's feed. An audiologist holding an otoscope herself
+  // would be 1:1, and the supervision panel two beats later cites the 2026 CMS
+  // rule change to claim one clinician covers six visits.
+  { id: "otoscopy", stage: 4, lead: "audiologist",
+    screens: { patient: "otoscopy", cma: "cma-otoscopy", audiologist: "aud-otoscopy", operator: "op-dashboard" } },
   // Corrections sheet 2026-08-31, item 5: tympanometry runs on every exam,
   // between the ear health check and the hearing test.
-  { id: "tympanometry", stage: 4, lead: "cma",
-    screens: { patient: "tympanometry", cma: "cma-tympanometry", audiologist: "aud-panel", operator: "op-dashboard" } },
+  { id: "tympanometry", stage: 4, lead: "audiologist",
+    screens: { patient: "tympanometry", cma: "cma-tympanometry", audiologist: "aud-tympanometry", operator: "op-dashboard" } },
   { id: "puretone", stage: 4, lead: "cma",
     screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
 

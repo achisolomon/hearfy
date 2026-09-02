@@ -53,6 +53,8 @@ export function TympanometryStep({ framing }: { framing: Framing }) {
         <p className="text-sm leading-6 text-slate-500">
           {framing === "cma"
             ? "Seal the probe tip in the canal and hold still through the pressure sweep. One trace per ear; re-run if the seal breaks."
+            : framing === "audiologist"
+            ? "Both traces are in. Accept them, or send one back for a re-run before the exam moves on."
             : "A gentle pressure test of how your eardrums move — one result for each ear. No response is needed from you."}
         </p>
       </Card>

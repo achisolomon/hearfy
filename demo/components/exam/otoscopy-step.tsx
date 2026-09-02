@@ -3,7 +3,7 @@ import { Card, StatusPill } from "../ui";
 import { otoscopy } from "@/lib/mock-data";
 import { asset } from "@/lib/asset";
 
-export type Framing = "patient" | "cma";
+export type Framing = "patient" | "cma" | "audiologist";
 
 /**
  * The scope view: a real otoscopy capture per ear, so the two read as two
@@ -70,6 +70,8 @@ export function OtoscopyStep({ framing }: { framing: Framing }) {
         <p className="text-sm leading-6 text-slate-500">
           {framing === "cma"
             ? "Angle the scope slightly up and back. One clear capture per ear; retake if the view is obscured."
+            : framing === "audiologist"
+            ? "Both captures are in. Accept them, or send one back for a retake before the exam moves on."
             : "Both ears captured, one image each. Your audiologist reviews the images and explains what they show."}
         </p>
       </Card>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, beatIndexById } from "./story";
+import { BEATS, beatIndexById, isTerminalBeat } from "./story";
 import { EXAM_STEPS } from "./exam";
 import { clearanceOf, visitClearance, visitGates } from "./clearance";
 import { compareCategories, devices, deviceDetail, tiers } from "./mock-data";
@@ -541,7 +541,11 @@ describe("the pre-test clearance gate", () => {
   // a stop that affects all three of them.
   it("sits between tympanometry and the hearing test", () => {
     expect(beatIndexById("clearance")).toBe(beatIndexById("tympanometry") + 1);
-    expect(beatIndexById("puretone")).toBe(beatIndexById("clearance") + 1);
+    // The referral beat sits between the gate and the test: a stopped visit
+    // ends there, so it is passed over on the way to puretone rather than
+    // walked through (nothing advances out of it — see isTerminalBeat).
+    expect(beatIndexById("referral")).toBe(beatIndexById("clearance") + 1);
+    expect(beatIndexById("puretone")).toBe(beatIndexById("referral") + 1);
   });
 
   // The clinician decides; the CMA reports. Whoever leads the beat is who the
@@ -656,5 +660,77 @@ describe("the pre-test clearance gate", () => {
   // checks, and the demo's main story has to reach the hearing test.
   it("lets the hero visit through on its noted findings", () => {
     expect(visitClearance().cleared).toBe(true);
+  });
+});
+
+/* ---------------------------------------------------------------------- *
+ * Owner, 2026-09-02 — the termination screen.
+ *
+ * "If I click on stop the visit, then I get to something I didn't expect.
+ *  Expect a termination page, something that will tell Alex you need to go to
+ *  a doctor, both on his application and on the CMA screen. And only then we
+ *  can help with the hearing devices, but we cannot proceed until he sees a
+ *  doctor."
+ * ---------------------------------------------------------------------- */
+describe("the referral termination beat", () => {
+  // The bug: "Stop the visit and refer" called the story's shared next(),
+  // whose next beat is puretone — so the stop button walked everyone into the
+  // hearing test it had just forbidden.
+  it("gives every role its own termination screen", () => {
+    const beat = BEATS[beatIndexById("referral")];
+    expect(beat.screens.patient).toBe("referral");
+    expect(beat.screens.cma).toBe("cma-referral");
+    expect(beat.screens.audiologist).toBe("aud-referral");
+  });
+
+  // Nothing advances out of a stopped visit — not the chrome's Next, not an
+  // in-screen button. Asserted on the logic both go through.
+  it("is terminal: no beat follows it", () => {
+    expect(isTerminalBeat(beatIndexById("referral"))).toBe(true);
+    expect(isTerminalBeat(beatIndexById("clearance"))).toBe(false);
+    expect(isTerminalBeat(beatIndexById("puretone"))).toBe(false);
+  });
+
+  it("guards both forward paths in the shell", () => {
+    const src = sourceOf("components/shell/story-context.tsx");
+    // Both next() and advanceInRole() must bail on a terminal beat.
+    expect(src.match(/if \(isTerminalBeat\(beat\)\) return;/g)?.length ?? 0)
+      .toBeGreaterThanOrEqual(2);
+  });
+
+  // The stop buttons must GO somewhere, not call next().
+  it("sends both clinicians to the referral screen, not onward", () => {
+    expect(sourceOf("components/screens/audiologist/clearance.tsx"))
+      .toMatch(/goToScreen\("aud-referral"\)/);
+    expect(sourceOf("components/screens/cma/clearance.tsx"))
+      .toMatch(/goToScreen\("cma-referral"\)/);
+  });
+
+  // The owner's message, on the patient's own screen: see a doctor, we cannot
+  // proceed until you have, and afterwards we can still help with devices.
+  it("tells the patient to see a doctor first, and that help follows", () => {
+    const src = sourceOf("components/screens/patient/exam.tsx");
+    expect(src).toMatch(/Please see a doctor about your ears/);
+    expect(src).toMatch(/We cannot test your hearing until they have/);
+    expect(src).toMatch(/help choosing a hearing device/);
+  });
+
+  // The CMA screen carries the same instruction, since she is the one in the
+  // room when the visit ends.
+  it("tells the CMA to pack up and hold the device conversation", () => {
+    const src = sourceOf("components/screens/cma/referral.tsx");
+    expect(src).toMatch(/Pack the kit/);
+    expect(src).toMatch(/No device conversation/);
+    expect(src).toMatch(/seeing a doctor first/);
+  });
+
+  // A terminal screen with a forward button is not terminal.
+  it("offers no way onward from any termination screen", () => {
+    for (const f of ["components/screens/cma/referral.tsx",
+                     "components/screens/audiologist/referral.tsx"]) {
+      const src = sourceOf(f);
+      expect(src, `${f} must not take a next prop`).not.toMatch(/next=\{|next:\s*\(\)/);
+      expect(src, `${f} must not offer a primary action`).not.toMatch(/<PrimaryButton/);
+    }
   });
 });

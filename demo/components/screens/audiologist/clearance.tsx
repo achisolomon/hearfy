@@ -11,6 +11,7 @@ import {
   type ReviewableId, type ReviewState,
 } from "@/lib/clearance";
 import { reviewStore, useReview } from "@/lib/review-store";
+import { useStory } from "../../shell/story-context";
 import { supervisionQueue } from "@/lib/mock-data";
 import { cn } from "@/lib/cn";
 
@@ -93,6 +94,11 @@ export function AudClearance({ next }: { next: () => void }) {
   // See lib/review-store.ts.
   const review = useReview();
   const [signed, setSigned] = useState(false);
+  // The stop needs a DESTINATION. `next()` from this beat advances to
+  // `puretone` — the hearing test — so wiring the referral button to it walked
+  // everyone into the very test being stopped (owner, 2026-09-02). goToScreen
+  // moves the shared pointer to the referral beat without changing persona.
+  const { goToScreen } = useStory();
   const outcome = reviewOutcome(review);
 
   const questionnaire = gates.find(g => g.id === "questionnaire")!;
@@ -168,7 +174,7 @@ export function AudClearance({ next }: { next: () => void }) {
                     that stopped here.
                   </p>
                   <div className="mt-4">
-                    <PrimaryButton onClick={next} className="bg-[#b42318] hover:bg-[#992018]">
+                    <PrimaryButton onClick={() => goToScreen("aud-referral")} className="bg-[#b42318] hover:bg-[#992018]">
                       Stop the visit and refer
                     </PrimaryButton>
                   </div>

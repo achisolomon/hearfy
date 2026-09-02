@@ -88,6 +88,63 @@ export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
     </>}
   </Shell>
 }
+/**
+ * Where a stopped visit ends for Alex (owner, 2026-09-02).
+ *
+ * The referral button used to call the story's shared `next()`, which walked
+ * him straight into the hearing test he had just been told he could not have.
+ * This is the destination that was missing.
+ *
+ * The message the owner asked for, in order: you need to see a doctor; we
+ * cannot go further until you have; and once you have, we can help with
+ * hearing devices. That last part matters — a stop that reads as a rejection
+ * loses a patient who is still very much someone Hearfy can help, just not
+ * today and not before a physician has looked.
+ *
+ * No forward control at all. The visit is over; his next step is a doctor,
+ * not a button in this app.
+ */
+export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  const review = useReview();
+  return <Shell>
+    <PageHeader
+      title="Your visit stops here today"
+      subtitle="Maya has packed up the kit. Nothing is wrong with what you did — this is the safe next step."
+      onBack={back}
+      eyebrow="Referred to a doctor"/>
+    <Card className="border-red-300 p-5">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#fdeaea] text-[#b42318]"><Stethoscope size={18}/></span>
+        <div>
+          <b className="text-sm text-[#b42318]">Please see a doctor about your ears</b>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{reviewReferralReason(review, visitGates())}</p>
+        </div>
+      </div>
+    </Card>
+    <Card className="mt-4 p-5">
+      <b className="text-sm">What happens now</b>
+      <div className="mt-4 space-y-4">
+        {[
+          ["1","See a doctor","Dr. Reed is calling you to explain what she saw and help you arrange the appointment. Your ear images and traces go with you."],
+          ["2","Get their assessment","A physician needs to look at and treat what today\u2019s checks found. We cannot test your hearing until they have."],
+          ["3","Come back to us","Once they clear you, we pick up right here \u2014 the hearing test, your results, and help choosing a hearing device if you need one."],
+        ].map(([n,t,d])=>
+          <div key={n} className="flex items-start gap-3">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#e8f9f8] text-xs font-extrabold text-teal-ink">{n}</span>
+            <div><b className="text-sm">{t}</b><p className="mt-0.5 text-sm leading-6 text-slate-500">{d}</p></div>
+          </div>)}
+      </div>
+    </Card>
+    <Card className="mt-4 p-5">
+      <b className="text-sm">Today&rsquo;s visit fee</b>
+      <p className="mt-1 text-sm leading-6 text-slate-500">
+        Nothing further is charged. The ear checks you had today are yours to keep and to
+        show your doctor.
+      </p>
+    </Card>
+    <div className="mt-6"><AudiologistStatusLine>Dr. Reed is calling you about the referral.</AudiologistStatusLine></div>
+  </Shell>
+}
 // The "Complete test" button ended the whole procedure — Maya/Dr. Reed's
 // call, not Alex's, so the patient's screen carries no button for it.
 // `PureToneStep`'s own "tap when you hear a tone" button is UNTOUCHED: it is

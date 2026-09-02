@@ -7,9 +7,11 @@ import { CmaArrival, CmaConsent } from "../screens/cma/arrival";
 import { CmaCalibration } from "../screens/cma/setup";
 import { CmaOtoscopy, CmaTympanometry, CmaPureTone, CmaSpeech, CmaBone } from "../screens/cma/exam";
 import { CmaClearance } from "../screens/cma/clearance";
+import { CmaReferral } from "../screens/cma/referral";
 import { CmaHandoff } from "../screens/cma/handoff";
 import { AudPanel, AudMonitor } from "../screens/audiologist/supervision";
 import { AudClearance } from "../screens/audiologist/clearance";
+import { AudReferral } from "../screens/audiologist/referral";
 import { AudReview, AudSign } from "../screens/audiologist/review";
 import { AudConsult, AudPrescription } from "../screens/audiologist/consult";
 import { CmaStock, CmaTryOn, CmaSigning, CmaActivate, CmaCloseout } from "../screens/cma/suitcase";
@@ -51,6 +53,7 @@ export function RoleView() {
       case "cma-otoscopy": return <CmaOtoscopy next={advanceInRole} />;
       case "cma-tympanometry": return <CmaTympanometry next={advanceInRole} />;
       case "cma-clearance": return <CmaClearance next={advanceInRole} />;
+      case "cma-referral": return <CmaReferral />;
       case "cma-puretone": return <CmaPureTone next={advanceInRole} />;
       case "cma-speech": return <CmaSpeech next={advanceInRole} />;
       case "cma-bone": return <CmaBone next={advanceInRole} />;
@@ -68,6 +71,7 @@ export function RoleView() {
     switch (id) {
       case "aud-panel": return <AudPanel />;
       case "aud-clearance": return <AudClearance next={advanceInRole} />;
+      case "aud-referral": return <AudReferral />;
       case "aud-monitor": return <AudMonitor next={advanceInRole} />;
       case "aud-review": return <AudReview next={advanceInRole} />;
       case "aud-sign": return <AudSign next={advanceInRole} />;

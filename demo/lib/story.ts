@@ -130,6 +130,18 @@ export const BEATS: Beat[] = [
   // sign-off is her act, so she leads it.
   { id: "clearance", stage: 4, lead: "audiologist",
     screens: { patient: "clearance", cma: "cma-clearance", audiologist: "aud-clearance", operator: "op-dashboard" } },
+  // Where a stopped visit ENDS (owner, 2026-09-02). The referral button used
+  // to call the shared `next()`, whose next beat is `puretone` — so pressing
+  // "Stop the visit and refer" walked everyone into the hearing test the
+  // referral had just forbidden. A stop with no destination is not a stop.
+  //
+  // It is a beat of its own rather than a state inside `clearance` because
+  // the visit genuinely ends here for all three roles: Alex is told to see a
+  // doctor, Maya is told to pack up, and the story does not continue to
+  // thresholds, results or a device. It stays in stage 4 — the visit never
+  // reached live supervision.
+  { id: "referral", stage: 4, lead: "audiologist",
+    screens: { patient: "referral", cma: "cma-referral", audiologist: "aud-referral", operator: "op-dashboard" } },
   { id: "puretone", stage: 4, lead: "cma",
     screens: { patient: "testing", cma: "cma-puretone", audiologist: "aud-monitor", operator: "op-dashboard" } },
 
@@ -467,4 +479,24 @@ export function soloHandoffAt(i: number, role: Role): Role | null {
   const resumed = nextBeatForRole(i, role);
   if (resumed === i || BEATS[resumed].lead !== role) return null;
   return lead;
+}
+
+/**
+ * The beat a stopped visit ends on. Nothing in the script may advance past it
+ * (owner, 2026-09-02).
+ *
+ * The referral is a terminal beat, not a waypoint: the beats after it are the
+ * hearing test, the results, the prescription and the sale — every one of them
+ * a thing the referral has just ruled out. Guarding only the button that
+ * reaches it would leave the chrome's own Next walking straight through, which
+ * is exactly how the first cut let a stopped visit continue.
+ *
+ * Framework-free like the rest of this file, so `story-context.tsx` can call
+ * it from `next()` and the guard is one fact in one place rather than a
+ * condition repeated in every screen.
+ */
+export const TERMINAL_BEATS = ["referral"] as const;
+
+export function isTerminalBeat(i: number): boolean {
+  return (TERMINAL_BEATS as readonly string[]).includes(BEATS[clamp(i)].id);
 }

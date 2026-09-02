@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import {
+import { isTerminalBeat,
   BEATS,
   beatForRoleSwitch,
   beatForScreenNear,
@@ -114,6 +114,12 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
    * happens to be idempotent, which is not a property worth depending on.
    */
   const next = useCallback(() => {
+    // A stopped visit ends here. The beats after the referral are the hearing
+    // test, the results and the sale — all of them ruled out by the referral
+    // itself, so Next must not walk into them (owner, 2026-09-02). Guarded at
+    // the pointer rather than per-screen: `isTerminalBeat` is the one fact,
+    // and every forward path in this file goes through here.
+    if (isTerminalBeat(beat)) return;
     // Solo: walk only this role's own beats; never switch role — EXCEPT at a
     // beat whose entire purpose is another persona acting while the current
     // persona is explicitly a passive mirror (soloHandoffAt, lib/story.ts).
@@ -192,6 +198,9 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
   }, [beat, mode, role]);
 
   const advanceInRole = useCallback(() => {
+    // Same terminal guard as `next()`: no in-screen control may walk out of a
+    // stopped visit either.
+    if (isTerminalBeat(beat)) return;
     setBeat(nextBeatForRole(beat, role));
   }, [beat, role]);
 

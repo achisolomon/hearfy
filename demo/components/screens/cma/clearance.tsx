@@ -6,6 +6,7 @@ import { CallSplit } from "./call-tile";
 import { ClearanceList } from "../../exam/clearance-list";
 import { reviewOutcome, reviewReferralReason, visitClearance, visitGates } from "@/lib/clearance";
 import { useReview } from "@/lib/review-store";
+import { useStory } from "../../shell/story-context";
 import { clinician } from "@/lib/mock-data";
 
 /**
@@ -33,6 +34,9 @@ export function CmaClearance({ next }: { next: () => void }) {
   // the visit is PENDING — and pending is not permission to start, so Maya
   // gets no "Start hearing test" button yet.
   const review = useReview();
+  // See the audiologist's screen: the referral needs its own beat, because
+  // `next()` from here is the hearing test.
+  const { goToScreen } = useStory();
   const outcome = reviewOutcome(review);
   const stopped = outcome === "stopped";
   const cleared = outcome === "cleared";
@@ -77,7 +81,7 @@ export function CmaClearance({ next }: { next: () => void }) {
               </div>
             </Card>
             <div className="mt-6">
-              <PrimaryButton onClick={next} className="bg-[#b42318] hover:bg-[#992018]">
+              <PrimaryButton onClick={() => goToScreen("cma-referral")} className="bg-[#b42318] hover:bg-[#992018]">
                 <PhoneCall size={17} aria-hidden />
                 Close the visit and hand over the referral
               </PrimaryButton>

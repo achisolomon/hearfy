@@ -55,10 +55,15 @@ function statusFor(retake: Retake, ordered: string): { left?: EarStatus; right?:
   return {};
 }
 
-function ExamJudgment({ id, beat, accepted, onAccept, retake, onRetake, ordered, instruction, cta, next, children }: {
+function ExamJudgment({ id, beat, accepted, onAccept, retake, onRetake, ordered, instruction, prompt, cta, next, children }: {
   id: string; beat: string; accepted: boolean; onAccept: () => void;
   retake: Retake; onRetake: (e: Retake) => void; ordered: string;
-  instruction: string; cta: string; next: () => void; children: React.ReactNode;
+  instruction: string;
+  /** What she is being asked to decide, in this step's own noun — captures
+      for the ear check, traces for tympanometry. Shared wording sent an
+      audiologist looking at two tympanograms a card about "captures". */
+  prompt: string;
+  cta: string; next: () => void; children: React.ReactNode;
 }) {
   const s = step(id);
   return (
@@ -80,7 +85,7 @@ function ExamJudgment({ id, beat, accepted, onAccept, retake, onRetake, ordered,
               ? instruction
               : accepted
               ? "Accepted. Maya can move the exam on."
-              : "Accept both captures, or send one ear back before the exam moves on."}
+              : prompt}
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <SecondaryButton onClick={() => onRetake(retake === "right" ? null : "right")}>
@@ -103,6 +108,7 @@ export function AudOtoscopy({ next }: { next: () => void }) {
       accepted={accepted} onAccept={() => setAccepted(true)}
       retake={retake} onRetake={setRetake} ordered="Retake ordered"
       instruction="Retake ordered — asking Maya to re-angle the scope up and back."
+      prompt="Accept both captures, or send one ear back before the exam moves on."
     >
       <OtoscopyStep framing="audiologist" status={statusFor(retake, "Retake ordered")} />
     </ExamJudgment>
@@ -118,6 +124,7 @@ export function AudTympanometry({ next }: { next: () => void }) {
       accepted={accepted} onAccept={() => setAccepted(true)}
       retake={retake} onRetake={setRetake} ordered="Re-run ordered"
       instruction="Re-run ordered — the seal broke, so the trace is not readable."
+      prompt="Accept both traces, or send one ear back before the exam moves on."
     >
       <TympanometryStep framing="audiologist" status={statusFor(retake, "Re-run ordered")} />
     </ExamJudgment>

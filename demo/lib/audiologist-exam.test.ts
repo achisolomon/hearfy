@@ -143,6 +143,17 @@ describe("her exam screens", () => {
     expect(SRC()).toMatch(/retake|re-run/i);
   });
 
+  /**
+   * Each step asks about its own artefact. The judgment card was shared
+   * wording, so the tympanometry screen showed an audiologist looking at two
+   * tympanograms a card asking her to accept "captures".
+   */
+  it("asks about traces on tympanometry and captures on the ear check", () => {
+    const src = SRC();
+    expect(src).toMatch(/prompt="Accept both captures/);
+    expect(src).toMatch(/prompt="Accept both traces/);
+  });
+
   /** The steps are shared, not re-drawn. */
   it("reuses the shared step components", () => {
     expect(SRC()).toMatch(/OtoscopyStep/);

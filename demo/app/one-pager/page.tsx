@@ -543,17 +543,46 @@ export default function OnePagerPage() {
 
               {/* A phone number, not a walkthrough link. The owner removed the
                   "walk through the product" button on 2026-09-02: the page's
-                  close should reach a person. `tel:` is the E.164 form so it
-                  dials from a phone, while the visible text keeps the readable
-                  spelling. The number is marked LTR because it opens with "+"
-                  and would otherwise reorder beside Hebrew text. */}
+                  close should reach a person.
+
+                  MOBILE vs DESKTOP, owner 2026-09-02: "only on mobile (on
+                  desktop it will not work)". `tel:` does nothing in a desktop
+                  browser — at best it opens an app-picker — so a button there
+                  is an affordance that fails when used. The number is the same
+                  either way; only its behaviour changes:
+
+                    - phone (< sm): a tappable teal button that dials.
+                    - desktop (>= sm): plain selectable text to read or copy.
+
+                  Both stack label-over-number. The button was one row at
+                  first, which fitted at desktop widths but broke at 390px:
+                  "Contact us" split across two lines and the number wrapped
+                  mid-way, as "+972-54- / 3003630". Caught by screenshot, not
+                  by the computed styles, which were correct throughout — so
+                  the number carries whitespace-nowrap and cannot break again.
+
+                  Done with `sm:` classes rather than JS so it survives the
+                  static export and is correct on first paint — a
+                  useMediaQuery would render the wrong one until it hydrates.
+                  Both branches read the SAME `CTA.contact`, so the number can
+                  never drift between them. */}
               <a
                 href={`tel:${CTA.contact.tel}`}
-                className="mt-6 inline-flex h-14 items-center justify-center gap-3 rounded-[16px] bg-brand-teal px-7 text-[16px] font-extrabold text-brand-navy"
+                className="mt-6 inline-flex flex-col items-start gap-1 rounded-[16px] bg-brand-teal px-6 py-4 text-[16px] font-extrabold text-brand-navy sm:pointer-events-none sm:mt-7 sm:gap-1 sm:rounded-none sm:bg-transparent sm:p-0"
               >
-                <Phone aria-hidden className="h-5 w-5" />
-                {CTA.contact.label}
-                <span dir="ltr" className="font-extrabold">
+                <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                  <Phone aria-hidden className="h-5 w-5 sm:h-4 sm:w-4 sm:text-brand-teal" />
+                  <span className="text-[13px] font-extrabold uppercase tracking-[0.16em] sm:text-[11px] sm:tracking-[0.2em] sm:text-brand-teal">
+                    {CTA.contact.label}
+                  </span>
+                </span>
+                {/* select-text re-enables selection on desktop, where the
+                    anchor itself is pointer-events-none so the dead tel: link
+                    cannot be clicked. */}
+                <span
+                  dir="ltr"
+                  className="whitespace-nowrap text-[22px] font-extrabold leading-tight tabular-nums sm:select-text sm:text-[26px] sm:tracking-[-0.01em] sm:text-white"
+                >
                   {CTA.contact.phone}
                 </span>
               </a>

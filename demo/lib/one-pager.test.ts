@@ -517,6 +517,68 @@ describe("the one-pager closes on a way to reach a person", () => {
     expect(CTA.contact.phone.replace(/[^\d+]/g, "")).toBe(CTA.contact.tel);
   });
 
+  /**
+   * `tel:` only works on a device that can place a call. Owner, 2026-09-02:
+   * "only on mobile (on desktop it will not work)" — so the button is a button
+   * on a phone and plain, selectable text on a desktop, where the link is
+   * disabled rather than left to fail when clicked.
+   *
+   * The invariant, not the classes: the desktop branch must neutralise the
+   * link and must not keep the button's fill. A later "simplification" back to
+   * one button for every viewport is the regression this catches.
+   */
+  it("does not offer a dead tel: button on desktop", () => {
+    const stripped = stripComments(PAGE_SRC);
+    const anchor = stripped.slice(
+      stripped.indexOf("<a", stripped.indexOf("CTA.contact.tel") - 200),
+      stripped.indexOf("</a>", stripped.indexOf("CTA.contact.tel")),
+    );
+    expect(anchor, "the tel: link is still clickable on desktop, where it does nothing")
+      .toMatch(/sm:pointer-events-none/);
+    expect(anchor, "the desktop branch still paints the mobile button's fill")
+      .toMatch(/sm:bg-transparent/);
+  });
+
+  /**
+   * The number must be readable on desktop even though the link is dead —
+   * pointer-events-none on its own would leave it visible but unselectable, so
+   * a desktop reader could not copy it.
+   */
+  it("keeps the number selectable where it cannot be dialled", () => {
+    expect(stripComments(PAGE_SRC)).toMatch(/sm:select-text/);
+  });
+
+  /**
+   * The phone number must never wrap.
+   *
+   * Found by screenshot at 390px, 2026-09-02: the button laid out as one row,
+   * so "Contact us" split over two lines and the number broke mid-way, as
+   * "+972-54- / 3003630" — a number that reads as two. Every computed style
+   * was correct, so only the picture showed it.
+   *
+   * A broken phone number is worse than an ugly one: it can be misread and
+   * misdialled. The nowrap is therefore pinned.
+   */
+  it("never lets the phone number break across lines", () => {
+    const stripped = stripComments(PAGE_SRC);
+    const numSpan = stripped.slice(
+      stripped.lastIndexOf("<span", stripped.indexOf("CTA.contact.phone")),
+      stripped.indexOf("CTA.contact.phone"),
+    );
+    expect(numSpan, "the phone number can wrap mid-number again")
+      .toMatch(/whitespace-nowrap/);
+  });
+
+  /**
+   * Both viewports render from the same source, so the number cannot drift
+   * between them — the failure mode of duplicating the markup per breakpoint.
+   */
+  it("renders one number for both viewports", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect((stripped.match(/CTA\.contact\.phone/g) ?? []).length).toBe(1);
+    expect((stripped.match(/CTA\.contact\.tel/g) ?? []).length).toBe(1);
+  });
+
   it("renders the number as a tel: link", () => {
     const stripped = stripComments(PAGE_SRC);
     expect(stripped, "the phone number is not dialable").toMatch(/href=\{`tel:\$\{[^}]+\}`\}/);

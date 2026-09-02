@@ -32,3 +32,36 @@
    "standard"/"large"/"larger" steps and applies the same clamp, so the
    in-product control remains the deliberate way to get larger text. */
 html { font-size: clamp(18px, 1.125rem, 22px); }
+
+/* The one-pager's living brand mark.
+   ------------------------------------------------------------------
+   The shared BrandLogo plays its entry once and then holds. On the
+   one-pager the owner asked for a mark that keeps moving, so the three
+   sound bars breathe like a level meter. Scoped to `.op-live-logo` so
+   the same component stays perfectly still everywhere else in the demo
+   — a chrome-bar logo pulsing on all 27 screens would be the toy-app
+   register PRODUCT.md rules out.
+
+   The mark's SVG is: arc, bar, bar, bar, dot. `rect` targets exactly the
+   three bars, so no change to the shared component is needed.
+
+   `transform-box: fill-box` + a 50% origin makes each bar scale about its
+   own centre; without it the origin is the SVG's top-left and the bars
+   slide instead of breathing. The entry animation sets its own transforms
+   via framer, so this runs only after it settles (1s delay) — otherwise
+   the two fight over the same property on first paint. */
+@media (prefers-reduced-motion: no-preference) {
+  .op-live-logo svg rect {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: op-bar 1.9s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+  .op-live-logo svg rect:nth-of-type(2) { animation-delay: 1.16s; }
+  .op-live-logo svg rect:nth-of-type(3) { animation-delay: 1.32s; }
+}
+
+@keyframes op-bar {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(0.55); }
+}

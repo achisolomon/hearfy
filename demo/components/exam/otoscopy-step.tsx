@@ -56,10 +56,21 @@ export interface EarStatus {
  * One capture per ear (corrections sheet 2026-08-31, item 3) — never a single
  * image standing in for both.
  */
-export function OtoscopyStep({ framing, status }: {
+export function OtoscopyStep({ framing, status, earAction }: {
   framing: Framing;
   /** Per-ear pill override; falls back to the mock's own quality readout. */
   status?: { left?: EarStatus; right?: EarStatus };
+  /**
+   * An optional control rendered inside each ear's own card — the
+   * audiologist's send-back sits under the ear it acts on (owner,
+   * 2026-09-02), so there is no doubt which ear is being returned. One
+   * shared button could only ever name one ear, which made the other
+   * un-rejectable.
+   *
+   * Optional because only her screens pass it: the CMA's and the patient's
+   * render exactly as before.
+   */
+  earAction?: (side: "left" | "right") => React.ReactNode;
 }) {
   // Anatomical order: the patient's left ear renders in the left column and
   // the right ear on the right, matching how a clinician reads a chart.
@@ -84,6 +95,7 @@ export function OtoscopyStep({ framing, status }: {
                 <div className="mt-2">
                   <StatusPill tone={tone}>{label}</StatusPill>
                 </div>
+                {earAction && <div className="mt-3">{earAction(ear.side)}</div>}
               </div>
             </Card>
           );
@@ -94,7 +106,7 @@ export function OtoscopyStep({ framing, status }: {
           {framing === "cma"
             ? "Angle the scope slightly up and back. One clear capture per ear; retake if the view is obscured."
             : framing === "audiologist"
-            ? "Both captures are in. Accept them, or send one back for a retake before the exam moves on."
+            ? "Both captures are in. Accept them, or send either ear back for a retake before the exam moves on."
             : "Both ears captured, one image each. Your audiologist reviews the images and explains what they show."}
         </p>
       </Card>

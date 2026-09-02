@@ -38,26 +38,70 @@ function step(id: string) {
   };
 }
 
+type Side = "left" | "right";
+
 /**
- * Which ear, if any, she has sent back. `null` is the untouched state — both
- * captures standing as the mock reported them.
+ * Which ears she has sent back — a SET, not a single choice (owner,
+ * 2026-09-02: "she also needs to be able to send the left ear").
+ *
+ * It was one `"left" | "right" | null` driven by one shared button, which
+ * could only ever name one ear and left the other un-rejectable. Either ear
+ * can come back badly, or both — and in this data the LEFT canal is the one
+ * with cerumen, so the un-returnable ear was precisely the one most likely to
+ * need returning.
  *
  * Local state on purpose: this is a demo affordance, not story state. The beat
- * advances on the primary button either way, and nothing outside this screen
- * needs to know. Crucially it is NOT a write into `lib/mock-data`, which the
- * CMA's and the patient's screens read from the same import.
+ * advances either way, and nothing outside this screen needs to know. Crucially
+ * it is NOT a write into `lib/mock-data`, which the CMA's and the patient's
+ * screens read from the same import — her sending an ear back must not change
+ * their screens.
  */
-type Retake = "left" | "right" | null;
+type SentBack = ReadonlySet<Side>;
 
-function statusFor(retake: Retake, ordered: string): { left?: EarStatus; right?: EarStatus } {
-  if (retake === "left") return { left: { tone: "amber", label: ordered } };
-  if (retake === "right") return { right: { tone: "amber", label: ordered } };
-  return {};
+function statusFor(sent: SentBack, ordered: string): { left?: EarStatus; right?: EarStatus } {
+  const out: { left?: EarStatus; right?: EarStatus } = {};
+  if (sent.has("left")) out.left = { tone: "amber", label: ordered };
+  if (sent.has("right")) out.right = { tone: "amber", label: ordered };
+  return out;
 }
 
-function ExamJudgment({ id, beat, accepted, onAccept, retake, onRetake, ordered, instruction, prompt, cta, next, children }: {
+function toggle(sent: SentBack, side: Side): Set<Side> {
+  const next = new Set(sent);
+  if (next.has(side)) next.delete(side);
+  else next.add(side);
+  return next;
+}
+
+/** Names the ears she has returned, so the summary says which, not how many. */
+function named(sent: SentBack): string {
+  if (sent.size === 2) return "Both ears";
+  const [only] = [...sent];
+  return `The ${only} ear`;
+}
+
+/** One ear's send-back control, rendered inside that ear's own card. */
+function EarButton({ side, sent, onToggle, sendLabel }: {
+  side: Side; sent: SentBack; onToggle: (s: Side) => void; sendLabel: string;
+}) {
+  const on = sent.has(side);
+  return (
+    <SecondaryButton
+      onClick={() => onToggle(side)}
+      className={on ? "border-brand-teal text-teal-ink" : ""}
+    >
+      {on ? "Cancel" : sendLabel}
+    </SecondaryButton>
+  );
+}
+
+function ExamJudgment({
+  id, beat, accepted, onAccept, sent, ordered, instruction, prompt, cta, next, children,
+}: {
   id: string; beat: string; accepted: boolean; onAccept: () => void;
-  retake: Retake; onRetake: (e: Retake) => void; ordered: string;
+  sent: SentBack;
+  /** The pill wording on a returned ear — "Retake ordered" / "Re-run ordered". */
+  ordered: string;
+  /** What she is telling Maya to do, shown once an ear is returned. */
   instruction: string;
   /** What she is being asked to decide, in this step's own noun — captures
       for the ear check, traces for tympanometry. Shared wording sent an
@@ -66,32 +110,40 @@ function ExamJudgment({ id, beat, accepted, onAccept, retake, onRetake, ordered,
   cta: string; next: () => void; children: React.ReactNode;
 }) {
   const s = step(id);
+  const any = sent.size > 0;
+  // "The left ear — retake ordered. Asking Maya to re-angle the scope."
+  const verdict = any ? `${named(sent)} — ${ordered.toLowerCase()}. ${instruction}` : "";
   return (
     <CallShell header={
       <PageHeader
         eyebrow={s.eyebrow}
         title={s.title}
-        subtitle={retake ? instruction : "Both ears are in — accept them or send one back."}
+        subtitle={any ? verdict : "Both ears are in — accept them, or send either one back."}
       />
     }>
       {/* The one shared video geometry: her tile sits in the same 380px column
          at the same size as the call on every other screen of every role. */}
-      <VideoSplit video={<HomeFeed beat={beat} active={!retake} />}>
+      <VideoSplit video={<HomeFeed beat={beat} active={!any} />}>
+        {/* Each ear carries its OWN send-back control, inside its own card
+           (owner, 2026-09-02), so the button sits under the ear it judges and
+           names no ear at all — which ear it acts on is its position. */}
         {children}
         <Card className="mt-4 p-4">
           <b className="text-sm">Your call</b>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            {retake
-              ? instruction
+            {any
+              ? verdict
               : accepted
               ? "Accepted. Maya can move the exam on."
               : prompt}
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <SecondaryButton onClick={() => onRetake(retake === "right" ? null : "right")}>
-              {retake === "right" ? "Cancel retake" : "Send right ear back"}
-            </SecondaryButton>
-            <PrimaryButton onClick={() => { onAccept(); next(); }}>{cta}</PrimaryButton>
+          <div className="mt-3">
+            {/* Sending an ear back does not block the walkthrough: the demo
+                still has to move. It changes what the button SAYS, so nobody
+                reads "accept both" over an ear she just rejected. */}
+            <PrimaryButton onClick={() => { onAccept(); next(); }}>
+              {any ? "Continue with the exam" : cta}
+            </PrimaryButton>
           </div>
         </Card>
       </VideoSplit>
@@ -100,33 +152,49 @@ function ExamJudgment({ id, beat, accepted, onAccept, retake, onRetake, ordered,
 }
 
 export function AudOtoscopy({ next }: { next: () => void }) {
-  const [retake, setRetake] = useState<Retake>(null);
+  const [sent, setSent] = useState<SentBack>(new Set<Side>());
   const [accepted, setAccepted] = useState(false);
+  const onToggle = (side: Side) => setSent(s => toggle(s, side));
   return (
     <ExamJudgment
       id="otoscopy" beat="otoscopy" cta="Accept both captures" next={next}
       accepted={accepted} onAccept={() => setAccepted(true)}
-      retake={retake} onRetake={setRetake} ordered="Retake ordered"
-      instruction="Retake ordered — asking Maya to re-angle the scope up and back."
-      prompt="Accept both captures, or send one ear back before the exam moves on."
+      sent={sent} ordered="Retake ordered"
+      instruction="Asking Maya to re-angle the scope up and back."
+      prompt="Accept both captures, or send either ear back before the exam moves on."
     >
-      <OtoscopyStep framing="audiologist" status={statusFor(retake, "Retake ordered")} />
+      <OtoscopyStep
+        framing="audiologist"
+        status={statusFor(sent, "Retake ordered")}
+        earAction={side => (
+          <EarButton side={side} sent={sent} onToggle={onToggle}
+            sendLabel="Send back for a retake" />
+        )}
+      />
     </ExamJudgment>
   );
 }
 
 export function AudTympanometry({ next }: { next: () => void }) {
-  const [retake, setRetake] = useState<Retake>(null);
+  const [sent, setSent] = useState<SentBack>(new Set<Side>());
   const [accepted, setAccepted] = useState(false);
+  const onToggle = (side: Side) => setSent(s => toggle(s, side));
   return (
     <ExamJudgment
       id="tympanometry" beat="tympanometry" cta="Accept both traces" next={next}
       accepted={accepted} onAccept={() => setAccepted(true)}
-      retake={retake} onRetake={setRetake} ordered="Re-run ordered"
-      instruction="Re-run ordered — the seal broke, so the trace is not readable."
-      prompt="Accept both traces, or send one ear back before the exam moves on."
+      sent={sent} ordered="Re-run ordered"
+      instruction="The seal broke, so the trace is not readable."
+      prompt="Accept both traces, or send either ear back before the exam moves on."
     >
-      <TympanometryStep framing="audiologist" status={statusFor(retake, "Re-run ordered")} />
+      <TympanometryStep
+        framing="audiologist"
+        status={statusFor(sent, "Re-run ordered")}
+        earAction={side => (
+          <EarButton side={side} sent={sent} onToggle={onToggle}
+            sendLabel="Send back for a re-run" />
+        )}
+      />
     </ExamJudgment>
   );
 }

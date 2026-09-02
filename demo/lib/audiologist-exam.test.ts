@@ -166,6 +166,36 @@ describe("her exam screens", () => {
   });
 
   /**
+   * EITHER ear can be sent back, not just one (owner, 2026-09-02: "she also
+   * needs to be able to send the left ear").
+   *
+   * The first cut had a single shared button that named the right ear, so the
+   * left was un-rejectable — and the left canal is the one carrying cerumen in
+   * this data, i.e. exactly the ear most likely to need returning. The control
+   * now renders per ear via `earAction`, so it names no side at all: which ear
+   * it acts on is its position in the grid.
+   */
+  it("lets her send back either ear, not one hardcoded side", () => {
+    const src = SRC();
+    // A set, so both ears can be out at once — not a single-choice union.
+    expect(src).toMatch(/ReadonlySet<Side>/);
+    // The control is per-ear, handed to the step to render inside each card.
+    expect(src).toMatch(/earAction=/);
+    // And it must not hardcode a side in the button copy.
+    expect(src).not.toMatch(/Send right ear back|Send left ear back/);
+  });
+
+  /** Both steps must accept the per-ear slot, or only one exam gets it. */
+  it("wires the per-ear control into both exam steps", () => {
+    for (const f of ["components/exam/otoscopy-step.tsx",
+                     "components/exam/tympanometry-step.tsx"]) {
+      const src = sourceOf(f);
+      expect(src, f).toMatch(/earAction\?:/);
+      expect(src, f).toMatch(/earAction\(ear\.side\)/);
+    }
+  });
+
+  /**
    * Each step asks about its own artefact. The judgment card was shared
    * wording, so the tympanometry screen showed an audiologist looking at two
    * tympanograms a card asking her to accept "captures".

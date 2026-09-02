@@ -26,10 +26,12 @@ function Tympanogram({ peak, shift, color }: { peak: number; shift: number; colo
 }
 
 /** One tympanogram per ear (corrections sheet 2026-08-31, item 5). */
-export function TympanometryStep({ framing, status }: {
+export function TympanometryStep({ framing, status, earAction }: {
   framing: Framing;
   /** Per-ear pill override; see `EarStatus` in otoscopy-step.tsx. */
   status?: { left?: EarStatus; right?: EarStatus };
+  /** Per-ear control, rendered inside that ear's card. See `OtoscopyStep`. */
+  earAction?: (side: "left" | "right") => React.ReactNode;
 }) {
   // Left ear in the left column, right ear on the right (see OtoscopyStep).
   const ears = [
@@ -54,6 +56,7 @@ export function TympanometryStep({ framing, status }: {
               <div className="mt-2">
                 <StatusPill tone={tone}>{label}</StatusPill>
               </div>
+              {earAction && <div className="mt-3">{earAction(ear.side)}</div>}
             </Card>
           );
         })}
@@ -63,7 +66,7 @@ export function TympanometryStep({ framing, status }: {
           {framing === "cma"
             ? "Seal the probe tip in the canal and hold still through the pressure sweep. One trace per ear; re-run if the seal breaks."
             : framing === "audiologist"
-            ? "Both traces are in. Accept them, or send one back for a re-run before the exam moves on."
+            ? "Both traces are in. Accept them, or send either ear back for a re-run before the exam moves on."
             : "A gentle pressure test of how your eardrums move — one result for each ear. No response is needed from you."}
         </p>
       </Card>

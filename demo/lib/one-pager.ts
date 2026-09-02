@@ -50,7 +50,7 @@ export const HERO = {
   /** Slide 6's line, which is the whole thesis in one sentence. */
   thesis: "The operating platform for at-home hearing care.",
   lede:
-    "A full diagnostic hearing exam at your kitchen table. A Certified Medical Assistant brings the clinic to you; a licensed audiologist runs the exam live from their office. No booth, no waiting list, no trip across town.",
+    "A full diagnostic hearing exam, turning every home into a point of care. A Certified Medical Assistant brings the clinic-grade equipment to the patient; a licensed audiologist runs the exam live from their office. No booth, no waiting list, no trip across town.",
   chips: ["Private", "On demand", "Clinical-guided"],
 };
 

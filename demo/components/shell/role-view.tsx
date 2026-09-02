@@ -8,6 +8,7 @@ import { CmaCalibration } from "../screens/cma/setup";
 import { CmaOtoscopy, CmaTympanometry, CmaPureTone, CmaSpeech, CmaBone } from "../screens/cma/exam";
 import { CmaHandoff } from "../screens/cma/handoff";
 import { AudPanel, AudMonitor } from "../screens/audiologist/supervision";
+import { AudOtoscopy, AudTympanometry } from "../screens/audiologist/exam";
 import { AudReview, AudSign } from "../screens/audiologist/review";
 import { AudConsult, AudPrescription } from "../screens/audiologist/consult";
 import { CmaStock, CmaTryOn, CmaSigning, CmaActivate, CmaCloseout } from "../screens/cma/suitcase";
@@ -64,6 +65,8 @@ export function RoleView() {
   if (role === "audiologist") {
     switch (id) {
       case "aud-panel": return <AudPanel />;
+      case "aud-otoscopy": return <AudOtoscopy next={advanceInRole} />;
+      case "aud-tympanometry": return <AudTympanometry next={advanceInRole} />;
       case "aud-monitor": return <AudMonitor next={advanceInRole} />;
       case "aud-review": return <AudReview next={advanceInRole} />;
       case "aud-sign": return <AudSign next={advanceInRole} />;

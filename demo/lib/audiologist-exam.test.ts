@@ -149,3 +149,24 @@ describe("her exam screens", () => {
     expect(SRC()).toMatch(/TympanometryStep/);
   });
 });
+
+describe("routing", () => {
+  /**
+   * Every screen id the script names must resolve to a real component. An
+   * unrouted id does not throw — it renders the "not built yet" stub, so the
+   * failure is silent until someone walks the demo.
+   */
+  it("routes both of her new screens", () => {
+    const src = sourceOf("components/shell/role-view.tsx");
+    expect(src).toMatch(/case "aud-otoscopy": return <AudOtoscopy/);
+    expect(src).toMatch(/case "aud-tympanometry": return <AudTympanometry/);
+  });
+
+  it("leaves no audiologist screen in the script unrouted", () => {
+    const src = sourceOf("components/shell/role-view.tsx");
+    const ids = new Set(BEATS.map(b => String(b.screens.audiologist)));
+    for (const id of ids) {
+      expect(src, `${id} falls through to Stub`).toMatch(`case "${id}":`);
+    }
+  });
+});

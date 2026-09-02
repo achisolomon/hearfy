@@ -482,7 +482,7 @@ describe("the page is complete enough to stand alone", () => {
     expect(HOW.steps.length).toBe(5);
     expect(SYSTEM.parts.length).toBe(3);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
-    expect(CTA.action.length).toBeGreaterThan(0);
+    expect(CTA.contact.phone.length).toBeGreaterThan(0);
   });
 
   /** The visit steps are numbered in the UI; the numbering must be in order. */
@@ -667,6 +667,108 @@ describe("motion is calm and accessible", () => {
    */
   it("lands the counter on the exact quoted value", () => {
     expect(MOTION_SRC).toMatch(/setShown\(value\)/);
+  });
+});
+
+/**
+ * The page closes on a way to reach a person, not a link into the demo.
+ *
+ * Owner, 2026-09-02: "remove the button to walk to the product ... instead of
+ * that, put contact us and write the phone number". The walkthrough button is
+ * the obvious thing for a later editor to restore — it is the only outbound
+ * link a marketing page would normally carry — so the removal is pinned rather
+ * than left to memory.
+ *
+ * These assert the INVARIANT (the close reaches a human by phone), not the
+ * wording: the label and the number may be re-edited freely.
+ */
+describe("the one-pager closes on a way to reach a person", () => {
+  it("offers a dialable phone number", () => {
+    // E.164 for the href, so a phone actually dials it.
+    expect(CTA.contact.tel).toMatch(/^\+[1-9]\d{7,14}$/);
+    // The visible spelling must be the same number, punctuation aside.
+    expect(CTA.contact.phone.replace(/[^\d+]/g, "")).toBe(CTA.contact.tel);
+  });
+
+  /**
+   * `tel:` only works on a device that can place a call. Owner, 2026-09-02:
+   * "only on mobile (on desktop it will not work)" — so the button is a button
+   * on a phone and plain, selectable text on a desktop, where the link is
+   * disabled rather than left to fail when clicked.
+   *
+   * The invariant, not the classes: the desktop branch must neutralise the
+   * link and must not keep the button's fill. A later "simplification" back to
+   * one button for every viewport is the regression this catches.
+   */
+  it("does not offer a dead tel: button on desktop", () => {
+    const stripped = stripComments(PAGE_SRC);
+    const anchor = stripped.slice(
+      stripped.indexOf("<a", stripped.indexOf("CTA.contact.tel") - 200),
+      stripped.indexOf("</a>", stripped.indexOf("CTA.contact.tel")),
+    );
+    expect(anchor, "the tel: link is still clickable on desktop, where it does nothing")
+      .toMatch(/sm:pointer-events-none/);
+    expect(anchor, "the desktop branch still paints the mobile button's fill")
+      .toMatch(/sm:bg-transparent/);
+  });
+
+  /**
+   * The number must be readable on desktop even though the link is dead —
+   * pointer-events-none on its own would leave it visible but unselectable, so
+   * a desktop reader could not copy it.
+   */
+  it("keeps the number selectable where it cannot be dialled", () => {
+    expect(stripComments(PAGE_SRC)).toMatch(/sm:select-text/);
+  });
+
+  /**
+   * The phone number must never wrap.
+   *
+   * Found by screenshot at 390px, 2026-09-02: the button laid out as one row,
+   * so "Contact us" split over two lines and the number broke mid-way, as
+   * "+972-54- / 3003630" — a number that reads as two. Every computed style
+   * was correct, so only the picture showed it.
+   *
+   * A broken phone number is worse than an ugly one: it can be misread and
+   * misdialled. The nowrap is therefore pinned.
+   */
+  it("never lets the phone number break across lines", () => {
+    const stripped = stripComments(PAGE_SRC);
+    const numSpan = stripped.slice(
+      stripped.lastIndexOf("<span", stripped.indexOf("CTA.contact.phone")),
+      stripped.indexOf("CTA.contact.phone"),
+    );
+    expect(numSpan, "the phone number can wrap mid-number again")
+      .toMatch(/whitespace-nowrap/);
+  });
+
+  /**
+   * Both viewports render from the same source, so the number cannot drift
+   * between them — the failure mode of duplicating the markup per breakpoint.
+   */
+  it("renders one number for both viewports", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect((stripped.match(/CTA\.contact\.phone/g) ?? []).length).toBe(1);
+    expect((stripped.match(/CTA\.contact\.tel/g) ?? []).length).toBe(1);
+  });
+
+  it("renders the number as a tel: link", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect(stripped, "the phone number is not dialable").toMatch(/href=\{`tel:\$\{[^}]+\}`\}/);
+    expect(stripped, "the phone number is hardcoded in the markup")
+      .not.toMatch(/tel:\+\d/);
+  });
+
+  /**
+   * The demo walkthrough button. Its old copy ("Walk through the product") and
+   * any link back into the demo root are both barred — restoring either would
+   * undo the owner's change.
+   */
+  it("no longer links into the product demo", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect(SHIPPED).not.toMatch(/walk through the product/i);
+    expect(stripped, "the CTA links into the demo again instead of offering contact")
+      .not.toMatch(/href=\{asset\("\/"\)\}/);
   });
 });
 

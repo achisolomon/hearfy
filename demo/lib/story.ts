@@ -532,3 +532,38 @@ export const CONDITIONAL_BEATS = ["referral"] as const;
 export function isConditionalBeat(i: number): boolean {
   return (CONDITIONAL_BEATS as readonly string[]).includes(BEATS[clamp(i)].id);
 }
+
+/**
+ * Who Next hands to, while sitting on a terminal beat.
+ *
+ * A stopped visit still has a story to tell — it is just told sideways rather
+ * than forwards. Dr. Reed decides and issues the referral, Maya closes the
+ * visit down in the room, and Alex is told what was found and where to take
+ * it. Three screens, one beat.
+ *
+ * The first cut froze Next entirely on a terminal beat, which conflated two
+ * different things: escaping the beat (into the hearing test, results and sale
+ * that the referral has ruled out — still forbidden) and walking the roles
+ * WITHIN it (the point of the beat — wrongly blocked). A viewer could only see
+ * the CMA's and the patient's referral screens by clicking role tabs, so on
+ * the guided walk they did not exist (owner, 2026-09-02: "when I click on
+ * next, nothing happens").
+ *
+ * The order is the order the referral actually happens in: the clinician
+ * decides, the CMA carries it out in the room, the patient receives it.
+ * Returns null at the end of the chain — the walk stops there rather than
+ * looping, because a stopped visit does not resume.
+ */
+export const TERMINAL_ROLE_ORDER: Role[] = ["audiologist", "cma", "patient"];
+
+export function nextRoleOnTerminalBeat(role: Role): Role | null {
+  const i = TERMINAL_ROLE_ORDER.indexOf(role);
+  if (i === -1 || i === TERMINAL_ROLE_ORDER.length - 1) return null;
+  return TERMINAL_ROLE_ORDER[i + 1];
+}
+
+export function prevRoleOnTerminalBeat(role: Role): Role | null {
+  const i = TERMINAL_ROLE_ORDER.indexOf(role);
+  if (i <= 0) return null;
+  return TERMINAL_ROLE_ORDER[i - 1];
+}

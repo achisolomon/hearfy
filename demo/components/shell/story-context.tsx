@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { isTerminalBeat,
+import { prevRoleOnTerminalBeat, nextRoleOnTerminalBeat, isTerminalBeat,
   BEATS,
   beatForRoleSwitch,
   beatForScreenNear,
@@ -114,12 +114,23 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
    * happens to be idempotent, which is not a property worth depending on.
    */
   const next = useCallback(() => {
-    // A stopped visit ends here. The beats after the referral are the hearing
-    // test, the results and the sale — all of them ruled out by the referral
-    // itself, so Next must not walk into them (owner, 2026-09-02). Guarded at
-    // the pointer rather than per-screen: `isTerminalBeat` is the one fact,
-    // and every forward path in this file goes through here.
-    if (isTerminalBeat(beat)) return;
+    // A stopped visit never advances to another BEAT: the ones after the
+    // referral are the hearing test, the results and the sale, all ruled out
+    // by the referral itself. But it still has a story — told across the three
+    // roles at this one beat, in the order the referral happens: the clinician
+    // decides, the CMA closes the visit in the room, the patient is told what
+    // was found. Next walks that, then stops.
+    //
+    // Freezing Next outright (the first cut) conflated leaving the beat with
+    // walking within it, so the CMA's and patient's referral screens were
+    // unreachable on the guided walk — "when I click on next, nothing happens"
+    // (owner, 2026-09-02). The handoff is announced like any other, so the
+    // persona change is visible rather than silent.
+    if (isTerminalBeat(beat)) {
+      const to = nextRoleOnTerminalBeat(role);
+      if (to) { setHandoff(to); setRoleState(to); }
+      return;
+    }
     // Solo: walk only this role's own beats; never switch role — EXCEPT at a
     // beat whose entire purpose is another persona acting while the current
     // persona is explicitly a passive mirror (soloHandoffAt, lib/story.ts).
@@ -184,6 +195,14 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
    * only that role's own beats.
    */
   const back = useCallback(() => {
+    // Mirror of `next()` on a terminal beat: step back through the roles at
+    // this beat before leaving it, so Back undoes exactly what Next did rather
+    // than skipping the whole referral in one press.
+    if (isTerminalBeat(beat) && mode !== "solo") {
+      const to = prevRoleOnTerminalBeat(role);
+      if (to) { setHandoff(to); setRoleState(to); return; }
+      // At the head of the chain, fall through and leave the beat normally.
+    }
     if (mode === "solo") {
       setBeat(prevBeatForRole(beat, role));
       return;
@@ -198,8 +217,9 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
   }, [beat, mode, role]);
 
   const advanceInRole = useCallback(() => {
-    // Same terminal guard as `next()`: no in-screen control may walk out of a
-    // stopped visit either.
+    // In-screen controls never switch persona, so on a terminal beat there is
+    // simply nowhere for one to go — unlike the chrome's Next above, which is
+    // allowed to hand between roles. Kept as a plain stop.
     if (isTerminalBeat(beat)) return;
     setBeat(nextBeatForRole(beat, role));
   }, [beat, role]);

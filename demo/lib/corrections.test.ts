@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BEATS, ROLES, beatIndexById, isConditionalBeat, isTerminalBeat, nextBeat, nextBeatForRole, prevBeat } from "./story";
+import { BEATS, ROLES, TERMINAL_ROLE_ORDER, beatIndexById, isConditionalBeat, isTerminalBeat, nextBeat, nextBeatForRole, nextRoleOnTerminalBeat, prevBeat, prevRoleOnTerminalBeat } from "./story";
 import { EXAM_STEPS } from "./exam";
 import { clearanceOf, visitClearance, visitGates } from "./clearance";
 import { compareCategories, devices, deviceDetail, tiers } from "./mock-data";
@@ -691,11 +691,53 @@ describe("the referral termination beat", () => {
     expect(isTerminalBeat(beatIndexById("puretone"))).toBe(false);
   });
 
-  it("guards both forward paths in the shell", () => {
+  it("guards every forward path in the shell", () => {
     const src = sourceOf("components/shell/story-context.tsx");
-    // Both next() and advanceInRole() must bail on a terminal beat.
-    expect(src.match(/if \(isTerminalBeat\(beat\)\) return;/g)?.length ?? 0)
-      .toBeGreaterThanOrEqual(2);
+    // Both forward paths consult the terminal check. `next()` hands between
+    // the roles AT the beat (see below) and `advanceInRole` simply stops, but
+    // neither may call setBeat — which is what leaving the beat would take.
+    expect(src.match(/isTerminalBeat\(beat\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(src).toMatch(/if \(isTerminalBeat\(beat\)\) return;/); // advanceInRole
+    // The terminal branch of next() must not move the pointer.
+    const branch = src.slice(src.indexOf("if (isTerminalBeat(beat)) {"));
+    const body = branch.slice(0, branch.indexOf("\n    }") + 6);
+    expect(body, "the terminal branch must not setBeat").not.toMatch(/setBeat/);
+    expect(body, "it hands to the next role instead").toMatch(/nextRoleOnTerminalBeat/);
+  });
+
+  // Owner, 2026-09-02: "after I click next I expect to go to the CMA and see
+  // a similar page, and then the patient's screen with the results."
+  //
+  // The first cut froze Next on the terminal beat, which conflated leaving the
+  // beat (forbidden) with walking the roles within it (the whole point). The
+  // CMA's and patient's referral screens were then unreachable on the guided
+  // walk — "when I click on next, nothing happens".
+  it("walks the three referral screens in the order the referral happens", () => {
+    expect(TERMINAL_ROLE_ORDER).toEqual(["audiologist", "cma", "patient"]);
+    expect(nextRoleOnTerminalBeat("audiologist")).toBe("cma");
+    expect(nextRoleOnTerminalBeat("cma")).toBe("patient");
+  });
+
+  // The walk stops at the patient rather than looping: a stopped visit does
+  // not resume, and a loop would read as the demo continuing.
+  it("stops at the patient rather than looping", () => {
+    expect(nextRoleOnTerminalBeat("patient")).toBeNull();
+  });
+
+  it("steps back through the same chain", () => {
+    expect(prevRoleOnTerminalBeat("patient")).toBe("cma");
+    expect(prevRoleOnTerminalBeat("cma")).toBe("audiologist");
+    // At the head, Back leaves the beat normally rather than sticking.
+    expect(prevRoleOnTerminalBeat("audiologist")).toBeNull();
+  });
+
+  // Every role in the walk must actually have a screen at the beat, or Next
+  // hands to a stub.
+  it("gives every role in the walk a real screen", () => {
+    const beat = BEATS[beatIndexById("referral")];
+    for (const role of TERMINAL_ROLE_ORDER) {
+      expect(beat.screens[role], `${role} needs a referral screen`).toMatch(/referral/);
+    }
   });
 
   // The stop buttons must GO somewhere, not call next().

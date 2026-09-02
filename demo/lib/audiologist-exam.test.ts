@@ -73,3 +73,35 @@ describe("her framing on the shared step components", () => {
     expect(hers.slice(0, 300)).not.toMatch(/Angle the scope/);
   });
 });
+
+describe("the retake override", () => {
+  /**
+   * The override must never write to `lib/mock-data`: it is module state the
+   * CMA's and the patient's screens read from the same import, so a mutation
+   * there would change two other roles' screens as a side effect of her
+   * clicking a button on hers.
+   */
+  it("passes status down as a prop instead of mutating mock-data", () => {
+    for (const f of ["components/exam/otoscopy-step.tsx",
+                     "components/exam/tympanometry-step.tsx"]) {
+      const src = sourceOf(f);
+      expect(src, f).toMatch(/status\?:/);
+      // No assignment into the imported mock objects.
+      expect(src, f).not.toMatch(/\b(otoscopy|tympanometry)\.(left|right)\s*=/);
+    }
+  });
+
+  it("keeps the mock values as the default so other roles are unaffected", () => {
+    for (const f of ["components/exam/otoscopy-step.tsx",
+                     "components/exam/tympanometry-step.tsx"]) {
+      const src = sourceOf(f);
+      // The override is read off `status` and then EVERY use of it falls back
+      // to the mock with `??`. Asserting the fallback rather than one spelling
+      // of it: the point is that an absent override changes nothing for the
+      // CMA and the patient, who pass no `status` at all.
+      expect(src, f).toMatch(/const over = status\?\.\[/);
+      expect(src, f).toMatch(/over\?\.tone \?\? \w+\.tone/);
+      expect(src, f).toMatch(/over\?\.label \?\?/);
+    }
+  });
+});

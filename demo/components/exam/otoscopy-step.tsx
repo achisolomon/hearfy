@@ -39,32 +39,55 @@ export function EarImage({ hue }: { hue: "warm" | "cool" }) {
 }
 
 /**
+ * What one ear's pill says, when someone other than the mock decides it.
+ *
+ * The audiologist's screen owns this: she can send an ear back for a retake,
+ * and that has to show. It arrives as a PROP rather than a write into
+ * `lib/mock-data`, because that module is shared state — the CMA's screen and
+ * the patient's read the same object, and a mutation there would change their
+ * screens as a side effect of her clicking a button on hers.
+ */
+export interface EarStatus {
+  tone: "green" | "amber";
+  label: string;
+}
+
+/**
  * One capture per ear (corrections sheet 2026-08-31, item 3) — never a single
  * image standing in for both.
  */
-export function OtoscopyStep({ framing }: { framing: Framing }) {
+export function OtoscopyStep({ framing, status }: {
+  framing: Framing;
+  /** Per-ear pill override; falls back to the mock's own quality readout. */
+  status?: { left?: EarStatus; right?: EarStatus };
+}) {
   // Anatomical order: the patient's left ear renders in the left column and
   // the right ear on the right, matching how a clinician reads a chart.
   const ears = [
-    { label: "Left ear", hue: "cool" as const, ...otoscopy.left },
-    { label: "Right ear", hue: "warm" as const, ...otoscopy.right },
+    { label: "Left ear", hue: "cool" as const, side: "left" as const, ...otoscopy.left },
+    { label: "Right ear", hue: "warm" as const, side: "right" as const, ...otoscopy.right },
   ];
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        {ears.map(ear => (
-          <Card key={ear.label} className="overflow-hidden">
-            <EarImage hue={ear.hue} />
-            <div className="p-4">
-              <span className="text-xs text-slate-500">{ear.label}</span>
-              <h3 className="text-sm font-extrabold">Image captured</h3>
-              {/* Procedural quality, not a clinical finding — safe for both roles. */}
-              <div className="mt-2">
-                <StatusPill tone={ear.tone}>{ear.tone === "green" ? "Good view" : "View adequate"}</StatusPill>
+        {ears.map(ear => {
+          const over = status?.[ear.side];
+          const tone = over?.tone ?? ear.tone;
+          const label = over?.label ?? (ear.tone === "green" ? "Good view" : "View adequate");
+          return (
+            <Card key={ear.label} className="overflow-hidden">
+              <EarImage hue={ear.hue} />
+              <div className="p-4">
+                <span className="text-xs text-slate-500">{ear.label}</span>
+                <h3 className="text-sm font-extrabold">Image captured</h3>
+                {/* Procedural quality, not a clinical finding — safe for both roles. */}
+                <div className="mt-2">
+                  <StatusPill tone={tone}>{label}</StatusPill>
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
       <Card className="mt-4 p-4">
         <p className="text-sm leading-6 text-slate-500">

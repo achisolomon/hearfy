@@ -1,7 +1,7 @@
 "use client";
 import { Card, StatusPill } from "../ui";
 import { tympanometry } from "@/lib/mock-data";
-import type { Framing } from "./otoscopy-step";
+import type { EarStatus, Framing } from "./otoscopy-step";
 
 /**
  * A tympanogram trace: eardrum compliance (y) against canal pressure (x,
@@ -26,28 +26,37 @@ function Tympanogram({ peak, shift, color }: { peak: number; shift: number; colo
 }
 
 /** One tympanogram per ear (corrections sheet 2026-08-31, item 5). */
-export function TympanometryStep({ framing }: { framing: Framing }) {
+export function TympanometryStep({ framing, status }: {
+  framing: Framing;
+  /** Per-ear pill override; see `EarStatus` in otoscopy-step.tsx. */
+  status?: { left?: EarStatus; right?: EarStatus };
+}) {
   // Left ear in the left column, right ear on the right (see OtoscopyStep).
   const ears = [
-    { label: "Left ear", peak: 22, shift: -12, color: "#2788c8", ...tympanometry.left },
-    { label: "Right ear", peak: 44, shift: -4, color: "#ef6b6b", ...tympanometry.right },
+    { label: "Left ear", peak: 22, shift: -12, color: "#2788c8", side: "left" as const, ...tympanometry.left },
+    { label: "Right ear", peak: 44, shift: -4, color: "#ef6b6b", side: "right" as const, ...tympanometry.right },
   ];
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        {ears.map(ear => (
-          <Card key={ear.label} className="p-4">
-            <span className="text-xs text-slate-500">{ear.label}</span>
-            <h3 className="text-sm font-extrabold">{ear.type}</h3>
-            <div className="mt-2"><Tympanogram peak={ear.peak} shift={ear.shift} color={ear.color} /></div>
-            <p className="mt-2 text-[11px] leading-4 text-slate-500">
-              Peak {ear.pressure} · {ear.compliance}
-            </p>
-            <div className="mt-2">
-              <StatusPill tone={ear.tone}>{ear.tone === "green" ? "Normal" : "Noted"}</StatusPill>
-            </div>
-          </Card>
-        ))}
+        {ears.map(ear => {
+          const over = status?.[ear.side];
+          const tone = over?.tone ?? ear.tone;
+          const label = over?.label ?? (ear.tone === "green" ? "Normal" : "Noted");
+          return (
+            <Card key={ear.label} className="p-4">
+              <span className="text-xs text-slate-500">{ear.label}</span>
+              <h3 className="text-sm font-extrabold">{ear.type}</h3>
+              <div className="mt-2"><Tympanogram peak={ear.peak} shift={ear.shift} color={ear.color} /></div>
+              <p className="mt-2 text-[11px] leading-4 text-slate-500">
+                Peak {ear.pressure} · {ear.compliance}
+              </p>
+              <div className="mt-2">
+                <StatusPill tone={tone}>{label}</StatusPill>
+              </div>
+            </Card>
+          );
+        })}
       </div>
       <Card className="mt-4 p-4">
         <p className="text-sm leading-6 text-slate-500">

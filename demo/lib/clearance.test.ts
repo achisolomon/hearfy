@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   GATE_ORDER, clearanceOf, gateFor, questionnaireGate, referralReason,
   verdictForTone, visitClearance, visitGates, worst,
-  type GateResult,
+  NO_REVIEW, REVIEWABLE, criticalGates, markReview, reviewOutcome, reviewReferralReason,
+  type GateResult, type ReviewMark,
 } from "./clearance";
 
 const g = (id: string, verdict: GateResult["verdict"]): GateResult =>
@@ -163,5 +164,89 @@ describe("this visit's gates", () => {
       expect(gate.label.length).toBeGreaterThan(0);
       expect(gate.detail.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("the audiologist's review", () => {
+  // Owner, 2026-09-02: she ticks otoscopy and tympanometry. The questionnaire
+  // was answered at intake and is not hers to rule on.
+  it("gives her exactly the two physical checks to rule on", () => {
+    expect([...REVIEWABLE]).toEqual(["otoscopy", "tympanometry"]);
+    expect(REVIEWABLE).not.toContain("questionnaire");
+  });
+
+  it("starts with nothing decided", () => {
+    expect(reviewOutcome(NO_REVIEW)).toBe("pending");
+  });
+
+  // THE rule this module exists for: an un-reviewed visit is not a cleared
+  // visit. Treating "not yet stopped" as "go" would let the hearing test start
+  // before anyone looked.
+  it("stays pending until she has ruled on BOTH checks", () => {
+    let s = markReview(NO_REVIEW, "otoscopy", "clear");
+    expect(reviewOutcome(s)).toBe("pending");
+    s = markReview(s, "tympanometry", "clear");
+    expect(reviewOutcome(s)).toBe("cleared");
+  });
+
+  it("stops the visit the moment she flags anything critical", () => {
+    const s = markReview(NO_REVIEW, "otoscopy", "critical");
+    // Tympanometry is still pending — she does not have to finish the list to
+    // stop something she has already seen.
+    expect(s.tympanometry).toBe("pending");
+    expect(reviewOutcome(s)).toBe("stopped");
+  });
+
+  it("keeps the visit stopped even if the other check is clear", () => {
+    let s = markReview(NO_REVIEW, "otoscopy", "clear");
+    s = markReview(s, "tympanometry", "critical");
+    expect(reviewOutcome(s)).toBe("stopped");
+  });
+
+  it("is never more than one outcome at a time", () => {
+    const marks: ReviewMark[] = ["pending", "clear", "critical"];
+    for (const o of marks) for (const t of marks) {
+      const out = reviewOutcome({ otoscopy: o, tympanometry: t });
+      expect(["pending", "cleared", "stopped"]).toContain(out);
+    }
+  });
+
+  // She can change her mind before committing.
+  it("lets her revise a mark", () => {
+    let s = markReview(NO_REVIEW, "otoscopy", "critical");
+    expect(reviewOutcome(s)).toBe("stopped");
+    s = markReview(s, "otoscopy", "clear");
+    s = markReview(s, "tympanometry", "clear");
+    expect(reviewOutcome(s)).toBe("cleared");
+  });
+
+  it("names only the checks she flagged, never the ones she cleared", () => {
+    const gates = visitGates();
+    let s = markReview(NO_REVIEW, "otoscopy", "clear");
+    s = markReview(s, "tympanometry", "critical");
+    expect(criticalGates(s, gates).map(g => g.id)).toEqual(["tympanometry"]);
+    const msg = reviewReferralReason(s, gates);
+    expect(msg).toMatch(/tympanometry/);
+    expect(msg).not.toMatch(/otoscopy/);
+  });
+
+  it("lists both when she flags both", () => {
+    let s = markReview(NO_REVIEW, "otoscopy", "critical");
+    s = markReview(s, "tympanometry", "critical");
+    expect(reviewReferralReason(s, visitGates())).toMatch(/otoscopy and tympanometry/);
+  });
+
+  // Same constraints as the automatic message: she refers, she does not
+  // diagnose, and a stopped visit sells nothing.
+  it("never diagnoses or mentions a device", () => {
+    const s = markReview(NO_REVIEW, "otoscopy", "critical");
+    const msg = reviewReferralReason(s, visitGates());
+    expect(msg).not.toMatch(/diagnos|infection|perforation/i);
+    expect(msg).not.toMatch(/hearing aid|purchase|price|recommend/i);
+    expect(msg).toMatch(/physician/);
+  });
+
+  it("says nothing when she has flagged nothing", () => {
+    expect(reviewReferralReason(NO_REVIEW, visitGates())).toBe("");
   });
 });

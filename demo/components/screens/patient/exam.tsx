@@ -8,7 +8,8 @@ import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
-import { referralReason, visitClearance } from "@/lib/clearance";
+import { reviewOutcome, reviewReferralReason, visitGates } from "@/lib/clearance";
+import { useReview } from "@/lib/review-store";
 
 // The visit's patient-facing steps, counted from one list so adding a step
 // (as tympanometry was, corrections sheet item 5) renumbers every eyebrow —
@@ -43,22 +44,28 @@ export function Tympanometry({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){re
 // plain-language version of the same three rows the clinicians are reading —
 // the outcome, never the raw tones and trace types.
 export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
-  const c = visitClearance();
+  // Alex sees the outcome of Dr. Reed's review, in his own words. Never the
+  // tones, trace types or her checklist — the outcome, and what happens next.
+  const review = useReview();
+  const outcome = reviewOutcome(review);
+  const stopped = outcome === "stopped";
   return <Shell>
     <PageHeader
-      title={c.stopped ? "We need to pause here" : "Your ear checks are done"}
-      subtitle={c.stopped
+      title={stopped ? "We need to pause here" : outcome === "cleared" ? "Your ear checks are done" : "Your ear checks are with your audiologist"}
+      subtitle={stopped
         ? "Your ear checks found something a doctor should look at before any hearing test."
-        : "Both ear checks are complete and your audiologist has cleared you for the hearing test."}
+        : outcome === "cleared"
+          ? "Both ear checks are complete and your audiologist has cleared you for the hearing test."
+          : "Dr. Reed is looking at both ear checks now. She will clear the hearing test when she is happy with them."}
       onBack={back}
       eyebrow={visitEyebrow("clearance")}/>
-    {c.stopped ? <>
+    {stopped ? <>
       <Card className="border-red-300 p-5">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#fdeaea] text-[#b42318]"><Stethoscope size={18}/></span>
           <div>
             <b className="text-sm text-[#b42318]">Please see a doctor first</b>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{referralReason(c)}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{reviewReferralReason(review, visitGates())}</p>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               We are not going ahead with the hearing test or any hearing device today.
               Dr. Reed will call you to explain what she saw and help you arrange the visit.
@@ -69,7 +76,7 @@ export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
       <div className="mt-6"><AudiologistStatusLine>Dr. Reed is calling you about the referral.</AudiologistStatusLine></div>
     </> : <>
       <div className="space-y-3">{[
-        ["Your questionnaire","Reviewed by your audiologist."],
+        ["Your questionnaire", outcome === "cleared" ? "Reviewed by your audiologist." : "Answered before today\u2019s visit."],
         ["Ear health check","Images captured and read for both ears."],
         ["Middle ear check","Both eardrums measured."],
       ].map(([t,d])=><div key={t} className="flex items-start gap-3 rounded-2xl bg-white p-4">
@@ -77,7 +84,7 @@ export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         <div><b className="text-sm">{t}</b><p className="mt-0.5 text-xs leading-5 text-slate-500">{d}</p></div>
       </div>)}</div>
       <Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Anything worth a closer look is noted on your record — Dr. Reed reads it alongside your results.</p></Card>
-      <div className="mt-6"><AudiologistStatusLine>Dr. Reed has cleared you for the hearing test.</AudiologistStatusLine></div>
+      <div className="mt-6"><AudiologistStatusLine>{outcome === "cleared" ? "Dr. Reed has cleared you for the hearing test." : "Dr. Reed is reviewing your ear checks."}</AudiologistStatusLine></div>
     </>}
   </Shell>
 }

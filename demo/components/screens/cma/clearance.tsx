@@ -1,10 +1,11 @@
 "use client";
-import { AlertTriangle, PhoneCall, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Hourglass, PhoneCall, ShieldCheck } from "lucide-react";
 import { Card, PageHeader, PrimaryButton } from "../../ui";
 import { CallShell } from "../video-split";
 import { CallSplit } from "./call-tile";
 import { ClearanceList } from "../../exam/clearance-list";
-import { referralReason, visitClearance } from "@/lib/clearance";
+import { reviewOutcome, reviewReferralReason, visitClearance, visitGates } from "@/lib/clearance";
+import { useReview } from "@/lib/review-store";
 import { clinician } from "@/lib/mock-data";
 
 /**
@@ -27,23 +28,35 @@ import { clinician } from "@/lib/mock-data";
  */
 export function CmaClearance({ next }: { next: () => void }) {
   const clearance = visitClearance();
+  // Maya's screen follows Dr. Reed's decision, not the raw tones: the clinician
+  // rules, the CMA is told the result. Until Dr. Reed has ruled on both checks
+  // the visit is PENDING — and pending is not permission to start, so Maya
+  // gets no "Start hearing test" button yet.
+  const review = useReview();
+  const outcome = reviewOutcome(review);
+  const stopped = outcome === "stopped";
+  const cleared = outcome === "cleared";
   return (
     <CallShell header={
       <PageHeader
         eyebrow="Clearance"
-        title={clearance.stopped ? "Visit stops here" : "Cleared for testing"}
-        subtitle={clearance.stopped
-          ? "The safety checks did not clear. Do not start the hearing test."
-          : "Both safety checks are in. The hearing test can begin."}
+        title={stopped ? "Visit stops here" : cleared ? "Cleared for testing" : "Waiting on Dr. Reed"}
+        subtitle={stopped
+          ? "Dr. Reed found a critical issue. Do not start the hearing test."
+          : cleared
+            ? "Dr. Reed has cleared both ear checks. The hearing test can begin."
+            : "Both ear checks are in and with Dr. Reed. Wait for her clearance before testing."}
       />
     }>
-      <CallSplit note={clearance.stopped
+      <CallSplit note={stopped
         ? "Has seen the findings and is calling the patient now — she makes the referral, not you."
-        : "Has reviewed all three checks and signed the visit off — you are clear to start the test."}>
+        : cleared
+          ? "Has reviewed both ear checks and signed the visit off — you are clear to start the test."
+          : "Is reading your captures and traces now — she will tell you when to start."}>
 
         <ClearanceList clearance={clearance} title="Pre-test safety checks" />
 
-        {clearance.stopped ? (
+        {stopped ? (
           <>
             {/* The stop is stated in full before anything else is offered, and
                 what follows it is a referral, not a next step in the exam. */}
@@ -54,7 +67,7 @@ export function CmaClearance({ next }: { next: () => void }) {
                 </span>
                 <div>
                   <b className="text-sm text-[#b42318]">Stop the exam — refer to a doctor</b>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{referralReason(clearance)}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{reviewReferralReason(review, visitGates())}</p>
                   <p className="mt-3 text-sm leading-6 text-slate-600">
                     No hearing test, no results and no device today. Pack the kit, explain that
                     a physician needs to look first, and {clinician.name} will call the patient
@@ -70,7 +83,7 @@ export function CmaClearance({ next }: { next: () => void }) {
               </PrimaryButton>
             </div>
           </>
-        ) : (
+        ) : cleared ? (
           <>
             <Card className="mt-4 p-5">
               <div className="flex items-start gap-3">
@@ -78,9 +91,9 @@ export function CmaClearance({ next }: { next: () => void }) {
                   <ShieldCheck size={17} aria-hidden />
                 </span>
                 <p className="text-sm leading-6 text-slate-600">
-                  {clinician.name} has signed off the questionnaire, the otoscopy and the
-                  tympanometry. Noted findings travel with the record — she reads them against
-                  the thresholds once the test is done.
+                  {clinician.name} has cleared the otoscopy and the tympanometry. Noted
+                  findings travel with the record — she reads them against the thresholds
+                  once the test is done.
                 </p>
               </div>
             </Card>
@@ -88,6 +101,24 @@ export function CmaClearance({ next }: { next: () => void }) {
               <PrimaryButton onClick={next}>Start hearing test</PrimaryButton>
             </div>
           </>
+        ) : (
+          /* Pending. No button: the test cannot start on a visit the clinician
+             has not cleared, and a disabled control would still suggest the
+             CMA is the one who decides when to press it. */
+          <Card className="mt-4 p-5">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#e8f9f8] text-[#087d7a]">
+                <Hourglass size={17} aria-hidden />
+              </span>
+              <div>
+                <b className="text-sm">With {clinician.name} for review</b>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  She is checking both ear findings for anything critical. The hearing test
+                  starts only once she has cleared them.
+                </p>
+              </div>
+            </div>
+          </Card>
         )}
       </CallSplit>
     </CallShell>

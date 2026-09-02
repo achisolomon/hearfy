@@ -181,3 +181,71 @@ export function visitGates(): GateResult[] {
 export function visitClearance(): Clearance {
   return clearanceOf(visitGates());
 }
+
+/* ------------------------------------------------------------------------ *
+ * The audiologist's REVIEW (owner, 2026-09-02, refined).
+ *
+ * Everything above scores what the instruments recorded. That is the input to
+ * a decision, not the decision — and as first built, the checklist WAS the
+ * decision: the app read the tones and told Dr. Reed the answer. Nobody on
+ * screen could ever say "I see a problem", so the referral path could only be
+ * reached by editing mock data.
+ *
+ * This is the correction. Dr. Reed rules on the two physical checks herself,
+ * one at a time. The questionnaire is not hers to rule on — it was answered at
+ * intake, so it stays a read-only row (owner: "only otoscopy and
+ * tympanometry"). Her verdict, not the tone, decides whether the visit
+ * proceeds.
+ * ------------------------------------------------------------------------ */
+
+/** What the reviewing clinician has said about one check. */
+export type ReviewMark = "pending" | "clear" | "critical";
+
+/** The two checks she rules on. The questionnaire is deliberately absent. */
+export const REVIEWABLE = ["otoscopy", "tympanometry"] as const;
+export type ReviewableId = (typeof REVIEWABLE)[number];
+
+export type ReviewState = Record<ReviewableId, ReviewMark>;
+
+export const NO_REVIEW: ReviewState = { otoscopy: "pending", tympanometry: "pending" };
+
+export function markReview(s: ReviewState, id: ReviewableId, mark: ReviewMark): ReviewState {
+  return { ...s, [id]: mark };
+}
+
+/**
+ * The visit's state under her review. Three outcomes, and the middle one is
+ * the reason this is not a boolean: before she has ruled on both checks the
+ * visit is neither cleared NOR stopped — it is waiting on her. A screen that
+ * treats "not yet stopped" as "cleared" would let the hearing test start
+ * before anyone looked, which is the whole failure this gate exists to
+ * prevent.
+ */
+export type ReviewOutcome = "pending" | "cleared" | "stopped";
+
+export function reviewOutcome(s: ReviewState): ReviewOutcome {
+  // A critical finding stops the visit the moment she marks it — she does not
+  // have to finish the checklist to stop something she has already seen.
+  if (REVIEWABLE.some(id => s[id] === "critical")) return "stopped";
+  return REVIEWABLE.every(id => s[id] === "clear") ? "cleared" : "pending";
+}
+
+/** The checks she has marked critical, for the referral message. */
+export function criticalGates(s: ReviewState, gates: GateResult[]): GateResult[] {
+  return gates.filter(g => REVIEWABLE.includes(g.id as ReviewableId)
+    && s[g.id as ReviewableId] === "critical");
+}
+
+/**
+ * The referral wording for HER decision, phrased from the checks she flagged.
+ * Same constraints as `referralReason`: no diagnosis, no device talk.
+ */
+export function reviewReferralReason(s: ReviewState, gates: GateResult[]): string {
+  const flagged = criticalGates(s, gates);
+  if (flagged.length === 0) return "";
+  const names = flagged.map(g => g.label.toLowerCase());
+  const list = names.length === 1
+    ? names[0]
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `Dr. Reed flagged today's ${list} finding as needing a physician's assessment before any hearing test or device fitting can go ahead.`;
+}

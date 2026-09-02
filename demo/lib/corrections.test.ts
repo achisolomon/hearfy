@@ -604,13 +604,52 @@ describe("the pre-test clearance gate", () => {
     expect(src).toMatch(/not going ahead with the hearing test or any hearing device/);
   });
 
-  // Both clinical surfaces read ONE source of truth. Two independent accounts
-  // of whether a visit may proceed is the bug this prevents.
-  it("draws the CMA's and the audiologist's checklists from one function", () => {
+  // Both clinical surfaces read ONE source of truth: the findings come from
+  // lib/clearance, and whether the visit proceeds comes from Dr. Reed's review
+  // via the shared store. Two independent accounts of either is the bug this
+  // prevents — as is a screen that decides for itself.
+  it("draws both clinicians' checklists from the shared findings", () => {
     for (const f of ["components/screens/cma/clearance.tsx",
                      "components/screens/audiologist/clearance.tsx"]) {
-      expect(sourceOf(f), `${f} must use visitClearance()`).toMatch(/visitClearance\(\)/);
+      expect(sourceOf(f), `${f} must read the shared gates`)
+        .toMatch(/visitClearance\(\)|visitGates\(\)/);
     }
+  });
+
+  // Owner, 2026-09-02 (refined): the audiologist ticks the checklist herself.
+  // A screen that computes the answer from the recorded tones is what made the
+  // referral path unreachable — nobody on screen could say "I see a problem".
+  it("lets the audiologist mark a critical issue herself", () => {
+    const src = sourceOf("components/screens/audiologist/clearance.tsx");
+    expect(src).toMatch(/Critical issue/);
+    expect(src).toMatch(/No critical issue/);
+    expect(src).toMatch(/reviewStore\.set\(/);
+  });
+
+  // Her decision must reach the other two roles, or Maya walks into the
+  // hearing test Dr. Reed just stopped.
+  it("makes the CMA and the patient follow her decision", () => {
+    for (const f of ["components/screens/cma/clearance.tsx",
+                     "components/screens/patient/exam.tsx"]) {
+      expect(sourceOf(f), `${f} must read her review`).toMatch(/useReview\(\)/);
+      expect(sourceOf(f), `${f} must branch on the outcome`).toMatch(/reviewOutcome\(/);
+    }
+  });
+
+  // Pending is not permission. Before she has ruled, no screen may offer a way
+  // into the hearing test.
+  it("offers the CMA no way to start the test while the review is pending", () => {
+    const src = sourceOf("components/screens/cma/clearance.tsx");
+    // The start control lives in the `cleared` branch, which opens before the
+    // pending block — so nothing after the pending block may start the test.
+    const clearedBranch = src.search(/\)\s*:\s*cleared\s*\?\s*\(/);
+    const startBtn = src.indexOf("Start hearing test</PrimaryButton>");
+    const pending = src.indexOf("for review");
+    expect(clearedBranch, "a distinct cleared branch must exist").toBeGreaterThan(-1);
+    expect(startBtn, "the start control must exist").toBeGreaterThan(clearedBranch);
+    expect(pending, "a pending branch must follow it").toBeGreaterThan(startBtn);
+    // Nothing in the pending branch offers a way into the test.
+    expect(src.slice(pending)).not.toMatch(/Start hearing test<\/PrimaryButton>/);
   });
 
   // Amber is not a failure. The hero's own ears are amber on both physical

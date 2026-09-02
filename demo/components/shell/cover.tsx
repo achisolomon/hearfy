@@ -6,6 +6,7 @@ import { BRAND_NAME } from "@/lib/mock-data";
 import { BEATS, STAGES, ROLES } from "@/lib/story";
 import { personaFor } from "@/lib/personas";
 import { resetAllLatches } from "@/lib/latch";
+import { reviewStore } from "@/lib/review-store";
 import { resetSelection } from "@/lib/selection";
 import { resetSigning } from "@/lib/signing";
 import { resetTextSize } from "../a11y/text-size";
@@ -22,7 +23,7 @@ export function Cover() {
   // skipping the signing beat outright. The text-size choice and the
   // patient's device selection live outside React the same way, so both
   // reset alongside the gates.
-  useEffect(() => { resetAllLatches(); resetTextSize(); resetSelection(); resetSigning(); }, []);
+  useEffect(() => { resetAllLatches(); resetTextSize(); resetSelection(); resetSigning(); reviewStore.reset(); }, []);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full max-w-md text-center">

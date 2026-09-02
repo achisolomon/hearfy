@@ -617,7 +617,7 @@ describe("motion is calm and accessible", () => {
    *
    * The one exception is the brand mark's sound bars, which breathe
    * continuously (the owner asked for a logo that does not stop). That loop
-   * lives in CSS, scoped to `.op-live-logo`, so this assertion still holds:
+   * lives in CSS, scoped to `.live-logo`, so this assertion still holds:
    * no framer animation on this page repeats.
    */
   it("uses no infinite animations on content", () => {
@@ -627,17 +627,25 @@ describe("motion is calm and accessible", () => {
 
   /**
    * The brand mark must keep moving — the owner's note was that it animates
-   * "again, then they stopped". The loop is CSS on `.op-live-logo`, and it
-   * must stay scoped: the same BrandLogo renders in the demo's chrome on
-   * every screen, and an unscoped rule would set it pulsing there too.
+   * "again, then they stopped". The loop is CSS on `.live-logo`, and it must
+   * stay behind that opt-in class: the same BrandLogo renders in the demo's
+   * chrome on every screen, and an unscoped rule would set it pulsing there
+   * too — the toy-app register PRODUCT.md rules out.
+   *
+   * The class is no longer one-pager-only. The owner asked for the same living
+   * mark on the demo's cover and end-cap (2026-09-02), which is what DESIGN.md
+   * already permitted: the brandmark "may animate gently on cover and welcome
+   * screens". What must hold is that it stays an opt-in a surface wears
+   * deliberately, so `.live-logo` guards every rule — see the companion test in
+   * regressions.test.ts, which caps WHICH surfaces may wear it.
    */
-  it("keeps the brand mark alive, scoped to this page", () => {
+  it("keeps the brand mark alive, behind an opt-in class", () => {
     const CSS = readFileSync(join(HERE, "app/globals.css"), "utf8");
-    expect(CSS).toMatch(/\.op-live-logo/);
+    expect(CSS).toMatch(/\.live-logo/);
     expect(CSS).toMatch(/animation:\s*op-bar[^;]*infinite/);
     // Every rule that drives the loop is scoped to the wrapper class.
     for (const rule of CSS.match(/^[^@\n{]*\{[^}]*op-bar[^}]*\}/gm) ?? []) {
-      expect(rule).toMatch(/\.op-live-logo/);
+      expect(rule).toMatch(/\.live-logo/);
     }
     // And it is behind a reduced-motion guard.
     expect(CSS).toMatch(/prefers-reduced-motion:\s*no-preference/);

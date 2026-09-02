@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { BrandLogo, PrimaryButton, SecondaryButton } from "../ui";
+import { LiveBrandLogo, PrimaryButton, SecondaryButton } from "../ui";
 import { BRAND_NAME } from "@/lib/mock-data";
 import { BEATS, STAGES, ROLES } from "@/lib/story";
 import { personaFor } from "@/lib/personas";
@@ -26,7 +26,11 @@ export function Cover() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full max-w-md text-center">
-        <div className="mb-8 flex justify-center"><BrandLogo animate size="lg" /></div>
+        {/* The mark arrives, then keeps breathing. `BrandLogo animate` stopped
+            after its entry, which reads as an animation that broke; this is the
+            cover, where the mark is the subject and nothing else is moving —
+            one of the three surfaces DESIGN.md lets the brandmark perform on. */}
+        <div className="mb-8 flex justify-center"><LiveBrandLogo size="lg" /></div>
         <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-[-.03em] text-brand-navy">
           Hearing diagnostics, at home
         </h1>
@@ -73,7 +77,9 @@ export function EndCap() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6">
       <div className="w-full max-w-md text-center">
-        <div className="mb-8 flex justify-center"><BrandLogo animate size="lg" /></div>
+        {/* Alive here too — the end-cap bookends the cover, and the walkthrough
+            has stopped, so the mark is again the only thing on screen moving. */}
+        <div className="mb-8 flex justify-center"><LiveBrandLogo size="lg" /></div>
         <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-.03em] text-brand-navy">
           One journey, end to end
         </h1>

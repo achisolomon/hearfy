@@ -135,6 +135,33 @@ export function BrandLogo({ compact=false, className="", wordmarkFromLg=false, a
       <span className="text-teal-ink">{WORDMARK_TAIL}</span></span>}
   </div>
 }
+/**
+ * The brand mark, alive.
+ *
+ * `BrandLogo animate` plays its entry once (arc, bars, dot, in reading order)
+ * and then sits perfectly still, which reads as an animation that broke rather
+ * than one that finished. This wraps it and adds a continuous second layer:
+ * the three sound bars breathe, staggered, the way a level meter does.
+ *
+ * That is a loop that earns itself — this is a hearing brand, and the bars are
+ * a signal, so motion there means "sound", not decoration (PRODUCT.md's "state
+ * over decoration"). It is still a loop, so it is opt-in rather than baked into
+ * BrandLogo: the same component renders in the demo's chrome on every screen,
+ * and 27 pulsing chrome-bar logos is the toy-app register PRODUCT.md rules out.
+ *
+ * DESIGN.md draws the line — the brandmark "is the only place the brand
+ * performs — it may animate gently on cover and welcome screens" — so this
+ * belongs only where the mark is the subject and nothing else is moving. Today
+ * that is three surfaces: the cover, the end-cap, and the one-pager masthead.
+ * Anything denser than that is a screen that should not be using it.
+ *
+ * The loop itself is CSS on `.live-logo` in globals.css, targeting the three
+ * <rect> bars by position, so the shared mark needs no change and a viewer who
+ * asked for reduced motion is dropped out of it by the media query — no JS.
+ */
+export function LiveBrandLogo({ size="lg", className="" }:{size?:keyof typeof SIZES;className?:string}){
+  return <span className={cn("live-logo inline-flex",className)}><BrandLogo size={size} animate/></span>
+}
 export function Card({children,className=""}:{children:React.ReactNode;className?:string}){return <div className={cn("rounded-[24px] border border-[#e4eef0] bg-white shadow-card",className)}>{children}</div>}
 /**
  * One fill, no surface branch: Harbor Navy with a white label, 15.8:1.

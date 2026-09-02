@@ -1,9 +1,10 @@
 "use client";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { LiveBrandLogo, PrimaryButton, SecondaryButton } from "../ui";
-import { BRAND_NAME } from "@/lib/mock-data";
-import { BEATS, STAGES, ROLES } from "@/lib/story";
+import { CalendarDays } from "lucide-react";
+import { Card, LiveBrandLogo, PrimaryButton, SecondaryButton, StatusPill } from "../ui";
+import { clinician, devices, patient, visitHistory } from "@/lib/mock-data";
+import { STAGES, ROLES } from "@/lib/story";
 import { personaFor } from "@/lib/personas";
 import { resetAllLatches } from "@/lib/latch";
 import { reviewStore } from "@/lib/review-store";
@@ -75,27 +76,66 @@ export function Cover() {
 
 export function EndCap() {
   const { restart, exploreFreely } = useStory();
+  // The visit is over; these are the three things it left behind. The follow-up
+  // row is the point of the screen — it is dated, booked, and lands on the same
+  // record, which is what makes the encounter a relationship rather than a
+  // transaction. Dates and names come from mock-data so this screen agrees with
+  // the journey the viewer just watched (in-home fitting, not a shipment).
+  const followUp = visitHistory.find(v => !v.done);
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6">
-      <div className="w-full max-w-md text-center">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
+      <div className="w-full min-w-0 max-w-md text-center">
         {/* Alive here too — the end-cap bookends the cover, and the walkthrough
             has stopped, so the mark is again the only thing on screen moving. */}
         <div className="mb-8 flex justify-center"><LiveBrandLogo size="lg" /></div>
-        <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-.03em] text-brand-navy">
-          One journey, end to end
-        </h1>
-        <div className="mt-7 grid grid-cols-3 gap-3">
-          {[[STAGES.length, "stages"], [ROLES.length, "roles"], [BEATS.length, "beats"]].map(([n, l]) => (
-            <div key={String(l)} className="rounded-2xl bg-white p-4 shadow-card">
-              <b className="block text-2xl text-brand-navy">{n}</b>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{l}</span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-6 text-[15px] leading-6 text-slate-500">
-          {BRAND_NAME} keeps every visit on one record — booking, exam, signature,
-          prescription, device and follow-up.
+        <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-teal-ink">
+          After the visit
         </p>
+        <h1 className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-.03em] text-brand-navy">
+          The visit ends.<br />The record doesn&rsquo;t.
+        </h1>
+
+        <div className="mt-7 space-y-3 text-left">
+          <Card className="flex w-full min-w-0 items-center gap-2.5 px-3.5 py-3.5">
+            <PersonaAvatar role="cma" size="sm" />
+            <div className="flex min-w-0 flex-1 flex-col justify-center min-h-[2.9em]">
+              <b className="block text-sm leading-tight">{devices[0].name}</b>
+              <span className="mt-0.5 block text-xs leading-snug text-slate-500">
+                Fitted and activated in your home
+              </span>
+            </div>
+            <span className="shrink-0"><StatusPill tone="green">Active</StatusPill></span>
+          </Card>
+
+          <Card className="flex w-full min-w-0 items-center gap-2.5 px-3.5 py-3.5">
+            <PersonaAvatar role="audiologist" size="sm" />
+            <div className="flex min-w-0 flex-1 flex-col justify-center min-h-[2.9em]">
+              <b className="block text-sm leading-tight">{followUp?.what ?? "Follow-up hearing check"}</b>
+              <span className="mt-0.5 block text-xs leading-snug text-slate-500">
+                {followUp?.date} &middot; at home
+              </span>
+            </div>
+            <span className="shrink-0"><StatusPill tone="blue" icon={CalendarDays}>Booked</StatusPill></span>
+          </Card>
+
+          <Card className="flex w-full min-w-0 items-center gap-2.5 px-3.5 py-3.5">
+            <PersonaAvatar role="patient" size="sm" />
+            <div className="flex min-w-0 flex-1 flex-col justify-center min-h-[2.9em]">
+              <b className="block text-sm leading-tight">Visit record</b>
+              <span className="mt-0.5 block text-xs leading-snug text-slate-500">
+                Shared with {patient.name} &amp; {clinician.name}
+              </span>
+            </div>
+            <span className="shrink-0"><StatusPill tone="green">Signed</StatusPill></span>
+          </Card>
+        </div>
+
+        <p className="mt-6 text-[15px] leading-6 text-slate-500">
+          Every future visit lands on{" "}
+          <b className="font-bold text-brand-navy">this same record</b> — one patient,
+          {" "}{STAGES.length} stages, {ROLES.length} roles.
+        </p>
+
         <div className="mt-9 space-y-3">
           <PrimaryButton onClick={restart}>Watch it again</PrimaryButton>
           <SecondaryButton onClick={exploreFreely}>Explore freely</SecondaryButton>

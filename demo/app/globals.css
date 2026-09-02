@@ -32,3 +32,26 @@
    "standard"/"large"/"larger" steps and applies the same clamp, so the
    in-product control remains the deliberate way to get larger text. */
 html { font-size: clamp(18px, 1.125rem, 22px); }
+
+/* The chrome must not slide sideways as the story advances.
+   ("The top line is moving with screen slides" — owner, 2026-09-02.)
+
+   Every beat centres its column in the viewport, so the layout's horizontal
+   origin is (viewport width / 2). A classic scrollbar is taken OUT of that
+   width, which makes the origin depend on whether the CURRENT beat happens to
+   be taller than the window. Walking the patient story, that flips repeatedly:
+   the hero scrolls, "Welcome to Hearfy" does not, the symptom list does again.
+   Each flip moved the logo, the persona pills and the Next button ~7px — the
+   drift visible in the owner's screenshots, where the bar sits at one x on the
+   scrolling beats and another on "You're all set!".
+
+   `stable` reserves the gutter on every beat, scrolling or not, so the content
+   box is one constant width for the whole walk and the chrome has nothing to
+   shift against. It is the same reserve-the-tallest-case pattern the call
+   panel uses for height (CALL_HEADER_MIN), applied to the viewport's width.
+
+   Note this is invisible to headless Chrome, which draws overlay scrollbars
+   that occupy no space — which is exactly why the browser sweep passed while
+   the bug was plainly visible on the owner's machine. scripts/stability-sweep
+   .mjs now asserts the reservation directly rather than trying to measure it. */
+html { scrollbar-gutter: stable; }

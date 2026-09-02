@@ -121,6 +121,9 @@ const personas = [
 
 const findings = [];
 let beatsWalked = 0;
+/** Did the story contain both a scrolling and a non-scrolling beat? */
+const overflowSeen = new Set();
+let gutter = "";
 
 for (const [role, entry] of personas) {
   await page.goto(URL, { waitUntil: "networkidle" });
@@ -135,6 +138,28 @@ for (const [role, entry] of personas) {
     const name = await page.evaluate(
       () => (document.querySelector("h1,h2")?.textContent || "").trim().slice(0, 40));
     const now = await page.evaluate(COLLECT);
+    /**
+     * The width the layout actually centres against.
+     *
+     * This is measured SEPARATELY from the element map because headless Chrome
+     * draws overlay scrollbars that take no space, so `clientWidth` never
+     * changes here and no element ever appears to move — which is how the
+     * owner's 2026-09-02 report ("the top line is moving with screen slides")
+     * survived a green sweep. On a real Chrome a classic scrollbar is taken
+     * out of this width, so a beat that scrolls centres 7.5px left of one that
+     * does not, dragging the logo, the persona pills and the Next button with it.
+     *
+     * We cannot reproduce the scrollbar headlessly, so we assert the thing that
+     * makes it harmless instead: whether each beat overflows, and whether the
+     * gutter is reserved regardless. If the reservation is in place, a flip
+     * costs nothing; if it is not, a flip is drift the eye will see.
+     */
+    const view = await page.evaluate(() => ({
+      overflows: document.documentElement.scrollHeight > document.documentElement.clientHeight,
+      gutter: getComputedStyle(document.documentElement).scrollbarGutter,
+    }));
+    if (view.overflows !== undefined) overflowSeen.add(view.overflows);
+    gutter = view.gutter;
     beatsWalked++;
 
     if (prev) {
@@ -173,6 +198,26 @@ if (beatsWalked < 8) {
 }
 
 console.log(`${beatsWalked} beats across ${personas.length} personas at ${WIDTH}px.`);
+
+/**
+ * The scrollbar-gutter check.
+ *
+ * Only meaningful when the walk actually mixed scrolling and non-scrolling
+ * beats — if every beat scrolls, the scrollbar is always there and nothing
+ * flips. This story mixes them (the hero scrolls, "Welcome to Hearfy" does
+ * not), so the reservation is required.
+ */
+if (overflowSeen.size > 1 && !/stable/.test(gutter)) {
+  console.log(`\nThe story has both scrolling and non-scrolling beats, but the`);
+  console.log(`root element does not reserve the scrollbar gutter`);
+  console.log(`(scrollbar-gutter: ${gutter || "auto"}).`);
+  console.log(`\nOn a real Chrome the scrollbar appears and disappears as the story`);
+  console.log(`advances, changing the width the layout centres against, so the whole`);
+  console.log(`top bar slides ~7px sideways between beats. Headless Chrome draws`);
+  console.log(`overlay scrollbars and cannot see this, which is why it needs asserting`);
+  console.log(`rather than measuring. Set \`html { scrollbar-gutter: stable }\`.`);
+  process.exit(1);
+}
 if (findings.length) {
   console.log(`\n${findings.length} chrome element(s) moved between beats:\n`);
   for (const f of findings) {

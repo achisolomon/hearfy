@@ -110,6 +110,34 @@ describe("persistent chrome reserves space instead of resizing", () => {
       .toMatch(/minHeight/);
   });
 
+  /**
+   * The root must reserve the scrollbar gutter.
+   *
+   * The story mixes beats that overflow the viewport with beats that do not
+   * (the hero scrolls; "Welcome to Hearfy" does not). Without a reservation a
+   * classic scrollbar appears on some beats and not others, and since every
+   * beat centres its column, the layout's origin moves with it — the logo,
+   * the persona pills and the Next button all slide ~7.5px sideways. Measured
+   * 2026-09-02 in a headed Chrome at 1440px: logo x alternated 91.5 / 99
+   * across the patient walk, and held at 91.5 with the reservation in place.
+   *
+   * This is asserted in the stylesheet rather than measured in the sweep
+   * because headless Chrome draws zero-width overlay scrollbars: the sweep
+   * ran green through the whole bug. A source assertion has no such blind spot.
+   */
+  it("reserves the scrollbar gutter so a scrolling beat cannot shift the layout", () => {
+    const css = sourceOf("app/globals.css");
+    // Keyed on the declaration, not on a selector spelling or comment text:
+    // the invariant is that the root reserves the gutter, however it is written.
+    const rule = /(?:^|[{;\s])scrollbar-gutter\s*:\s*stable/m;
+    expect(
+      rule.test(css),
+      "app/globals.css must set `scrollbar-gutter: stable` on the root — "
+      + "without it the top bar slides sideways whenever a beat starts or "
+      + "stops overflowing the viewport",
+    ).toBe(true);
+  });
+
   // The sweep is only a gate if it is actually runnable as one.
   it("exposes the browser sweep as an npm script", () => {
     const pkg = JSON.parse(sourceOf("package.json"));

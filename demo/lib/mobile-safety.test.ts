@@ -6,6 +6,7 @@ import {
   rootFontRules,
   shortBottomPadding,
   textOverlaysInMediaFrame,
+  unscrollableNoWrapRows,
 } from "./mobile-safety";
 
 /**
@@ -115,5 +116,27 @@ describe("the live call stays visible behind its own captions", () => {
   it("puts no variable-length text overlay inside the video frame", () => {
     const src = sourceOf("components", "screens", "cma", "call-tile.tsx");
     expect(textOverlaysInMediaFrame(src)).toEqual([]);
+  });
+});
+
+describe("a row that cannot wrap can still scroll", () => {
+  // The shipped bug: pinning the hero chips to one line with flex-nowrap left
+  // the row no way to handle content wider than a 320px phone with large text,
+  // so the whole page scrolled sideways instead.
+  it("catches a nowrap row with no scroller, and accepts one with", () => {
+    expect(
+      unscrollableNoWrapRows('className="mt-6 flex flex-nowrap gap-1.5 sm:flex-wrap"'),
+    ).toHaveLength(1);
+    expect(
+      unscrollableNoWrapRows(
+        'className="mt-6 flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto sm:flex-wrap"',
+      ),
+    ).toEqual([]);
+  });
+
+  it("no component pins a row to one line without letting it scroll", () => {
+    for (const file of componentFiles()) {
+      expect(unscrollableNoWrapRows(sourceOf(file)), file).toEqual([]);
+    }
   });
 });

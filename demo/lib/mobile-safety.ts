@@ -171,3 +171,40 @@ export function textOverlaysInMediaFrame(source: string): string[] {
   }
   return out;
 }
+
+/**
+ * `flex-nowrap` rows that cannot scroll when their content outgrows the
+ * viewport.
+ *
+ * The bug: the one-pager's hero chips (Private / On demand / Clinical-guided)
+ * wrapped onto two lines on a 360px phone, so the row was pinned to one line
+ * with `flex-nowrap`. That fixes the wrap and introduces a worse failure — a
+ * row that may not wrap has only one way to handle content it cannot fit,
+ * which is to push the page wider than the screen. A phone's large-text
+ * accessibility setting raises the MINIMUM font size, overriding even a fixed
+ * `text-[12px]`, so the row grew past a 320px viewport and the whole document
+ * scrolled sideways.
+ *
+ * The fix is two parts, and BOTH are required — this guard exists because the
+ * first alone looked correct and still overflowed:
+ *
+ *  1. `overflow-x-auto` on the row, so it scrolls internally; and
+ *  2. `min-w-0` on the ancestor that is a grid/flex ITEM, because such an item
+ *     defaults to `min-width: auto` and refuses to shrink below its content —
+ *     which means the row is never narrower than its contents and its own
+ *     `overflow-x-auto` never engages.
+ *
+ * Returns the offending `flex-nowrap` class strings. A row that also carries
+ * a wrap at a breakpoint (`sm:flex-wrap`) still needs the scroller, because
+ * the un-wrapped range is exactly the narrow one.
+ */
+export function unscrollableNoWrapRows(source: string): string[] {
+  const out: string[] = [];
+  for (const m of source.matchAll(/className="([^"]*\bflex-nowrap\b[^"]*)"/g)) {
+    const cls = m[1];
+    // A row that can scroll, or one whose children may shrink and wrap, is fine.
+    if (/\boverflow-x-(auto|scroll)\b/.test(cls)) continue;
+    out.push(cls);
+  }
+  return out;
+}

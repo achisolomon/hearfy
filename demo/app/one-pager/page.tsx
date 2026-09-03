@@ -160,7 +160,10 @@ export default function OnePagerPage() {
       {/* Hero: the exam itself, playing. The video carries the claim that this
           is a real clinical encounter far better than any illustration. */}
       <section className="mt-10 grid items-center gap-10 lg:mt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
-        <Reveal>
+        {/* min-w-0: a grid item defaults to min-width:auto, so it refuses to
+            shrink below its content and the chip row's own overflow-x-auto
+            never engages — the row pushes the page wide instead of scrolling. */}
+        <Reveal className="min-w-0">
           <h1 className="text-[34px] font-extrabold leading-[1.06] tracking-[-0.03em] text-brand-navy sm:text-[46px]">
             {HERO.title[0]}
             <br />
@@ -171,11 +174,20 @@ export default function OnePagerPage() {
             {HERO.lede}
           </p>
 
-          <ul className="mt-6 flex flex-wrap gap-2">
+          {/* One line, always. On a 360px phone the three chips only fit if they
+              may shrink, so below sm they never wrap and give up padding and
+              type size instead; from sm the comfortable sizing returns.
+              A phone's large-text setting raises the MINIMUM font size, which
+              overrides the fixed 12px and can push the un-wrappable row past a
+              320px viewport — so the row scrolls within itself rather than
+              scrolling the whole page. min-w-0 lets it shrink below its
+              content width; without it the flex item keeps its full content
+              size and overflows the page instead of scrolling. */}
+          <ul className="mt-6 flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:gap-2 sm:overflow-visible">
             {HERO.chips.map((chip) => (
               <li
                 key={chip}
-                className="rounded-full bg-[#E8F9F8] px-4 py-1.5 text-[13px] font-bold text-teal-ink"
+                className="whitespace-nowrap rounded-full bg-[#E8F9F8] px-2.5 py-1.5 text-[12px] font-bold text-teal-ink sm:px-4 sm:text-[13px]"
               >
                 {chip}
               </li>

@@ -449,7 +449,7 @@ describe("audiologist critique 2026-08-31", () => {
     expect(src).toMatch(/Otoscopy capture, right ear/);
 
     // Every capture URL goes through asset(). Pages serves the demo under
-    // /hearfy/, and a raw <img src="/exam/..."> resolves against the domain
+    // a basePath, and a raw <img src="/exam/..."> resolves against the domain
     // root instead — which 404s in production while looking perfect on
     // localhost. Shipped exactly that way once: the cards rendered as empty
     // navy boxes on the deployed site because object-cover on a broken image

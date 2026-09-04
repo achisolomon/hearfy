@@ -318,11 +318,21 @@ export const CTA = {
  * The page's media, and where each file came from.
  *
  * The photographs are cropped from the founders' live deck (the Google Slides
- * copy, exported 2026-09-02). That deck is already branded HEARFY — the
- * rebrand landed in the live copy — so unlike the older PDF in the private
- * repo, nothing here needed the old name painted out. Crops were taken from a
- * 200–300dpi render and trimmed so no slide text, callout, or connector line
- * is baked into the image.
+ * copy, exported 2026-09-02). Crops were taken from a 200–300dpi render and
+ * trimmed so no slide text, callout, or connector line is baked into the
+ * image.
+ *
+ * BRANDING INSIDE THE PICTURES, corrected 2026-09-04. This block used to say
+ * the live deck was already branded correctly and that nothing here needed the
+ * old name painted out. That was wrong: the generator set the name in caps on
+ * the props it drew, and the hero carried the all-caps spelling twice — on the CMA's polo
+ * and on the hearing-aid case — on the site's most-looked-at image. Because
+ * the name was in PIXELS, every naming guard in this suite was blind to it.
+ *
+ * `scripts/relockup-photos.py` now inpaints those away and composites the
+ * approved lockup over the hole (the mark is never redrawn), and the test
+ * below asserts that script still covers the hero, since no source read can
+ * see whether it does.
  *
  * The videos already ship in the public demo (`public/video/`) and are reused
  * rather than duplicated: they are the same people, in the same rooms, that

@@ -570,14 +570,34 @@ describe("the page's media", () => {
   });
 
   /**
-   * The deck's photography is Hearfy-branded in the live copy, but a crop
-   * taken from an older render could carry the old name in shot. The page
-   * must never ship one — and the brand-spelling guard above only reads
-   * source text, not what is baked into a picture, so provenance is pinned
-   * in the manifest's own documentation instead.
+   * The name is in the PICTURES as well as the source, and every naming guard
+   * in this suite reads source. The hero shipped the all-caps spelling twice —
+   * on the CMA's polo and on the hearing-aid case — while all the copy was clean
+   * (2026-09-04). This block's own documentation used to assert the opposite:
+   * that the live deck was correctly branded and nothing needed painting out.
+   *
+   * What is assertable without OCR is that the correction is still WIRED:
+   * `scripts/relockup-photos.py` must still cover the hero, and must still
+   * composite the approved asset rather than drawing letterforms. Drop it and
+   * the next re-export of that photo silently restores the old casing.
    */
+  it("re-lockups the name baked into the photography", async () => {
+    const { readFileSync } = await import("node:fs");
+    const script = readFileSync(join(HERE, "scripts/relockup-photos.py"), "utf8");
+    const jobs = script.slice(script.indexOf("JOBS = {"), script.indexOf("def main"));
+    expect(jobs, "the hero is no longer re-lockuped")
+      .toMatch(/one-pager\/visit-home\.jpg/);
+    // both props on it: the polo and the kit case
+    expect((jobs.match(/dict\(clear=/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(script, "the lockup is not taken from the approved asset")
+      .toMatch(/hearfy-logo-2000w\.png/);
+    expect(script, "the wordmark is drawn as text instead of composited")
+      .not.toMatch(/putText|ImageDraw|ImageFont/);
+  });
+
+  /** Provenance stays documented, including what had to be corrected. */
   it("documents where the imagery came from", () => {
-    expect(CONTENT_SRC).toMatch(/branded HEARFY/);
+    expect(CONTENT_SRC).toMatch(/relockup-photos\.py/);
   });
 });
 

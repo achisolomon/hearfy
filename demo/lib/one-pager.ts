@@ -308,10 +308,12 @@ export const CTA = {
   /**
    * The page used to close on a "Walk through the product" button into the
    * demo. The owner removed it on 2026-09-02 and put a way to reach a human in
-   * its place, so the close is now a phone number rather than a product tour.
-   * `tel:` uses the E.164 form; `label` is the human spelling.
+   * its place, so the close is a way to contact us rather than a product tour.
+   * It was a phone number until 2026-09-04, when the owner replaced it with an
+   * email address — `mailto:` works on every device, so unlike `tel:` it needs
+   * no separate desktop branch.
    */
-  contact: { label: "Contact us", phone: "+972-54-3003630", tel: "+972543003630" },
+  contact: { label: "Contact us", email: "contact@hearfy.org" },
 };
 
 /**

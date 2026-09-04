@@ -3,7 +3,7 @@ import { Card, StatusPill } from "../ui";
 import { otoscopy } from "@/lib/mock-data";
 import { asset } from "@/lib/asset";
 
-export type Framing = "patient" | "cma";
+export type Framing = "patient" | "cma" | "audiologist";
 
 /**
  * The scope view: a real otoscopy capture per ear, so the two read as two
@@ -39,37 +39,77 @@ export function EarImage({ hue }: { hue: "warm" | "cool" }) {
 }
 
 /**
+ * What one ear's pill says, when someone other than the mock decides it.
+ *
+ * The audiologist's screen owns this: she can send an ear back for a retake,
+ * and that has to show. It arrives as a PROP rather than a write into
+ * `lib/mock-data`, because that module is shared state — the CMA's screen and
+ * the patient's read the same object, and a mutation there would change their
+ * screens as a side effect of her clicking a button on hers.
+ */
+export interface EarStatus {
+  tone: "green" | "amber";
+  label: string;
+  /** Overrides the pill's tick — a returned ear is a refusal, not a pass. */
+  icon?: React.ComponentType<{ size?: number }>;
+}
+
+/**
  * One capture per ear (corrections sheet 2026-08-31, item 3) — never a single
  * image standing in for both.
  */
-export function OtoscopyStep({ framing }: { framing: Framing }) {
+export function OtoscopyStep({ framing, status, earAction }: {
+  framing: Framing;
+  /** Per-ear pill override; falls back to the mock's own quality readout. */
+  status?: { left?: EarStatus; right?: EarStatus };
+  /**
+   * An optional control rendered inside each ear's own card — the
+   * audiologist's send-back sits under the ear it acts on (owner,
+   * 2026-09-02), so there is no doubt which ear is being returned. One
+   * shared button could only ever name one ear, which made the other
+   * un-rejectable.
+   *
+   * Optional because only her screens pass it: the CMA's and the patient's
+   * render exactly as before.
+   */
+  earAction?: (side: "left" | "right") => React.ReactNode;
+}) {
   // Anatomical order: the patient's left ear renders in the left column and
   // the right ear on the right, matching how a clinician reads a chart.
   const ears = [
-    { label: "Left ear", hue: "cool" as const, ...otoscopy.left },
-    { label: "Right ear", hue: "warm" as const, ...otoscopy.right },
+    { label: "Left ear", hue: "cool" as const, side: "left" as const, ...otoscopy.left },
+    { label: "Right ear", hue: "warm" as const, side: "right" as const, ...otoscopy.right },
   ];
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        {ears.map(ear => (
-          <Card key={ear.label} className="overflow-hidden">
-            <EarImage hue={ear.hue} />
-            <div className="p-4">
-              <span className="text-xs text-slate-500">{ear.label}</span>
-              <h3 className="text-sm font-extrabold">Image captured</h3>
-              {/* Procedural quality, not a clinical finding — safe for both roles. */}
-              <div className="mt-2">
-                <StatusPill tone={ear.tone}>{ear.tone === "green" ? "Good view" : "View adequate"}</StatusPill>
+        {ears.map(ear => {
+          const over = status?.[ear.side];
+          const tone = over?.tone ?? ear.tone;
+          const label = over?.label ?? (ear.tone === "green" ? "Good view" : "View adequate");
+          const icon = over?.icon;
+          return (
+            <Card key={ear.label} className="overflow-hidden">
+              <EarImage hue={ear.hue} />
+              <div className="p-4">
+                <span className="text-xs text-slate-500">{ear.label}</span>
+                <h3 className="text-sm font-extrabold">Image captured</h3>
+                {/* Procedural quality, not a clinical finding — safe for both roles. */}
+                <div className="mt-2">
+                  <StatusPill tone={tone} icon={icon}>{label}</StatusPill>
+                </div>
+                {earAction && <div className="mt-3">{earAction(ear.side)}</div>}
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
       <Card className="mt-4 p-4">
         <p className="text-sm leading-6 text-slate-500">
           {framing === "cma"
             ? "Angle the scope slightly up and back. One clear capture per ear; retake if the view is obscured."
+            : framing === "audiologist"
+            ? "Both captures are in. Accept them, or send either ear back for a retake before the exam moves on."
             : "Both ears captured, one image each. Your audiologist reviews the images and explains what they show."}
         </p>
       </Card>

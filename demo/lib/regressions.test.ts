@@ -1974,7 +1974,8 @@ describe("Dr. Reed's camera feed", () => {
     expect(tile).not.toMatch(/h-20 w-24/);
   });
 
-  // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a
+  // The site serves from the root of hearfy.org, so the base is empty today.
+  // The rule holds regardless: Next rewrites bundled imports but leaves a
   // raw <video src> alone, so a literal "/video/..." 404s in production while
   // working on localhost.
   it("builds asset URLs through the basePath helper", () => {
@@ -2067,7 +2068,8 @@ describe("the room's camera feed", () => {
     expect(home).toMatch(/border-t border-\[#e4eef0\] bg-white/);
   });
 
-  // Pages serves under /hearfy/. Next rewrites bundled imports but leaves a
+  // The site serves from the root of hearfy.org, so the base is empty today.
+  // The rule holds regardless: Next rewrites bundled imports but leaves a
   // raw <video src> alone, so a literal "/video/..." 404s in production while
   // working on localhost. Same trap as Dr. Reed's feed.
   it("builds asset URLs through the basePath helper", () => {
@@ -3700,8 +3702,16 @@ describe("the brand name is written Hearfy everywhere", () => {
   // The lowercase `hearfy` in a slug, package name, path or URL is not the
   // company name and is not in scope; this pins that the guard above is
   // case-sensitive about the H, so a rename never silently widens to those.
-  it("leaves lowercase identifiers like the /hearfy/ basePath alone", () => {
-    expect(sourceOf("lib/asset.ts")).toMatch(/\/hearfy\//);
+  //
+  // The example was the `/hearfy/` basePath in lib/asset.ts until 2026-09-03,
+  // when the custom domain removed the basePath. The domain itself is the
+  // more durable specimen: it is the name in lowercase, and it is not going
+  // anywhere for as long as the site is served.
+  it("leaves lowercase identifiers like the hearfy.org domain alone", () => {
+    expect(sourceOf("public/CNAME").trim()).toBe("hearfy.org");
+    // The guard above walks source files; this asserts the lowercase name in
+    // one of them is untouched by it — the loop's own file is in scope.
+    expect(sourceOf("lib/regressions.test.ts")).toMatch(/\bhearfy\.org\b/);
   });
 
   // "HEARFY" was the wordmark for months; the owner asked for mixed case.
@@ -3994,7 +4004,7 @@ describe("the brand mark's entry animation", () => {
       "components/ui.tsx",               // where it is defined
       "components/one-pager/motion.tsx", // re-export, for the page's import
       "components/shell/cover.tsx",      // the cover AND the end-cap
-      "app/one-pager/page.tsx",          // the public one-pager's masthead
+      "app/page.tsx",                    // the public one-pager's masthead
       "app/globals.css",                 // defines the loop the class drives
       "lib/regressions.test.ts",         // this file
       "lib/one-pager.test.ts",           // asserts the loop stays scoped

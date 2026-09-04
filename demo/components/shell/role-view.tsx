@@ -10,6 +10,7 @@ import { CmaClearance } from "../screens/cma/clearance";
 import { CmaReferral } from "../screens/cma/referral";
 import { CmaHandoff } from "../screens/cma/handoff";
 import { AudPanel, AudMonitor } from "../screens/audiologist/supervision";
+import { AudOtoscopy, AudTympanometry } from "../screens/audiologist/exam";
 import { AudClearance } from "../screens/audiologist/clearance";
 import { AudReferral } from "../screens/audiologist/referral";
 import { AudReview, AudSign } from "../screens/audiologist/review";
@@ -70,6 +71,8 @@ export function RoleView() {
   if (role === "audiologist") {
     switch (id) {
       case "aud-panel": return <AudPanel />;
+      case "aud-otoscopy": return <AudOtoscopy next={advanceInRole} />;
+      case "aud-tympanometry": return <AudTympanometry next={advanceInRole} />;
       case "aud-clearance": return <AudClearance next={advanceInRole} />;
       case "aud-referral": return <AudReferral />;
       case "aud-monitor": return <AudMonitor next={advanceInRole} />;

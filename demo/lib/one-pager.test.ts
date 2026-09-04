@@ -21,7 +21,9 @@ import { CONTRAST, CTA, HERO, HOW, MARKET, PROBLEM, SYSTEM, TRUST } from "./one-
 
 const HERE = join(__dirname, "..");
 const CONTENT_SRC = readFileSync(join(HERE, "lib/one-pager.ts"), "utf8");
-const PAGE_SRC = readFileSync(join(HERE, "app/one-pager/page.tsx"), "utf8");
+// The page moved from app/one-pager/ to the root on 2026-09-03; what remains
+// at the old path is a redirect stub, deliberately empty of content.
+const PAGE_SRC = readFileSync(join(HERE, "app/page.tsx"), "utf8");
 
 /**
  * Only the parts a reader sees. The content module's own header documents the
@@ -549,7 +551,7 @@ describe("the page's media", () => {
 
   /**
    * Raw <img>/<video> URLs are NOT rewritten by Next, so every one must go
-   * through asset() or it 404s under the /hearfy/ basePath in production
+   * through asset(), so a restored basePath is one config edit rather than
    * while working perfectly on localhost — a failure that only appears once
    * deployed. Asserted by checking no src is a bare string literal.
    */

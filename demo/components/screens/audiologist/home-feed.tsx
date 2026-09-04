@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Mic, Video } from "lucide-react";
 import { cma, patient } from "@/lib/mock-data";
 import { cn } from "@/lib/cn";
+import { CALL_NOTE_MIN } from "../video-split";
 import { RoomFeed } from "./room-feed";
 import { SoundButton } from "../sound-button";
 import type { VideoSound } from "@/lib/use-video-sound";
@@ -147,7 +148,20 @@ export function HomeFeed({ cmaName = cma.name, beat, active = false, sound = fal
           he could not hear a tone while Dr. Reed was presenting devices —
           the wrong moment, and a negative note in a screen that should read
           as a good outcome. */}
-      <div className="border-t border-[#e4eef0] bg-white px-4 py-3">
+      {/* Reserved height, exactly as on Dr. Reed's tile — see CALL_NOTE_MIN.
+          Her side of the call has held this floor since 2026-09-02; this side
+          never did, so the patient's two quoted lines wrapped to one, two or
+          three lines depending on the beat and the panel grew and shrank
+          under them. It went unnoticed while the audiologist's own screens
+          were few and far apart; putting this tile on the ear check and
+          tympanometry as well made the walk cross a boundary where the height
+          changes, and the drift became visible.
+
+          Both sides of one call must reserve the same space, for the same
+          reason `VideoSplit` owns the column width: the video may not move
+          between beats. */}
+      <div style={{ minHeight: `${CALL_NOTE_MIN / 16}em` }}
+           className="border-t border-[#e4eef0] bg-white px-4 py-3">
         <p className="text-sm leading-relaxed text-[#3f5061]">
           <b className="font-semibold text-brand-navy">{patient.name}:</b>{" "}
           &ldquo;{lines[0]}&rdquo;

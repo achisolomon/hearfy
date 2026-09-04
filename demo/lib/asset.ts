@@ -1,11 +1,12 @@
 /**
  * Static asset URLs, basePath-aware.
  *
- * GitHub Pages serves the demo under /hearfy/ (next.config.mjs sets basePath
- * only when GITHUB_ACTIONS=true). Next rewrites its own bundles and `next/image`
- * for us, but a raw `<video src>` or `<img src>` is left untouched — so any URL
- * we hand the browser by hand must go through here, or it 404s in production
- * while working perfectly on localhost.
+ * The site serves from the apex of hearfy.org, so the base is empty and this
+ * is a no-op today (it was `/hearfy` until 2026-09-03, while Pages served the
+ * project URL). It stays because Next rewrites its own bundles and
+ * `next/image` but leaves a raw `<video src>` or `<img src>` untouched: every
+ * URL we hand the browser by hand goes through here, so restoring a basePath
+ * is one edit in next.config.mjs rather than a sweep of every raw tag.
  *
  * The env reference must be written as a full literal
  * `process.env.NEXT_PUBLIC_BASE_PATH` for Next to inline it at build time;

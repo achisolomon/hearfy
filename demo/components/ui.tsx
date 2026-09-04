@@ -192,6 +192,19 @@ export function SecondaryButton({children,onClick,className=""}:{children:React.
  * 18px on white" rule forbids.
  */
 export function PageHeader({title,subtitle,onBack,eyebrow}:{title:string;subtitle?:string;onBack?:()=>void;eyebrow?:string}){return <header className="mb-6"><div className="mb-5 flex items-center justify-between">{onBack?<button onClick={onBack} aria-label="Go back" className="grid h-11 w-11 place-items-center rounded-full border border-[#e1ebed] bg-white text-brand-navy transition hover:bg-[#f4f8f8]"><ArrowLeft size={19}/></button>:<BrandLogo className="md:hidden"/>}{eyebrow&&<span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#087d7a]">{eyebrow}</span>}</div><h1 className="text-[30px] font-extrabold leading-[1.08] tracking-[-.03em] text-balance text-brand-navy">{title}</h1>{subtitle&&<p className="mt-3 text-[15px] leading-6 text-slate-500">{subtitle}</p>}</header>}
-export function StatusPill({children,tone="teal"}:{children:React.ReactNode;tone?:"teal"|"blue"|"green"|"amber"}){const tones={teal:"bg-[#e8f9f8] text-[#087d7a]",blue:"bg-[#edf4fb] text-[#235f98]",green:"bg-[#edf8f2] text-[#237451]",amber:"bg-[#fff6e8] text-[#9d6514]"};return <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",tones[tone])}><Check size={13}/>{children}</span>}
+/**
+ * `icon` exists because the check is not always true (owner, 2026-09-02).
+ *
+ * The pill baked in a tick, which is right for every state it was built for —
+ * "Confirmed", "Done", "ID matched", "Available today". It is wrong for the
+ * one state that is a REFUSAL: the audiologist sending an ear back rendered
+ * "✓ Retake ordered", a tick on a rejection, which reads as the opposite of
+ * what happened.
+ *
+ * Opt-in rather than a new default, so all forty-odd existing pills keep the
+ * tick they have earned and only a pill that says no has to ask for another
+ * glyph. Pass any lucide icon component; `RotateCcw` is the retake case.
+ */
+export function StatusPill({children,tone="teal",icon:Icon=Check}:{children:React.ReactNode;tone?:"teal"|"blue"|"green"|"amber";icon?:React.ComponentType<{size?:number}>}){const tones={teal:"bg-[#e8f9f8] text-[#087d7a]",blue:"bg-[#edf4fb] text-[#235f98]",green:"bg-[#edf8f2] text-[#237451]",amber:"bg-[#fff6e8] text-[#9d6514]"};return <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",tones[tone])}><Icon size={13}/>{children}</span>}
 export function Progress({step,total}:{step:number;total:number}){return <div className="mb-6"><div className="mb-2 flex justify-between text-[11px] font-bold text-slate-400"><span>STEP {step} OF {total}</span><span>{Math.round(step/total*100)}%</span></div><div className="h-1.5 rounded-full bg-[#e4eeee]"><div className="h-full rounded-full bg-brand-teal transition-all" style={{width:`${step/total*100}%`}}/></div></div>}
 export function SecureFooter(){return <div className="mt-7 flex items-center justify-center gap-2 text-[11px] font-semibold text-slate-400"><ShieldCheck size={14}/>HIPAA-ready demo · Secure & encrypted</div>}

@@ -1,10 +1,15 @@
 /**
  * Static export for GitHub Pages (spec §4).
- * - Pages serves under /hearfy/, so basePath is set only in CI
- *   (GITHUB_ACTIONS=true) — local `npm run dev` still serves at /.
+ * - The site is served from the apex of its own domain (hearfy.org, set by
+ *   `public/CNAME`), so there is no basePath: `/` is the one-pager and
+ *   `/demo` is the walkthrough, in CI exactly as on localhost.
+ *
+ *   It was `/hearfy` until 2026-09-03, when the custom domain replaced the
+ *   achisolomon.github.io/hearfy/ project URL. A project-page basePath and a
+ *   custom domain are mutually exclusive — with both, every asset 404s — so
+ *   this must stay empty for as long as the CNAME file is there.
  * - No server features may be added: no API routes, no runtime images.
  */
-const isPages = process.env.GITHUB_ACTIONS === "true";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -21,11 +26,11 @@ const nextConfig = {
    */
   distDir: process.env.DIST_DIR || ".next",
   output: "export",
-  basePath: isPages ? "/hearfy" : "",
-  assetPrefix: isPages ? "/hearfy/" : undefined,
   images: { unoptimized: true },
   // Exposed so client code can build raw asset URLs (see lib/asset.ts).
-  env: { NEXT_PUBLIC_BASE_PATH: isPages ? "/hearfy" : "" },
+  // Empty now that the site is served from its own apex domain; the helper
+  // stays so a future basePath is one edit here, not a sweep of every <video>.
+  env: { NEXT_PUBLIC_BASE_PATH: "" },
 };
 
 export default nextConfig;

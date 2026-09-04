@@ -72,8 +72,10 @@ describe("pointer maths", () => {
   });
 
   it("returns the screen a role shows at a beat", () => {
-    expect(screenFor(beatIndexById("supervision"), "audiologist")).toBe("aud-panel");
-    expect(screenFor(beatIndexById("supervision"), "patient")).toBe("testing");
+    // Was the stage-5 "supervision" beat until 2026-09-02, when her six-exam
+    // panel moved to its own stage-4 beat and the later duplicate was dropped.
+    expect(screenFor(beatIndexById("overview"), "audiologist")).toBe("aud-panel");
+    expect(screenFor(beatIndexById("overview"), "patient")).toBe("setup");
   });
 
   it("knows the last beat", () => {
@@ -481,21 +483,28 @@ describe("mirror-beat handoff, mode-agnostic (shared primitive)", () => {
     return undefined;
   }
 
-  it("finds a genuine mirror beat for the CMA — sanity, not a hardcode: the script could change and this would just find a different beat", () => {
+  it("finds a genuine mirror beat for the CMA — structural, not a hardcoded beat id", () => {
     const mirrorBeat = findGenuineMirrorBeat("cma");
     expect(mirrorBeat).toBeDefined();
-    // Not asserted as a requirement — just documenting today's data for
-    // anyone reading this file. The owner's original report was about beat 32
-    // ("signing"), which is what this found until the pre-test clearance gate
-    // landed (2026-09-02). The finder returns the FIRST such beat, and
-    // "clearance" is a genuine one that now sits earlier: the audiologist
-    // leads it (she signs the three checks off), while the CMA's own
-    // `cma-clearance` screen there is distinct from her tympanometry screen
-    // before it and her pure-tone screen after. Both beats are real mirrors;
-    // the behaviour under test — that mirrorHandoffAt fires at one — is
-    // asserted by the tests below, and is unchanged.
-    expect(BEATS[mirrorBeat!].id).toBe("clearance");
-    expect(findGenuineMirrorBeat("cma")).toBeLessThan(beatIndexById("signing"));
+    // Documenting today's data, not asserting a requirement — which is why
+    // this line keeps moving rather than the finder.
+    //
+    // It named "signing" (beat 32) originally, the owner's first report. Two
+    // separate 2026-09-02 changes each introduced an EARLIER genuine mirror
+    // for the CMA, and both are real:
+    //   - "otoscopy"  — the audiologist took the ear check, so the CMA stopped
+    //                   leading a beat where she still has her own screen.
+    //   - "clearance" — the audiologist signs the three checks off, and the
+    //                   CMA's own clearance screen is distinct from her
+    //                   tympanometry screen before and pure tone after.
+    // The finder returns the FIRST, so the answer is whichever comes earlier
+    // in the script; asserting the set keeps this honest without pinning it.
+    expect(["otoscopy", "clearance", "signing"]).toContain(BEATS[mirrorBeat!].id);
+    expect(mirrorBeat!).toBeLessThan(beatIndexById("signing"));
+    // The guard that would catch a real regression: a mirror beat in the
+    // MIDDLE of a run led by one other role must not eject a solo viewer.
+    // soloHandoffAt's condition 4 is what enforces it.
+    expect(soloHandoffAt(beatIndexById("otoscopy"), "cma")).toBeNull();
   });
 
   it("mirrorHandoffAt returns the beat's lead role at a genuine mirror beat", () => {

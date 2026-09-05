@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import {
   Ban,
   CalendarCheck,
+  Check,
   ClipboardList,
-  Ear,
   FileHeart,
   Headphones,
   Home,
@@ -429,9 +429,14 @@ export default function OnePagerPage() {
                 {CONTRAST.home.label}
               </p>
               <ul className="mt-4 space-y-3.5">
+                {/* A check, deliberately, not the ear glyph this shipped with
+                    until 2026-09-03. The clinic column marks each drawback
+                    with `Ban`, so this column's marker is read as its
+                    opposite; a decorative ear reads as a category label and
+                    the contrast the whole section rests on goes flat. */}
                 {CONTRAST.home.points.map((p) => (
                   <li key={p} className="flex items-start gap-3 text-[15px] font-medium text-brand-navy">
-                    <Ear aria-hidden className="mt-[3px] h-4 w-4 shrink-0 text-brand-teal" />
+                    <Check aria-hidden className="mt-[3px] h-4 w-4 shrink-0 text-brand-teal" />
                     {p}
                   </li>
                 ))}
@@ -620,7 +625,7 @@ export default function OnePagerPage() {
               <ul className="mt-5 space-y-3">
                 {TRUST.map((t) => (
                   <li key={t} className="flex items-start gap-3 text-[15px] leading-snug text-white/85">
-                    <Ear aria-hidden className="mt-[3px] h-4 w-4 shrink-0 text-brand-teal" />
+                    <Check aria-hidden className="mt-[3px] h-4 w-4 shrink-0 text-brand-teal" />
                     {t}
                   </li>
                 ))}

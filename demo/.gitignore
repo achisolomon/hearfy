@@ -8,3 +8,7 @@ next-env.d.ts
 
 # A second dev server's build dir (see DIST_DIR in next.config.mjs).
 .next-review/
+
+# Screenshots captured for the commercial edit (scripts/capture-supervision.mjs)
+# — regenerate them, don't commit them.
+out-capture/

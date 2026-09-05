@@ -484,7 +484,7 @@ describe("the page is complete enough to stand alone", () => {
     expect(HOW.steps.length).toBe(5);
     expect(SYSTEM.parts.length).toBe(3);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
-    expect(CTA.contact.phone.length).toBeGreaterThan(0);
+    expect(CTA.contact.email.length).toBeGreaterThan(0);
   });
 
   /** The visit steps are numbered in the UI; the numbering must be in order. */
@@ -709,84 +709,134 @@ describe("motion is calm and accessible", () => {
  * link a marketing page would normally carry — so the removal is pinned rather
  * than left to memory.
  *
- * These assert the INVARIANT (the close reaches a human by phone), not the
- * wording: the label and the number may be re-edited freely.
+ * Owner, 2026-09-04: the phone number became an email address. `mailto:` works
+ * on every device, so the mobile/desktop split the `tel:` version needed is
+ * gone — see "one live link on every viewport" below.
+ *
+ * These assert the INVARIANT (the close reaches a human), not the wording: the
+ * label and the address may be re-edited freely.
  */
 describe("the one-pager closes on a way to reach a person", () => {
-  it("offers a dialable phone number", () => {
-    // E.164 for the href, so a phone actually dials it.
-    expect(CTA.contact.tel).toMatch(/^\+[1-9]\d{7,14}$/);
-    // The visible spelling must be the same number, punctuation aside.
-    expect(CTA.contact.phone.replace(/[^\d+]/g, "")).toBe(CTA.contact.tel);
+  it("offers a usable email address", () => {
+    expect(CTA.contact.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
   });
 
   /**
-   * `tel:` only works on a device that can place a call. Owner, 2026-09-02:
-   * "only on mobile (on desktop it will not work)" — so the button is a button
-   * on a phone and plain, selectable text on a desktop, where the link is
-   * disabled rather than left to fail when clicked.
-   *
-   * The invariant, not the classes: the desktop branch must neutralise the
-   * link and must not keep the button's fill. A later "simplification" back to
-   * one button for every viewport is the regression this catches.
+   * The close must not regress to a phone number, which is the shape this page
+   * carried until 2026-09-04 and the thing a later editor is most likely to
+   * restore from an old screenshot or the deck.
    */
-  it("does not offer a dead tel: button on desktop", () => {
+  it("does not close on a phone number", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect(stripped, "the close is a tel: link again").not.toMatch(/tel:/);
+    expect(JSON.stringify(CTA.contact), "a phone number is back on the contact object")
+      .not.toMatch(/\+?\d[\d\s()-]{6,}/);
+  });
+
+  /**
+   * `mailto:` works everywhere, so — unlike the `tel:` version — the link must
+   * stay live at every width. The old page disabled it above `sm` because a
+   * desktop `tel:` click does nothing; carrying that workaround over to email
+   * would kill a link that works fine, so both neutralisers are pinned OUT.
+   */
+  it("keeps one live link on every viewport", () => {
     const stripped = stripComments(PAGE_SRC);
     const anchor = stripped.slice(
-      stripped.indexOf("<a", stripped.indexOf("CTA.contact.tel") - 200),
-      stripped.indexOf("</a>", stripped.indexOf("CTA.contact.tel")),
+      stripped.indexOf("<a", stripped.indexOf("CTA.contact.email") - 400),
+      stripped.indexOf("</a>", stripped.indexOf("CTA.contact.email")),
     );
-    expect(anchor, "the tel: link is still clickable on desktop, where it does nothing")
-      .toMatch(/sm:pointer-events-none/);
-    expect(anchor, "the desktop branch still paints the mobile button's fill")
-      .toMatch(/sm:bg-transparent/);
+    expect(anchor, "the email link is disabled on desktop, where mailto: works")
+      .not.toMatch(/sm:pointer-events-none/);
+    expect(anchor, "the desktop branch drops the button fill the email link should keep")
+      .not.toMatch(/sm:bg-transparent/);
   });
 
   /**
-   * The number must be readable on desktop even though the link is dead —
-   * pointer-events-none on its own would leave it visible but unselectable, so
-   * a desktop reader could not copy it.
-   */
-  it("keeps the number selectable where it cannot be dialled", () => {
-    expect(stripComments(PAGE_SRC)).toMatch(/sm:select-text/);
-  });
-
-  /**
-   * The phone number must never wrap.
+   * The address must never wrap.
    *
-   * Found by screenshot at 390px, 2026-09-02: the button laid out as one row,
-   * so "Contact us" split over two lines and the number broke mid-way, as
-   * "+972-54- / 3003630" — a number that reads as two. Every computed style
-   * was correct, so only the picture showed it.
-   *
-   * A broken phone number is worse than an ugly one: it can be misread and
-   * misdialled. The nowrap is therefore pinned.
+   * Inherited from the phone number, found by screenshot at 390px on
+   * 2026-09-02: the button laid out as one row, so the label split over two
+   * lines and the value broke mid-way. Every computed style was correct, so
+   * only the picture showed it. An address broken across lines reads as two
+   * and can be mis-copied, so the nowrap is pinned.
    */
-  it("never lets the phone number break across lines", () => {
+  it("never lets the email address break across lines", () => {
     const stripped = stripComments(PAGE_SRC);
-    const numSpan = stripped.slice(
-      stripped.lastIndexOf("<span", stripped.indexOf("CTA.contact.phone")),
-      stripped.indexOf("CTA.contact.phone"),
-    );
-    expect(numSpan, "the phone number can wrap mid-number again")
+    // The address appears twice — once in the mailto: href, once as the
+    // visible text. The visible one is last, and it is the one that can wrap.
+    const visible = stripped.lastIndexOf("CTA.contact.email");
+    const addrSpan = stripped.slice(stripped.lastIndexOf("<span", visible), visible);
+    expect(addrSpan, "the email address can wrap mid-address")
       .toMatch(/whitespace-nowrap/);
   });
 
   /**
-   * Both viewports render from the same source, so the number cannot drift
-   * between them — the failure mode of duplicating the markup per breakpoint.
+   * One source for the address, so it cannot drift — the failure mode of
+   * duplicating the markup per breakpoint. The href and the visible text are
+   * the only two references, and both read the same field.
    */
-  it("renders one number for both viewports", () => {
+  it("renders one address for both viewports", () => {
     const stripped = stripComments(PAGE_SRC);
-    expect((stripped.match(/CTA\.contact\.phone/g) ?? []).length).toBe(1);
-    expect((stripped.match(/CTA\.contact\.tel/g) ?? []).length).toBe(1);
+    expect((stripped.match(/CTA\.contact\.email/g) ?? []).length).toBe(2);
+    expect((stripped.match(/<a\b[^>]*mailto:/g) ?? []).length).toBe(1);
   });
 
-  it("renders the number as a tel: link", () => {
+  /**
+   * The closing panel's balance, owner's call on 2026-09-04 from rendered
+   * options.
+   *
+   * The address had been set at 26px/extrabold, level with the 30px heading
+   * above it but sitting on a white fill, so the heaviest thing in the panel
+   * was the address and the eye reached it before the invitation meant to earn
+   * the click. Both halves of the fix are pinned because either one alone
+   * leaves the panel unbalanced:
+   *
+   *   1. the address ranks BELOW the heading, not level with it;
+   *   2. the columns are not an even split, and they are centred against each
+   *      other — an even split wrapped two of the four checklist items while
+   *      the shorter right column ran out early, leaving a dead band.
+   *
+   * Asserted as relationships rather than exact classes: a later edit may
+   * retune the sizes, and should, so long as the heading still outranks the
+   * address and the list still gets the larger share.
+   */
+  it("keeps the address ranked below the closing heading", () => {
     const stripped = stripComments(PAGE_SRC);
-    expect(stripped, "the phone number is not dialable").toMatch(/href=\{`tel:\$\{[^}]+\}`\}/);
-    expect(stripped, "the phone number is hardcoded in the markup")
-      .not.toMatch(/tel:\+\d/);
+    const px = (s: string | undefined) => (s ? Number(s) : NaN);
+    // the h2 that carries CTA.title, and the visible address span
+    const h2 = stripped.slice(stripped.indexOf("<h2"), stripped.indexOf("</h2>"));
+    const visible = stripped.lastIndexOf("CTA.contact.email");
+    const addr = stripped.slice(stripped.lastIndexOf("<span", visible), visible);
+    // compare the desktop (sm:) sizes, which is where both are largest
+    const headingPx = px(h2.match(/sm:text-\[(\d+)px\]/)?.[1]);
+    const addrPx = px(addr.match(/sm:text-\[(\d+)px\]/)?.[1]);
+    expect(headingPx).toBeGreaterThan(0);
+    expect(addrPx).toBeGreaterThan(0);
+    expect(addrPx, "the address is set as large as the heading it sits under")
+      .toBeLessThan(headingPx);
+    expect(addr, "the address is as heavy as the heading, so it competes with it")
+      .not.toMatch(/font-extrabold/);
+  });
+
+  it("gives the checklist the larger column and centres the two blocks", () => {
+    const stripped = stripComments(PAGE_SRC);
+    // the grid that lays out the checklist against the CTA
+    const grid = stripped.slice(stripped.indexOf('className="grid gap-10 lg:grid-cols-'));
+    const cols = grid.match(/lg:grid-cols-\[([\d.]+)fr_([\d.]+)fr\]/);
+    expect(cols, "the closing panel's two columns are no longer an fr split").toBeTruthy();
+    const [, left, right] = cols!;
+    expect(Number(left), "the checklist column is not wider than the CTA column, so it wraps")
+      .toBeGreaterThan(Number(right));
+    expect(grid.slice(0, 200), "the columns hang from a shared top edge, leaving a dead band")
+      .toMatch(/lg:items-center/);
+  });
+
+  it("renders the address as a mailto: link", () => {
+    const stripped = stripComments(PAGE_SRC);
+    expect(stripped, "the email address is not clickable")
+      .toMatch(/href=\{`mailto:\$\{[^}]+\}`\}/);
+    expect(stripped, "the email address is hardcoded in the markup")
+      .not.toMatch(/mailto:[^$]/);
   });
 
   /**

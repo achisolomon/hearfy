@@ -7,7 +7,7 @@ import {
   FileHeart,
   Headphones,
   Home,
-  Phone,
+  Mail,
   Stethoscope,
   Video,
 } from "lucide-react";
@@ -617,14 +617,24 @@ export default function OnePagerPage() {
        * ---------------------------------------------------------- */}
       <Reveal>
         <section className="mt-16 rounded-[28px] bg-brand-navy px-7 py-10 sm:px-12 sm:py-12">
-          <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
+          {/* NOT 1fr_1fr, and not top-aligned. The two columns hold very
+              different amounts of text — four checklist lines on the left, a
+              heading and one sentence on the right — so splitting the width
+              evenly made the left column wrap two of its four items while the
+              right ran out of content 54px early, leaving a dead band across
+              the bottom of the panel. Giving the list the larger share fits
+              every item on one line, and centring the columns against each
+              other lets the two blocks read as balanced masses rather than
+              hanging from a shared top edge. Owner picked this on 2026-09-04
+              from rendered options. */}
+          <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-center lg:gap-16">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-brand-teal">
                 What every patient can expect
               </p>
               <ul className="mt-5 space-y-3">
                 {TRUST.map((t) => (
-                  <li key={t} className="flex items-start gap-3 text-[15px] leading-snug text-white/85">
+                  <li key={t} className="flex items-start gap-3 text-[15px] leading-snug text-white/90">
                     <Check aria-hidden className="mt-[3px] h-4 w-4 shrink-0 text-brand-teal" />
                     {t}
                   </li>
@@ -640,49 +650,58 @@ export default function OnePagerPage() {
                 {CTA.line}
               </p>
 
-              {/* A phone number, not a walkthrough link. The owner removed the
-                  "walk through the product" button on 2026-09-02: the page's
-                  close should reach a person.
+              {/* An email address, not a walkthrough link. The owner removed
+                  the "walk through the product" button on 2026-09-02: the
+                  page's close should reach a person.
 
-                  MOBILE vs DESKTOP, owner 2026-09-02: "only on mobile (on
-                  desktop it will not work)". `tel:` does nothing in a desktop
-                  browser — at best it opens an app-picker — so a button there
-                  is an affordance that fails when used. The number is the same
-                  either way; only its behaviour changes:
+                  This was a phone number until 2026-09-04. That version had to
+                  render two ways — a tappable button on phones, dead selectable
+                  text on desktop — because `tel:` does nothing in a desktop
+                  browser, so a button there was an affordance that failed when
+                  used. `mailto:` works on every device, so that split is gone:
+                  one live button, every viewport, no pointer-events-none and no
+                  select-text needed.
 
-                    - phone (< sm): a tappable teal button that dials.
-                    - desktop (>= sm): plain selectable text to read or copy.
+                  COLOUR, per the Selection Rule (navy acts, teal marks): this
+                  is the page's primary action, so it must not wear the teal
+                  that marks live state and chosen things — every other teal on
+                  this page is a 2px progress dot. Navy-on-navy is unavailable
+                  inside this section, so the action inverts instead: a white
+                  fill with navy ink, the same button one tier up. Teal stays on
+                  the icon and kicker, where it is marking, not acting.
 
-                  Both stack label-over-number. The button was one row at
-                  first, which fitted at desktop widths but broke at 390px:
-                  "Contact us" split across two lines and the number wrapped
-                  mid-way, as "+972-54- / 3003630". Caught by screenshot, not
-                  by the computed styles, which were correct throughout — so
-                  the number carries whitespace-nowrap and cannot break again.
-
-                  Done with `sm:` classes rather than JS so it survives the
-                  static export and is correct on first paint — a
-                  useMediaQuery would render the wrong one until it hydrates.
-                  Both branches read the SAME `CTA.contact`, so the number can
-                  never drift between them. */}
+                  The label stacks over the address. whitespace-nowrap stays on
+                  the address for the same reason it was added to the number at
+                  390px: a contact detail broken across lines reads as two, and
+                  a screenshot is the only thing that catches it — the computed
+                  styles were correct throughout. */}
               <a
-                href={`tel:${CTA.contact.tel}`}
-                className="mt-6 inline-flex flex-col items-start gap-1 rounded-[16px] bg-brand-teal px-6 py-4 text-[16px] font-extrabold text-brand-navy sm:pointer-events-none sm:mt-7 sm:gap-1 sm:rounded-none sm:bg-transparent sm:p-0"
+                href={`mailto:${CTA.contact.email}`}
+                className="group mt-6 inline-flex min-h-14 flex-col items-start gap-1 rounded-[16px] bg-white px-6 py-4 text-[16px] font-extrabold text-brand-navy shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-teal active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:mt-7 sm:gap-1"
               >
                 <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                  <Phone aria-hidden className="h-5 w-5 sm:h-4 sm:w-4 sm:text-brand-teal" />
-                  <span className="text-[13px] font-extrabold uppercase tracking-[0.16em] sm:text-[11px] sm:tracking-[0.2em] sm:text-brand-teal">
+                  <Mail aria-hidden className="h-5 w-5 text-teal-ink" />
+                  <span className="text-[13px] font-extrabold uppercase tracking-[0.16em] text-teal-ink">
                     {CTA.contact.label}
                   </span>
                 </span>
-                {/* select-text re-enables selection on desktop, where the
-                    anchor itself is pointer-events-none so the dead tel: link
-                    cannot be clicked. */}
+                {/* SIZE, 2026-09-04: this was 26px/extrabold, which put it
+                    level with the 30px heading above it while sitting on a
+                    white fill — so the panel's heaviest element was the
+                    address, and the eye reached it before the invitation that
+                    is supposed to earn the click. 20px/bold keeps it plainly
+                    legible and unmistakably the address, one rank below the
+                    heading rather than competing with it.
+
+                    whitespace-nowrap stays for the reason it was added to the
+                    phone number at 390px: a contact detail broken across lines
+                    reads as two, and only a screenshot catches it — the
+                    computed styles were correct throughout. */}
                 <span
                   dir="ltr"
-                  className="whitespace-nowrap text-[22px] font-extrabold leading-tight tabular-nums sm:select-text sm:text-[26px] sm:tracking-[-0.01em] sm:text-white"
+                  className="whitespace-nowrap text-[19px] font-bold leading-tight sm:text-[20px] sm:tracking-[-0.01em]"
                 >
-                  {CTA.contact.phone}
+                  {CTA.contact.email}
                 </span>
               </a>
             </div>

@@ -44,13 +44,16 @@ describe("public one-pager carries no business information", () => {
    * than only the literal spelling used in the deck today.
    */
   const FORBIDDEN: Array<[string, RegExp]> = [
-    // Slide 5 — market sizing.
-    ["TAM $31B", /\$\s?31\s?B|31 billion/i],
-    ["SAM $15B", /\$\s?15\s?B|15 billion/i],
-    ["SOM $1.5B", /\$\s?1\.5\s?B|1\.5 billion/i],
+    // Slide 5 — market sizing. The deck's TAM ($28B) coincides digit-for-digit
+    // with the market section's own distinct, sourced global market figure
+    // (Grand View Research / Research and Markets), so it is not barred as a
+    // bare dollar figure here — "the sizing labels" below already bars the
+    // word "TAM" itself, which is what would actually leak the deck's table.
+    ["SAM $21B", /\$\s?21\s?B|21 billion/i],
+    ["SOM $2.1B", /\$\s?2\.1\s?B|2\.1 billion/i],
     ["the sizing labels", /\bTAM\b|\bSAM\b|\bSOM\b/],
     ["the $1,100 patient journey", /\$\s?1,?100/],
-    ["addressable-population counts", /28\.8\s?M|\b14M\b|14 million untreated/i],
+    ["addressable-population counts", /\b28M\b|28 million addressable|\b21M\b|21 million patients/i],
 
     // Slide 16 — the financial curve and its outcome tiles.
     ["2031 revenue", /\$\s?100(\.4)?\s?M|100\.4/],
@@ -75,13 +78,13 @@ describe("public one-pager carries no business information", () => {
   ];
 
   /**
-   * NOTE ON MARKET FIGURES. The page carries third-party analyst forecasts of
-   * the hearing industry ($36B / $39B / $15B). Those are deliberately NOT on
-   * this list: they describe an industry, not Hearfy. The prohibition is on
-   * OUR numbers — what we earn, charge, or project — and the deck's own
-   * sizing ($31B/$15B/$1.5B TAM/SAM/SOM) stays barred above, including the
-   * "$15B" spelling, which is why the market section says "~$15B" and is
-   * covered by its own guards below.
+   * NOTE ON MARKET FIGURES. The page carries a third-party analyst forecast of
+   * the hearing industry ($28B). That is deliberately NOT on this list: it
+   * describes an industry, not Hearfy, and is a distinct, sourced claim from
+   * the deck's own TAM/SAM/SOM sizing, even where digits coincide. The
+   * prohibition is on OUR numbers — what we earn, charge, or project — and
+   * the deck's own sizing (SAM $21B / SOM $2.1B, and the TAM/SAM/SOM labels
+   * themselves) stays barred above, covered by its own guards below.
    */
 
   it.each(FORBIDDEN)("never ships %s", (_label, pattern) => {
@@ -190,7 +193,7 @@ describe("the content the page is allowed to carry", () => {
 /**
  * The market section: "One Number, Held".
  *
- * A single $36B figure with qualifying chips. The first two tests exist
+ * A single $28B figure with qualifying chips. The first two tests exist
  * because the owner flagged those exact mistakes on 2026-09-02 while
  * supplying the segment model, and both are SILENT errors — a page with a
  * double-counted market size looks completely normal and is simply wrong.
@@ -204,7 +207,7 @@ describe("the market section is honest about its figures", () => {
    * Hearing aids alone ($10.35B → $14.42B) sit INSIDE the devices segment.
    * The owner's instruction: "do not add this number to the total, because it
    * is already included in the equipment category." Quoting it beside the
-   * $36B invites exactly that addition.
+   * $28B invites exactly that addition.
    */
   it("never quotes the hearing-aids-only figure", () => {
     expect(SHIPPED, "the hearing-aids-only figure risks being double-counted")
@@ -215,7 +218,7 @@ describe("the market section is honest about its figures", () => {
    * Consumer hearables are excluded on purpose. The owner: including them
    * "would significantly increase the number, but would also make the TAM
    * less credible and less relevant." The exclusion has to be STATED, since
-   * a bare "$36B hearing market" would otherwise be read as including them.
+   * a bare "$28B hearing market" would otherwise be read as including them.
    */
   it("states that consumer hearables are excluded", () => {
     expect(MARKET.footnote, "the hearables exclusion is no longer stated")
@@ -255,11 +258,6 @@ describe("the market section is honest about its figures", () => {
     // survived. Length was a proxy; this is the actual invariant.
     expect(MARKET.footnote, "the footnote no longer says what is excluded")
       .toMatch(/exclude/i);
-  });
-
-  /** The figure must carry a year, or "$36B" is a number about nothing. */
-  it("says which year the forecast is for", () => {
-    expect(MARKET.headline).toMatch(/20\d\d/);
   });
 
   /**

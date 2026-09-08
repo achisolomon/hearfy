@@ -109,7 +109,7 @@ export const PROBLEM = {
  * Chosen by the owner on 2026-09-02 from five rendered options (initially
  * "Where Hearfy Sits", changed the same day). The whole section is the
  * figure: no chart, no bars, no rings. It is the owner's own investor line —
- * "A $36B global hearing care market by 2030, growing at approximately 6%
+ * "A $28B global hearing care market, growing at approximately 6%
  * annually" — rendered literally, and it is the fastest read on the page.
  *
  * THE FIGURES ARE THIRD-PARTY ANALYST FORECASTS, not Hearfy's. That is what
@@ -121,30 +121,22 @@ export const PROBLEM = {
  * as Hearfy's own projection. A future edit that strips them for tidiness
  * turns a cited market fact into an unsourced claim on a public page.
  *
- * The owner's segment model, from which the $36B is cut:
- *
- *   Devices & equipment      $16.6B → $21.1B   6.2%
- *   Audiology services       $11.4B → $14.7B   6.6%
- *   Accessories & protection  ~$2.6B →  ~$3.6B  ~8.2%
- *   ------------------------------------------------
- *   Total broad market       ~$30.6B → ~$39.4B ~6.5%
- *
  * Two rules that must survive any future edit:
  *
- *  1. HEARING AIDS ALONE ($10.35B → $14.42B, MarketsandMarkets) are ALREADY
- *     INSIDE the devices segment. Never add that figure to a total — it is
- *     double-counting, and the owner flagged it explicitly.
+ *  1. HEARING AIDS ALONE are ALREADY INSIDE the devices segment. Never add
+ *     that figure to a total — it is double-counting, and the owner flagged
+ *     it explicitly.
  *  2. CONSUMER HEARABLES ARE EXCLUDED throughout. Including them would inflate
  *     the number and make it less credible, which is the opposite of the point.
  *
- * $36B drops hearing protection from the broad market as less relevant to
+ * $28B drops hearing protection from the broad market as less relevant to
  * Hearfy, and is the figure the section leads with.
  */
 export const MARKET = {
   /**
    * The number, split so the unit can be coloured separately from the digits.
-   * "$36B" is the clinical market — devices, implants, diagnostics, and the
-   * services around them — in 2030.
+   * "$28B" is the clinical market — devices, implants, diagnostics, and the
+   * services around them.
    */
   /**
    * The section needs a real H2. Every other section on the page has one; the
@@ -152,9 +144,9 @@ export const MARKET = {
    * why it read as an orphan rather than a section.
    */
   title: "A market that is growing, and underserved",
-  figure: "$36",
+  figure: "$28",
   unit: "B",
-  headline: "Global hearing care market by 2030",
+  headline: "Global hearing care market",
   /**
    * The qualifiers, as a labelled list rather than pills.
    *
@@ -166,7 +158,7 @@ export const MARKET = {
    * short label, one line of explanation.
    *
    * "Clinical, not consumer" earns its place most: it is why this figure is
-   * smaller than the ~$39B ecosystem number, and why hearables are absent.
+   * smaller than the broader ecosystem number, and why hearables are absent.
    */
   breakdownTitle: "What the number covers",
   breakdown: [
@@ -180,7 +172,7 @@ export const MARKET = {
     },
     {
       name: "Growing about 6% a year",
-      line: "Steady growth to 2030 across both the device and service halves.",
+      line: "Steady growth across both the device and service halves.",
     },
   ],
   /**
@@ -191,17 +183,17 @@ export const MARKET = {
    * the row above it.
    *
    * What survives is the only thing the chips do NOT carry: what the figure
-   * leaves out. That has to stay stated, or "$36B hearing market" is read as
+   * leaves out. That has to stay stated, or "$28B hearing market" is read as
    * including consumer hearables.
    */
   /**
    * Kept deliberately alongside the breakdown: that list says what the figure
-   * COVERS, and this says what it leaves out. Without it, "$36B hearing
+   * COVERS, and this says what it leaves out. Without it, "$28B hearing
    * market" is read as including the consumer earbud market.
    */
   /**
    * Kept deliberately alongside the breakdown: that list says what the figure
-   * COVERS, and this says what it leaves out. Without it, "$36B hearing
+   * COVERS, and this says what it leaves out. Without it, "$28B hearing
    * market" is read as including the consumer earbud market.
    */
   footnote: "Excludes hearing protection and consumer hearables.",

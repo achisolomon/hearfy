@@ -1,13 +1,12 @@
 /**
- * Static export for GitHub Pages (spec §4).
- * - The site is served from the apex of its own domain (hearfy.org, set by
+ * Static export, built and deployed by Cloudflare Pages (spec §4).
+ * - Production is served from the apex of its own domain (hearfy.org, set by
  *   `public/CNAME`), so there is no basePath: `/` is the one-pager and
- *   `/demo` is the walkthrough, in CI exactly as on localhost.
- *
- *   It was `/hearfy` until 2026-09-03, when the custom domain replaced the
- *   achisolomon.github.io/hearfy/ project URL. A project-page basePath and a
- *   custom domain are mutually exclusive — with both, every asset 404s — so
- *   this must stay empty for as long as the CNAME file is there.
+ *   `/demo` is the walkthrough, on every environment exactly as on localhost.
+ *   Cloudflare's per-branch preview URLs (`<branch>.hearfy-demo.pages.dev`)
+ *   are still apex-style project URLs, not subpaths, so this stays empty
+ *   there too — a basePath would only be needed for a subpath deployment,
+ *   which this project doesn't do.
  * - No server features may be added: no API routes, no runtime images.
  */
 

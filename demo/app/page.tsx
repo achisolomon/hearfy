@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "@/components/ui";
 import { CountUp, DotGrid, LiveBrandLogo, LoopVideo, Reveal } from "@/components/one-pager/motion";
+import {
+  PointerField,
+  PointerGlow,
+  PointerLocals,
+  PointerStyles,
+} from "@/components/one-pager/pointer";
 import { asset } from "@/lib/asset";
 import { BRAND_NAME } from "@/lib/mock-data";
 import {
@@ -76,7 +82,19 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** A soft white card on the tinted ground — the system's primary surface. */
+/**
+ * A soft white card on the tinted ground — the system's primary surface.
+ *
+ * `data-lift` and `data-sheen` opt every card into the pointer layer in one
+ * place. Doing it here rather than on each call site is what keeps the effect
+ * uniform: a card added later is reactive by construction, and there is no
+ * list of decorated cards to fall out of date. Both attributes are inert
+ * without a fine pointer — see components/one-pager/pointer.tsx.
+ *
+ * `overflow-hidden` is required by the sheen, not decorative: the ::after
+ * inherits the border radius but a radial gradient still paints to the
+ * element's box, so without it the highlight squares off the rounded corners.
+ */
 function Card({
   children,
   className = "",
@@ -86,7 +104,9 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-[24px] border border-[#E4EEF0] bg-white p-6 shadow-card print:shadow-none ${className}`}
+      data-lift
+      data-sheen
+      className={`relative overflow-hidden rounded-[24px] border border-[#E4EEF0] bg-white p-6 shadow-card print:shadow-none ${className}`}
     >
       {children}
     </div>
@@ -115,7 +135,12 @@ function Photo({
   imgClassName?: string;
 }) {
   return (
-    <div className={`overflow-hidden rounded-[20px] bg-[#E4EEF0] ${className}`}>
+    // `data-parallax` moves the picture inside this frame against the pointer.
+    // The frame itself never moves, which is what reads as depth rather than
+    // as a wobbling element. Safe because the img is already object-cover and
+    // therefore already overflows — there is spare picture to slide, and no
+    // edge can be exposed.
+    <div data-parallax className={`overflow-hidden rounded-[20px] bg-[#E4EEF0] ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={asset(src)} alt={alt} className={`h-full w-full object-cover ${imgClassName}`} />
     </div>
@@ -145,7 +170,23 @@ const SYSTEM_ICONS = [Home, Video, ClipboardList];
 
 export default function OnePagerPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 pb-24 pt-8 sm:px-8 sm:pt-12">
+    <PointerField className="mx-auto w-full max-w-5xl px-5 pb-24 pt-8 sm:px-8 sm:pt-12">
+      {/* The pointer layer. Three pieces, all inert on touch and under
+          prefers-reduced-motion, so the phone and the printed page are exactly
+          the document they were before:
+            - PointerGlow    the ambient light that follows the cursor
+            - PointerStyles  the hover rules for cards, photos and panels
+            - PointerLocals  one delegated listener publishing element-local
+                             pointer coordinates to whatever is under it
+          The page stays a server component; only these ship JavaScript. */}
+      <PointerGlow />
+      <PointerStyles />
+      <PointerLocals />
+
+      {/* `main` moved inside the pointer wrapper rather than wrapping it: the
+          landmark should contain the document, and the glow is decoration that
+          sits behind it. */}
+      <main>
       {/* ---------------------------------------------------------- *
        * Masthead
        * ---------------------------------------------------------- */}
@@ -199,7 +240,14 @@ export default function OnePagerPage() {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <div className="relative overflow-hidden rounded-[28px] bg-white p-2 shadow-card print:shadow-none">
+          <div
+            data-lift
+            className="relative overflow-hidden rounded-[28px] bg-white p-2 shadow-card print:shadow-none"
+          >
+            {/* No `data-sheen` on this frame: the Photo inside already carries
+                `data-parallax`, and a sheen over a photograph reads as glare on
+                the lens rather than as light on a surface. Cards get the sheen,
+                pictures get the parallax. */}
             <Photo
               src={MEDIA.hero.src}
               alt={MEDIA.hero.alt}
@@ -215,7 +263,15 @@ export default function OnePagerPage() {
 
       {/* The thesis line, given the weight of a pull quote. */}
       <Reveal>
-        <blockquote className="mt-12 rounded-[24px] bg-brand-navy px-7 py-8 text-center sm:px-12 sm:py-10">
+        {/* `data-sheen="dark"` — the teal light at card strength is invisible
+            against #0B2340, so the navy grounds get their own stronger variant.
+            No `data-lift`: the two navy panels are full-width bands, and a band
+            that rises off the page reads as a UI control rather than as the
+            page's own structure. */}
+        <blockquote
+          data-sheen="dark"
+          className="relative mt-12 overflow-hidden rounded-[24px] bg-brand-navy px-7 py-8 text-center sm:px-12 sm:py-10"
+        >
           <p className="text-[22px] font-extrabold leading-[1.2] tracking-[-0.02em] text-white sm:text-[28px]">
             {HERO.thesis}
           </p>
@@ -453,7 +509,14 @@ export default function OnePagerPage() {
                 video matches the two lists exactly (owner, 2026-09-02: "the
                 video and the text same size"). A min-height lets it settle at
                 its own smaller size and the row reads as ragged. */}
-            <div className="relative h-full overflow-hidden rounded-[24px] bg-white p-2 shadow-card print:shadow-none">
+            <div
+              data-lift
+              data-parallax
+              className="relative h-full overflow-hidden rounded-[24px] bg-white p-2 shadow-card print:shadow-none"
+            >
+              {/* `data-parallax` targets a direct `> video` child, which the
+                  LoopVideo renders — and its reduced-motion fallback renders a
+                  direct `> img`, so the selector covers both states. */}
               <LoopVideo
                 src={MEDIA.visitVideo.src}
                 poster={MEDIA.visitVideo.poster}
@@ -616,7 +679,12 @@ export default function OnePagerPage() {
        * Trust + close
        * ---------------------------------------------------------- */}
       <Reveal>
-        <section className="mt-16 rounded-[28px] bg-brand-navy px-7 py-10 sm:px-12 sm:py-12">
+        {/* The closing panel takes the dark sheen too, so the page's last
+            surface answers the pointer the same way its first one did. */}
+        <section
+          data-sheen="dark"
+          className="relative mt-16 overflow-hidden rounded-[28px] bg-brand-navy px-7 py-10 sm:px-12 sm:py-12"
+        >
           {/* NOT 1fr_1fr, and not top-aligned. The two columns hold very
               different amounts of text — four checklist lines on the left, a
               heading and one sentence on the right — so splitting the width
@@ -715,6 +783,7 @@ export default function OnePagerPage() {
           {BRAND_NAME} — {HERO.eyebrow}
         </p>
       </footer>
-    </main>
+      </main>
+    </PointerField>
   );
 }

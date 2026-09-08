@@ -6,6 +6,7 @@ import { Card, StatusPill } from "../ui";
 import { audiogram } from "@/lib/mock-data";
 import { advanceSweep, lossBand, pta, type SweepState } from "@/lib/exam";
 import type { Framing } from "./otoscopy-step";
+import { cn } from "@/lib/cn";
 
 // Each ear sweeps for ~4s; the whole animation runs once per visit to the
 // screen (the story shell remounts it, so stepping back replays it).
@@ -51,7 +52,7 @@ function EarCard({ label, avg, state, progress }:
   );
 }
 
-export function PureToneStep({ framing }: { framing: Framing }) {
+export function PureToneStep({ framing, noisy = false }: { framing: Framing; noisy?: boolean }) {
   const sweep = useSweep();
   const done = sweep.phase === "done";
   const right = pta(audiogram.frequencies, audiogram.right);
@@ -115,13 +116,20 @@ export function PureToneStep({ framing }: { framing: Framing }) {
         </Card>
       )}
 
+      {/* One source of truth for the room (spec AC08). This row and any
+          correction notice above it are the same fact stated twice, so it
+          reads from the prop rather than asserting "stable" unconditionally
+          — a screen that pauses for noise while still showing a green
+          "Environment is stable" pill tells the CMA two opposite things. */}
       <Card className="mt-4 flex items-center gap-3 p-4">
-        <Wifi className="shrink-0 text-teal-ink" />
+        <Wifi className={cn("shrink-0", noisy ? "text-[#9d6514]" : "text-teal-ink")} />
         <div className="min-w-0 flex-1">
-          <b className="text-sm">Environment is stable</b>
-          <p className="text-xs text-slate-500">Ambient noise within clinical range</p>
+          <b className="text-sm">{noisy ? "Room noise too high" : "Environment is stable"}</b>
+          <p className="text-xs text-slate-500">
+            {noisy ? "Above the clinical range — testing paused" : "Ambient noise within clinical range"}
+          </p>
         </div>
-        <StatusPill tone="green">Good</StatusPill>
+        <StatusPill tone={noisy ? "amber" : "green"}>{noisy ? "Action" : "Good"}</StatusPill>
       </Card>
     </>
   );

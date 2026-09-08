@@ -5,6 +5,7 @@ import { CallSplit } from "./call-tile";
 import { OtoscopyStep } from "../../exam/otoscopy-step";
 import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
+import { CorrectionNotice } from "../../exam/guidance";
 import { SpeechStep } from "../../exam/speech-step";
 import { BoneStep } from "../../exam/bone-step";
 import { EXAM_STEPS } from "@/lib/exam";
@@ -69,10 +70,23 @@ export function CmaTympanometry({ next }: { next: () => void }) {
 }
 
 export function CmaPureTone({ next }: { next: () => void }) {
+  // Spec AC08/AC09: an objective trigger pauses the test, and the correction
+  // is explained, demonstrated and verified before it resumes from the last
+  // validated checkpoint. Maya is the one who acts on a room-noise event —
+  // she is in the room — so the notice sits on her screen, above the sweep
+  // she is running. The patient's own screen is not interrupted mid-tone.
   return (
     <ExamStepShell id="puretone" next={next} cta="Thresholds complete" active
       note="Has joined the test — she is adjusting the left-ear sweep herself.">
-      <PureToneStep framing="cma" />
+      <CorrectionNotice
+        framing="cma"
+        className="mb-4"
+        issue="Room noise rose above the testing limit"
+        why="Background sound this loud masks the quietest tones, so a threshold measured now would read worse than Alex's real hearing."
+        fix="Close the hallway door and silence the television, then confirm the room is quiet again."
+        resumeAt="the last confirmed frequency"
+      />
+      <PureToneStep framing="cma" noisy />
     </ExamStepShell>
   );
 }

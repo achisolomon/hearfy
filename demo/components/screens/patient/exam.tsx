@@ -8,6 +8,7 @@ import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
+import { AiDisclosure, TeachBack } from "../../exam/guidance";
 import { patientFindings, reviewOutcome, reviewReferralReason, visitGates } from "@/lib/clearance";
 import { useReview } from "@/lib/review-store";
 
@@ -18,7 +19,7 @@ const VISIT_FLOW = ["setup", "otoscopy", "tympanometry", "clearance", "testing",
 const visitEyebrow = (id: (typeof VISIT_FLOW)[number]) =>
   `Visit ${VISIT_FLOW.indexOf(id) + 1} of ${VISIT_FLOW.length}`;
 
-export function Consent({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [ok,setOk]=useState(true);return <Shell><PageHeader title="Before we begin" subtitle="Please review and confirm today’s visit consent." onBack={back} eyebrow="Patient consent"/><Card className="p-5"><h3 className="font-extrabold">Today’s session may include</h3><div className="mt-4 space-y-4">{[[Video,"Secure video with your audiologist"],[FileHeart,"Clinical test data and images"],[Volume2,"Optional session recording for care quality"]].map(([I,t]:any)=><div key={t} className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf8f7] text-teal-ink"><I size={19}/></span><span className="text-sm font-semibold">{t}</span></div>)}</div></Card><button onClick={()=>setOk(!ok)} className="mt-4 flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left"><span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${ok?"border-teal-ink bg-teal-ink text-white":"border-slate-300"}`}>{ok&&<Check size={15}/>}</span><span className="text-sm leading-6 text-slate-600">I understand and consent to the use of my information for this hearing-care visit.</span></button><div className="mt-6"><PrimaryButton disabled={!ok} onClick={()=>go("setup")}>Confirm and continue</PrimaryButton></div></Shell>}
+export function Consent({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [ok,setOk]=useState(true);return <Shell><PageHeader title="Before we begin" subtitle="Please review and confirm today’s visit consent." onBack={back} eyebrow="Patient consent"/><Card className="p-5"><h3 className="font-extrabold">Today’s session may include</h3><div className="mt-4 space-y-4">{[[Video,"Secure video with your audiologist"],[FileHeart,"Clinical test data and images"],[Volume2,"Optional session recording for care quality"]].map(([I,t]:any)=><div key={t} className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf8f7] text-teal-ink"><I size={19}/></span><span className="text-sm font-semibold">{t}</span></div>)}</div></Card><AiDisclosure className="mt-4"/><button onClick={()=>setOk(!ok)} className="mt-4 flex w-full items-start gap-3 rounded-2xl bg-white p-4 text-left"><span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${ok?"border-teal-ink bg-teal-ink text-white":"border-slate-300"}`}>{ok&&<Check size={15}/>}</span><span className="text-sm leading-6 text-slate-600">I understand and consent to the use of my information for this hearing-care visit, including the automated guidance described above.</span></button><div className="mt-6"><PrimaryButton disabled={!ok} onClick={()=>go("setup")}>Confirm and continue</PrimaryButton></div></Shell>}
 // The patient's screen carries no button for a clinical act someone else
 // performs — preparing the kit is Maya's act, not Alex's. The chrome's Next
 // advances the story instead.
@@ -184,7 +185,29 @@ export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
 // `PureToneStep`'s own "tap when you hear a tone" button is UNTOUCHED: it is
 // the patient's own audiometric response, the one clinical act that
 // genuinely is his (see puretone-step.tsx).
-export function Testing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Hearing test in progress" subtitle="Tap the button whenever you hear a tone, even if it is very soft." onBack={back} eyebrow={visitEyebrow("testing")}/><AudiologistStatusLine className="mb-4">Dr. Reed is listening with you — she adjusts the test as you press.</AudiologistStatusLine><PureToneStep framing="patient"/></Shell>}
+export function Testing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
+  // Spec AC07: comprehension is verified before the first MEASURED stimulus,
+  // so the practice gate owns this screen until Alex has answered it. The
+  // measured run (PureToneStep) does not render at all until then — a
+  // tutorial he can skip past is not a tutorial, and the whole point of
+  // teach-back is that the answer gates the test rather than decorating it.
+  const [taught,setTaught]=useState(false);
+  return <Shell>
+    <PageHeader
+      title={taught?"Hearing test in progress":"One practice tone first"}
+      subtitle={taught
+        ?"Tap the button whenever you hear a tone, even if it is very soft."
+        :"Before the real test starts, let us make sure the task is clear."}
+      onBack={back}
+      eyebrow={visitEyebrow("testing")}/>
+    <AudiologistStatusLine className="mb-4">{taught
+      ?"Dr. Reed is listening with you — she adjusts the test as you press."
+      :"Dr. Reed is checking you are ready before the test begins."}</AudiologistStatusLine>
+    {taught
+      ? <PureToneStep framing="patient"/>
+      : <TeachBack onConfirm={()=>setTaught(true)}/>}
+  </Shell>
+}
 // Ending the consult is Dr. Reed's own act, so the patient's screen carries
 // no "Finish consultation" button — a status line is shown instead, and the
 // chrome's Next advances the story. The red hang-up button in the call card

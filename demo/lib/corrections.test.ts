@@ -286,21 +286,30 @@ describe("corrections sheet 2026-08-31", () => {
     }
   });
 
-  // Refined 2026-08-31: the patient's exam feels like a hearing lab with the
-  // audiologist right next to them — she is present on every exam step of the
-  // patient's phone. Refined again 2026-09-02 (owner): her presence is no
-  // longer a video tile, because the patient's pages carry no video streaming
-  // at all. What the rule was always protecting is that she is THERE on each
-  // step, so the guard asserts the presence, not the medium — a screen that
-  // drops her line entirely still fails here, which is the point.
-  it("keeps Dr. Reed next to the patient through the exam", () => {
+  // Refined 2026-08-31: the patient's exam feels like a hearing lab with
+  // someone right next to them — never alone on a step. Refined 2026-09-02:
+  // that presence is not a video tile, because the patient's pages carry no
+  // video streaming at all.
+  //
+  // Superseded 2026-09-08 (owner), Exam Engine spec §4/AC01: the presence is
+  // now the AI examiner, which leads every normal step; the audiologist moved
+  // behind the scenes to review, clearance and escalation. The rule the guard
+  // has always protected is unchanged — the patient is never left on an exam
+  // step with nobody guiding them — so it still asserts presence, and still
+  // fails a screen that drops the guide entirely. Only the identity moved.
+  it("keeps a guide next to the patient through every exam step", () => {
     const src = sourceOf("components/screens/patient/exam.tsx");
     const steps = ["Otoscopy", "Tympanometry", "Testing"];
     for (const part of src.split(/(?=export function )/)) {
       const name = /export function (\w+)/.exec(part)?.[1];
       if (!name || !steps.includes(name)) continue;
-      expect(part, `${name} must still say Dr. Reed is with the patient`)
-        .toMatch(/<AudiologistStatusLine[^]*?Dr\. Reed/);
+      expect(part, `${name} must keep the examiner present on the step`)
+        .toMatch(/<ExaminerPanel\b/);
+      // Presence is not enough on its own: the examiner has to be SAYING
+      // something on that step, which is what makes it a guide rather than
+      // an ornament.
+      expect(part, `${name}'s examiner must carry a spoken line`)
+        .toMatch(/<ExaminerPanel[^]*?line=/);
     }
   });
 

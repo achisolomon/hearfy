@@ -5,13 +5,18 @@ import { sourceOf } from "./screens";
  * The Exam Engine spec (Hearfy AI Avatar Exam Engine, MVP spec v2.0) in the
  * v1 demo.
  *
- * The spec replaces the audiologist with an AI avatar in the patient
- * interaction. The demo does NOT do that, deliberately: the 2026-09-02
- * rulings (no video on the patient's pages; Dr. Reed present on every exam
- * step) stand, and corrections.test.ts still enforces them. What is
- * implemented here are the three requirements that hold either way, and
- * these tests pin the BEHAVIOUR each one exists to protect — not the wording,
- * which is free to change.
+ * The spec replaces the audiologist with an AI examiner in the patient
+ * interaction, and on 2026-09-08 the owner asked for exactly that. So the
+ * examiner now leads every normal patient step; Dr. Reed moved behind the
+ * scenes to clearance, review, signature and escalation — which is the
+ * spec's own MVP operating model, not a reduction of her role.
+ *
+ * The 2026-09-02 no-video ruling SURVIVES: the examiner is an animated mark,
+ * not a feed, so regressions.test.ts's ban on video components in the
+ * patient's screens is untouched and still enforced.
+ *
+ * These tests pin the BEHAVIOUR each requirement exists to protect — not the
+ * wording, which is free to change.
  */
 describe("exam engine spec in the demo", () => {
   /**
@@ -153,5 +158,101 @@ describe("exam engine spec in the demo", () => {
       expect(puretone, "a screen showing the noise correction must pass noisy")
         .toMatch(/<PureToneStep[^>]*noisy/);
     }
+  });
+
+  /**
+   * AC01 — the examiner is visible through every normal step, and the
+   * patient always has a way out of it.
+   *
+   * Two halves, both load-bearing. Presence without controls is a system
+   * that talks at someone; controls without presence is a guide who left.
+   */
+  it("gives the patient the examiner and an escape hatch on every exam step", () => {
+    const src = sourceOf("components/screens/patient/exam.tsx");
+    const steps = ["Otoscopy", "Tympanometry", "Testing"];
+    for (const part of src.split(/(?=export function )/)) {
+      const name = /export function (\w+)/.exec(part)?.[1];
+      if (!name || !steps.includes(name)) continue;
+      expect(part, `${name} must show the examiner`).toMatch(/<ExaminerPanel\b/);
+      expect(part, `${name} must offer the patient controls, including a human`)
+        .toMatch(/<ExaminerControls\b/);
+    }
+  });
+
+  /**
+   * "No false humanity" (spec §4). The examiner is never presented as a
+   * person: its disclosure travels with it rather than living only on the
+   * consent screen, and it never claims a credential.
+   */
+  it("labels the examiner as AI wherever it appears", () => {
+    const panel = sourceOf("components/exam/examiner-panel.tsx");
+    // The disclosure is rendered unconditionally — not behind a prop or a
+    // first-visit flag, which is how a disclosure quietly disappears.
+    expect(panel, "the AI label must render unconditionally")
+      .toMatch(/\{examiner\.disclosure\}/);
+    expect(panel, "the examiner must not be given a clinical credential")
+      .not.toMatch(/Au\.D|audiologist|licensed/i);
+    const data = sourceOf("lib/mock-data.ts");
+    expect(data, "the examiner's own record must say it is an AI")
+      .toMatch(/disclosure:\s*"[^"]*AI/i);
+  });
+
+  /**
+   * The no-video ruling (2026-09-02) survives the avatar. The spec asks for
+   * a "video window", but it also asks for a graceful low-bandwidth mode and
+   * forbids impersonating a human — an animated mark satisfies all three,
+   * and keeps the patient's pages free of streaming.
+   */
+  it("keeps the examiner out of video", () => {
+    const panel = sourceOf("components/exam/examiner-panel.tsx");
+    expect(panel, "the examiner must not be a video element").not.toMatch(/<video\b/);
+    expect(panel, "nor reuse the call-tile video components")
+      .not.toMatch(/\b(ReedFeed|RoomFeed|HomeFeed|ZoomPanel|CallSplit|AudiologistStrip)\b/);
+  });
+
+  /**
+   * AC17 / spec §3 — the CMA is asked to DO things, never told what they
+   * mean. An assistance card that carried an interpretation would hand Maya
+   * a clinical judgement the spec explicitly denies her.
+   */
+  it("asks the CMA for actions, never interpretations", () => {
+    const card = sourceOf("components/exam/assistance.tsx");
+    expect(card, "the assistance card must attribute the request to the examiner")
+      .toMatch(/\{examiner\.name\}/);
+    const cma = sourceOf("components/screens/cma/exam.tsx");
+    const asks = [...cma.matchAll(/asks="([^"]*)"/g)].map(m => m[1]);
+    expect(asks.length, "the CMA's exam steps must carry assistance requests")
+      .toBeGreaterThan(2);
+    for (const ask of asks) {
+      expect(ask, `an assistance request must not interpret a finding: "${ask}"`)
+        .not.toMatch(/\b(normal|abnormal|loss|conductive|sensorineural|diagnos|refer)\b/i);
+    }
+  });
+
+  /**
+   * AC11 — when a human takes over, the patient is told it is a handoff and
+   * that context went with it. The spec's failure mode is a stranger
+   * appearing mid-visit with no explanation.
+   */
+  it("explains the handoff when a human takes over", () => {
+    const src = sourceOf("components/screens/patient/exam.tsx");
+    const live = src.slice(src.indexOf("export function Live"));
+    expect(live, "the escalation screen must frame the arrival as a handoff")
+      .toMatch(/<HumanHandoff\b/);
+    expect(live, "and must name the clinician from the record, not a literal")
+      .toMatch(/\{clinician\.name\}/);
+  });
+
+  /**
+   * Spec §2 — the audiologist supervises exceptions rather than watching
+   * every normal session. Her queue must say so, or the demo shows the AI
+   * doing the work while she still appears to watch all of it.
+   */
+  it("frames the audiologist's queue as exception supervision", () => {
+    const sup = sourceOf("components/screens/audiologist/supervision.tsx");
+    expect(sup, "her panel must name the examiner as the one running exams")
+      .toMatch(/\{examiner\.name\}/);
+    expect(sup, "and must be framed as exceptions, not blanket monitoring")
+      .toMatch(/Exception supervision/i);
   });
 });

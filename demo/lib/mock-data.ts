@@ -38,6 +38,23 @@ export const devices = [
   { name: "Oticon Intent 2", badge: "Premium", price: "$2,190 / pair", fit: 84, features: ["Rechargeable", "AI sound processing", "3-year warranty"] }
 ];
 
+/**
+ * The AI examiner that guides the patient through the exam (Exam Engine spec
+ * §4). It is named, so the patient has something to address and the
+ * transcript has a speaker — but the name is deliberately not a human one,
+ * and every surface that shows it also states it is an AI. The spec's rule
+ * is "no false humanity": it never claims credentials, emotions, or
+ * personal experience.
+ *
+ * `disclosure` is the one-line version shown beside the avatar wherever it
+ * appears; the long form lives in the consent screen's disclosure card.
+ */
+export const examiner = {
+  name: "Ava",
+  role: "AI examiner",
+  disclosure: "AI examiner · not a person",
+};
+
 /** The signing clinician (spec §5: license state is shown, not enforced). */
 export const clinician = {
   name: "Dr. Susan Reed",

@@ -6,6 +6,7 @@ import { OtoscopyStep } from "../../exam/otoscopy-step";
 import { TympanometryStep } from "../../exam/tympanometry-step";
 import { PureToneStep } from "../../exam/puretone-step";
 import { CorrectionNotice } from "../../exam/guidance";
+import { AssistanceRequest } from "../../exam/assistance";
 import { SpeechStep } from "../../exam/speech-step";
 import { BoneStep } from "../../exam/bone-step";
 import { EXAM_STEPS } from "@/lib/exam";
@@ -31,14 +32,23 @@ function step(id: string) {
  * screen and sees a clinician in the room. Below `md` the call collapses to
  * the compact strip.
  */
-function ExamStepShell({ id, note, active = false, cta, next, children }: {
-  id: string; note: string; active?: boolean; cta: string; next: () => void;
+/**
+ * `asks` is what the examiner needs Maya to physically do on this step
+ * (Exam Engine spec §8.2: "Avatar-requested physical-assistance cards with
+ * visual steps and confirmation — not full clinical interpretation").
+ *
+ * It sits above the step's own content because it is the instruction she
+ * acts on; the step below is what she is looking at while she does it.
+ */
+function ExamStepShell({ id, note, asks, active = false, cta, next, children }: {
+  id: string; note: string; asks?: string; active?: boolean; cta: string; next: () => void;
   children: React.ReactNode;
 }) {
   const s = step(id);
   return (
     <CallShell header={<PageHeader title={s.title} subtitle={s.procedure} eyebrow={s.eyebrow} />}>
       <CallSplit note={note} active={active}>
+        {asks && <AssistanceRequest className="mb-4">{asks}</AssistanceRequest>}
         {children}
         <div className="mt-6"><PrimaryButton onClick={next}>{cta}</PrimaryButton></div>
       </CallSplit>
@@ -49,7 +59,8 @@ function ExamStepShell({ id, note, active = false, cta, next, children }: {
 export function CmaOtoscopy({ next }: { next: () => void }) {
   return (
     <ExamStepShell id="otoscopy" next={next} cta="Both ears captured"
-      note="Watching both captures live — she flags a retake before you move on.">
+      note="On call — the examiner flags a retake before you move on."
+      asks="Steady the otoscope until the ring turns green on each ear, then hold for two seconds.">
       <OtoscopyStep framing="cma" />
     </ExamStepShell>
   );
@@ -63,7 +74,8 @@ export function CmaOtoscopy({ next }: { next: () => void }) {
 export function CmaTympanometry({ next }: { next: () => void }) {
   return (
     <ExamStepShell id="tympanometry" next={next} cta="Both ears traced — review clearance"
-      note="Reading each trace as it lands — a broken seal means a re-run, not a guess.">
+      note="On call — a broken seal means a re-run, not a guess."
+      asks="Seat the probe until the seal indicator holds. If it breaks mid-trace, re-seat and run that ear again.">
       <TympanometryStep framing="cma" />
     </ExamStepShell>
   );
@@ -77,7 +89,8 @@ export function CmaPureTone({ next }: { next: () => void }) {
   // she is running. The patient's own screen is not interrupted mid-tone.
   return (
     <ExamStepShell id="puretone" next={next} cta="Thresholds complete" active
-      note="Has joined the test — she is adjusting the left-ear sweep herself.">
+      note="Has joined the test — she is adjusting the left-ear sweep herself."
+      asks="Close the hallway door and silence the television, then tell me when the room is quiet.">
       <CorrectionNotice
         framing="cma"
         className="mb-4"
@@ -94,7 +107,8 @@ export function CmaPureTone({ next }: { next: () => void }) {
 export function CmaSpeech({ next }: { next: () => void }) {
   return (
     <ExamStepShell id="speech" next={next} cta="Lists complete"
-      note="Listening to the word lists live and scoring responses as they come.">
+      note="On call — scoring is automatic, she reviews the list after."
+      asks="Keep your face out of Alex's sightline while the words play, so he cannot lip-read the answers.">
       <SpeechStep framing="cma" />
     </ExamStepShell>
   );
@@ -105,7 +119,8 @@ export function CmaSpeech({ next }: { next: () => void }) {
 export function CmaBone({ next }: { next: () => void }) {
   return (
     <ExamStepShell id="bone" next={next} cta="Submit exam" active
-      note="Watching the bone thresholds — this is what separates conductive from sensorineural loss.">
+      note="On call — bone thresholds separate conductive from sensorineural loss."
+      asks="Place the bone oscillator on the mastoid behind the ear, snug but not tight, and check it is not touching the pinna.">
       <BoneStep framing="cma" />
     </ExamStepShell>
   );

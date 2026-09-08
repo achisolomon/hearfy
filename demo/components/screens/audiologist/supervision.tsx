@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, WifiOff } from "lucide-react";
 import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
 import { cn } from "@/lib/cn";
-import { supervisionQueue, clinician, type SupervisionExam } from "@/lib/mock-data";
+import { supervisionQueue, clinician, type SupervisionExam, examiner } from "@/lib/mock-data";
 import { Audiogram } from "../../charts/audiogram";
 import { HomeFeed } from "./home-feed";
 import { VideoSplit, CallShell } from "../video-split";
@@ -101,11 +101,19 @@ export function AudPanel() {
   return (
     <CallShell header={
       <PageHeader
-        eyebrow="Live supervision"
-        title="Six exams in progress"
+        eyebrow="Exception supervision"
+        title="Six AI-led exams in progress"
         subtitle={`${clinician.name}, ${clinician.credential} · Licensed in ${clinician.licenseState}`}
       />
     }>
+
+        {/* Spec §8.3: she does not watch every normal session. The examiner
+            runs them; this queue surfaces the ones that need a human, ranked
+            by safety first and then by how long they have waited. */}
+        <p className="mb-3 text-sm leading-6 text-slate-500">
+          {examiner.name} is running each exam. You are shown the ones that need you —
+          safety flags first, then longest wait.
+        </p>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {list.map(e => (

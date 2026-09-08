@@ -9,6 +9,7 @@ import { PureToneStep } from "../../exam/puretone-step";
 import { ScreenId } from "../registry";
 import { Shell, AudiologistStatusLine } from "../shared";
 import { AiDisclosure, TeachBack } from "../../exam/guidance";
+import { ExaminerPanel, ExaminerControls, HumanHandoff } from "../../exam/examiner-panel";
 import { patientFindings, reviewOutcome, reviewReferralReason, visitGates } from "@/lib/clearance";
 import { useReview } from "@/lib/review-store";
 
@@ -26,16 +27,20 @@ export function Consent({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const [
 export function Setup({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title={`Preparing the ${BRAND_NAME} kit`} subtitle="Maya is setting up your hearing lab, right here at home." onBack={back} eyebrow={visitEyebrow("setup")}/><div className="grid place-items-center rounded-[30px] bg-gradient-to-br from-[#e7f8f7] to-white py-10"><div className="relative h-36 w-56 rounded-[28px] bg-brand-navy shadow-card"><div className="absolute inset-x-8 top-8 h-16 rounded-xl bg-[#e6f7f6]"/><div className="absolute bottom-5 left-1/2 h-4 w-20 -translate-x-1/2 rounded-full bg-[#183b5e]"/></div></div><div className="mt-5 space-y-3">{["Kit identity verified","Equipment calibration current","Single-use items prepared","Room noise level acceptable"].map(x=><div key={x} className="flex items-center gap-3 rounded-2xl bg-white p-4"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16}/></span><b className="text-sm">{x}</b></div>)}</div><div className="mt-6"><AudiologistStatusLine>Maya is preparing the kit.</AudiologistStatusLine></div></Shell>}
 // Two captures, one per ear (corrections sheet 2026-08-31, item 3) — the
 // shared step renders both, so patient and CMA can never drift apart.
-// The patient's screen carries no button for this clinical act, and no live
-// video of Dr. Reed (owner, 2026-09-02: no video streaming on the patient's
-// pages). Her presence is carried in words instead — a status line naming
-// who is acting, the same pattern Setup and Arrived already use.
-export function Otoscopy({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Ear health check" subtitle="Maya is capturing a secure image of each ear for clinical review." onBack={back} eyebrow={visitEyebrow("otoscopy")}/><AudiologistStatusLine className="mb-4">Dr. Reed is right here with you — she sees each ear image as it’s captured.</AudiologistStatusLine><OtoscopyStep framing="patient"/><Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Images are reviewed by your licensed audiologist and stored with today’s clinical record.</p></Card></Shell>}
+//
+// The examiner leads this step (Exam Engine spec §5.8): it explains what is
+// happening and why, and stays visible while Maya captures. Dr. Reed is
+// named as the READER of the images, not as a presence in the room — the
+// spec's MVP keeps a licensed audiologist reviewing every result, and the
+// patient is told so, but she no longer narrates the step.
+// Still no video on this page: the examiner is an animated mark, not a feed.
+export function Otoscopy({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Ear health check" subtitle="Maya is capturing a secure image of each ear for clinical review." onBack={back} eyebrow={visitEyebrow("otoscopy")}/><ExaminerPanel className="mb-4" state="speaking" line="Maya is going to take a picture inside each ear. It does not touch anything and it does not hurt — you may feel the tip rest against the outside of your ear. Sit still for me."/><OtoscopyStep framing="patient"/><Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">{clinician.name} reviews both images and they are stored with today’s clinical record.</p></Card><ExaminerControls className="mt-4"/></Shell>}
 // New step (corrections sheet 2026-08-31, item 5): tympanometry between the
 // ear health check and the hearing test, on every exam.
-// Same reasoning as Otoscopy: a status line, not a video tile, says who is
-// acting.
-export function Tympanometry({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Tympanometry" subtitle="A gentle middle ear check — pressure on each eardrum, nothing to do but sit still." onBack={back} eyebrow={visitEyebrow("tympanometry")}/><AudiologistStatusLine className="mb-4">Dr. Reed is watching your traces with you — nothing to do but sit still.</AudiologistStatusLine><TympanometryStep framing="patient"/></Shell>}
+// Same reasoning as Otoscopy: the examiner explains and stays visible, and
+// the audiologist is named as the reader of the traces rather than a
+// presence narrating them.
+export function Tympanometry({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Tympanometry" subtitle="A gentle middle ear check — pressure on each eardrum, nothing to do but sit still." onBack={back} eyebrow={visitEyebrow("tympanometry")}/><ExaminerPanel className="mb-4" state="speaking" line="You will feel a small change in pressure, like a brief blocked-ear feeling on a plane, and hear a low hum. It lasts a few seconds each side. Nothing to do but sit still."/><TympanometryStep framing="patient"/><ExaminerControls className="mt-4"/></Shell>}
 // The patient's own view of the safety gate (owner, 2026-09-02). He is told
 // the checks passed and that the test is about to start — or, when they did
 // not, that the visit is stopping and he is being referred to a doctor.
@@ -57,7 +62,7 @@ export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         ? "Your ear checks found something a doctor should look at before any hearing test."
         : outcome === "cleared"
           ? "Both ear checks are complete and your audiologist has cleared you for the hearing test."
-          : "Dr. Reed is looking at both ear checks now. She will clear the hearing test when she is happy with them."}
+          : `${clinician.name} is looking at both ear checks now. The hearing test starts once she is happy with them.`}
       onBack={back}
       eyebrow={visitEyebrow("clearance")}/>
     {stopped ? <>
@@ -69,12 +74,12 @@ export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
             <p className="mt-2 text-sm leading-6 text-slate-600">{reviewReferralReason(review, visitGates())}</p>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               We are not going ahead with the hearing test or any hearing device today.
-              Dr. Reed will call you to explain what she saw and help you arrange the visit.
+              {" "}{clinician.name} will call you to explain what she saw and help you arrange the visit.
             </p>
           </div>
         </div>
       </Card>
-      <div className="mt-6"><AudiologistStatusLine>Dr. Reed is calling you about the referral.</AudiologistStatusLine></div>
+      <div className="mt-6"><HumanHandoff>{clinician.name} is calling you about the referral. I have passed her everything from today.</HumanHandoff></div>
     </> : <>
       <div className="space-y-3">{[
         ["Your questionnaire", outcome === "cleared" ? "Reviewed by your audiologist." : "Answered before today\u2019s visit."],
@@ -84,8 +89,8 @@ export function Clearance({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#dcf5ef] text-emerald-600"><Check size={16}/></span>
         <div><b className="text-sm">{t}</b><p className="mt-0.5 text-xs leading-5 text-slate-500">{d}</p></div>
       </div>)}</div>
-      <Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Anything worth a closer look is noted on your record — Dr. Reed reads it alongside your results.</p></Card>
-      <div className="mt-6"><AudiologistStatusLine>{outcome === "cleared" ? "Dr. Reed has cleared you for the hearing test." : "Dr. Reed is reviewing your ear checks."}</AudiologistStatusLine></div>
+      <Card className="mt-4 flex gap-3 p-4"><Stethoscope className="text-teal-ink"/><p className="text-sm leading-6 text-slate-500">Anything worth a closer look is noted on your record — {clinician.name} reads it alongside your results.</p></Card>
+      <div className="mt-6"><HumanHandoff>{outcome === "cleared" ? `${clinician.name} has cleared you for the hearing test.` : `${clinician.name} is reviewing your ear checks.`}</HumanHandoff></div>
     </>}
   </Shell>
 }
@@ -152,7 +157,7 @@ export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
       <b className="text-sm">What happens now</b>
       <div className="mt-4 space-y-4">
         {[
-          ["1","See a doctor","Dr. Reed is calling you to explain what she saw and help you arrange the appointment. Your ear images and traces go with you."],
+          ["1","See a doctor",`${clinician.name} is calling you to explain what she saw and help you arrange the appointment. Your ear images and traces go with you.`],
           ["2","Get their assessment","A physician needs to look at and treat what today\u2019s checks found. We cannot test your hearing until they have."],
           ["3","Come back to us","Once they clear you, we pick up right here \u2014 the hearing test, your results, and help choosing a hearing device if you need one."],
         ].map(([n,t,d])=>
@@ -177,10 +182,10 @@ export function Referral({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         show your doctor.
       </p>
     </Card>
-    <div className="mt-6"><AudiologistStatusLine>Dr. Reed is calling you about the referral.</AudiologistStatusLine></div>
+    <div className="mt-6"><HumanHandoff>{clinician.name} is calling you about the referral. I have passed her everything from today.</HumanHandoff></div>
   </Shell>
 }
-// The "Complete test" button ended the whole procedure — Maya/Dr. Reed's
+// The "Complete test" button ended the whole procedure — the protocol's
 // call, not Alex's, so the patient's screen carries no button for it.
 // `PureToneStep`'s own "tap when you hear a tone" button is UNTOUCHED: it is
 // the patient's own audiometric response, the one clinical act that
@@ -200,24 +205,33 @@ export function Testing({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){
         :"Before the real test starts, let us make sure the task is clear."}
       onBack={back}
       eyebrow={visitEyebrow("testing")}/>
-    <AudiologistStatusLine className="mb-4">{taught
-      ?"Dr. Reed is listening with you — she adjusts the test as you press."
-      :"Dr. Reed is checking you are ready before the test begins."}</AudiologistStatusLine>
+    <ExaminerPanel
+      className="mb-4"
+      state={taught ? "listening" : "speaking"}
+      line={taught
+        ? "I am listening for your taps now. Tones will get softer as we go — keep tapping whenever you think you hear one, even faintly."
+        : "Before the real test, one practice tone so I know the task is clear. Answer the question below and we will begin."}/>
     {taught
       ? <PureToneStep framing="patient"/>
       : <TeachBack onConfirm={()=>setTaught(true)}/>}
+    <ExaminerControls className="mt-4"/>
   </Shell>
 }
+// The escalation beat (Exam Engine spec §10, AC11). Every other exam screen
+// is examiner-led; this is the one where a human takes over, so the human
+// genuinely appears — that is the spec's model, not a contradiction of it.
+// The screen says why she is here and what the examiner handed over, so the
+// arrival reads as continuity rather than a stranger joining.
+//
 // Ending the consult is Dr. Reed's own act, so the patient's screen carries
-// no "Finish consultation" button — a status line is shown instead, and the
-// chrome's Next advances the story. The red hang-up button in the call card
+// no "Finish consultation" button. The red hang-up button in the call card
 // is kept but made permanently inert rather than removed — its position and
 // shape are part of what makes this read as a real call in progress, and Dr.
 // Reed IS still on the line; only the ability to end HER session, from
 // Alex's phone, is taken away. It keeps its aria-disabled and has no handler
 // or hover affordance, matching how PrimaryButton's own `disabled` state is
 // styled elsewhere in this file.
-export function Live({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Connected to your audiologist" subtitle="Dr. Susan Reed is reviewing your test in real time." onBack={back} eyebrow={visitEyebrow("live")}/><div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#e9f4f1] to-[#bddeea] pt-10 text-center text-brand-navy"><div className="mx-auto grid h-36 w-36 place-items-center rounded-full bg-white text-4xl font-extrabold shadow-card">SR</div><h2 className="mt-5 text-xl font-extrabold">Dr. Susan Reed, Au.D.</h2>{/* Not slate-500: this line sits on the call card's gradient, whose
+export function Live({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Connected to your audiologist" subtitle={`${clinician.name} is reviewing your test in real time.`} onBack={back} eyebrow={visitEyebrow("live")}/><HumanHandoff className="mb-4">Your results are ready for a person to go through with you, so I have handed over to {clinician.name}. She has your full test and everything we did today.</HumanHandoff><div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#e9f4f1] to-[#bddeea] pt-10 text-center text-brand-navy"><div className="mx-auto grid h-36 w-36 place-items-center rounded-full bg-white text-4xl font-extrabold shadow-card">SR</div><h2 className="mt-5 text-xl font-extrabold">Dr. Susan Reed, Au.D.</h2>{/* Not slate-500: this line sits on the call card's gradient, whose
             darkest end (#BDDEEA) leaves the muted token at 4.22:1. A deeper
             ink keeps it at 5.85:1 across the whole gradient. */}
-        <p className="mt-1 text-sm text-[#3f5061]">Licensed Audiologist · Florida</p><div className="mt-8 flex justify-center gap-4 bg-white/70 py-5"><button className="grid h-14 w-14 place-items-center rounded-full bg-white"><Volume2/></button><button className="grid h-14 w-14 place-items-center rounded-full bg-white"><Video/></button><button aria-disabled className="grid h-14 w-14 place-items-center rounded-full bg-red-500/40 text-white cursor-default"><Phone className="rotate-[135deg]"/></button></div></div><p className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold text-teal-ink"><span className="h-2 w-2 rounded-full bg-brand-teal"/>Secure clinical connection</p><div className="mt-5"><AudiologistStatusLine>Dr. Reed is reviewing your results with you.</AudiologistStatusLine></div></Shell>}
+        <p className="mt-1 text-sm text-[#3f5061]">Licensed Audiologist · Florida</p><div className="mt-8 flex justify-center gap-4 bg-white/70 py-5"><button className="grid h-14 w-14 place-items-center rounded-full bg-white"><Volume2/></button><button className="grid h-14 w-14 place-items-center rounded-full bg-white"><Video/></button><button aria-disabled className="grid h-14 w-14 place-items-center rounded-full bg-red-500/40 text-white cursor-default"><Phone className="rotate-[135deg]"/></button></div></div><p className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold text-teal-ink"><span className="h-2 w-2 rounded-full bg-brand-teal"/>Secure clinical connection</p><div className="mt-5"><AudiologistStatusLine>{clinician.name} is reviewing your results with you.</AudiologistStatusLine></div></Shell>}

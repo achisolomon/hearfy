@@ -13,6 +13,7 @@
     "mobile-sweep": "node scripts/mobile-sweep.mjs",
     "role-lock-sweep": "node scripts/role-lock-sweep.mjs",
     "stability-sweep": "node scripts/stability-sweep.mjs",
+    "pointer-sweep": "node scripts/pointer-sweep.mjs",
     "capture-supervision": "node scripts/capture-supervision.mjs"
   },
   "dependencies": {

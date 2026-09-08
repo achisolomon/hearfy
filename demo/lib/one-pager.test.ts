@@ -876,3 +876,162 @@ describe("the page identifies no individual", () => {
     }
   });
 });
+
+/**
+ * The pointer layer answers the reader, and never moves on its own.
+ *
+ * `components/one-pager/motion.tsx` states the register in prose: every
+ * animation on this page is an entrance, and nothing loops, pulses, or drifts
+ * once it has arrived. The pointer effects are compatible with that rule only
+ * because they are driven entirely by the reader's own cursor — hold the mouse
+ * still and the page is completely static. The moment one of them acquires a
+ * heartbeat of its own, the page becomes the "toy-like consumer app"
+ * anti-reference DESIGN.md rules out.
+ *
+ * These are source-reading guards, so they pin the INVARIANT rather than the
+ * spelling: that the effects are gated, that they touch no layout property,
+ * and that the reduced-motion escape exists. What source cannot tell you is
+ * whether any rule actually MATCHES — a selector typo or a stacking mistake
+ * leaves the source perfect and the page dead, and a guard that matches
+ * nothing passes. `scripts/pointer-sweep.mjs` is the other half: it drives a
+ * real mouse in a real browser and measures the effects. Both are needed.
+ */
+describe("the pointer layer is reader-driven and gated", () => {
+  const POINTER_SRC = readFileSync(join(HERE, "components/one-pager/pointer.tsx"), "utf8");
+
+  /**
+   * The gate. Both halves are required: `hover: hover` alone admits styluses
+   * and TV remotes, where the tilt reads as a glitch, and `pointer: fine`
+   * alone admits a fine pointer that cannot hover.
+   */
+  it("gates every effect on a fine, hovering pointer", () => {
+    expect(POINTER_SRC, "the fine-pointer query must be defined once and shared")
+      .toMatch(/\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)/);
+
+    // Defined once, not repeated: two copies drift, and the one that is
+    // forgotten is the one that enables an effect on touch.
+    const copies = POINTER_SRC.match(/\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)/g) ?? [];
+    expect(copies.length, "the query must be a single shared constant").toBe(1);
+  });
+
+  it("refuses to run under prefers-reduced-motion", () => {
+    // The listener itself, not merely the CSS transition: under reduced motion
+    // no transform should ever be WRITTEN, which is the same contract Reveal
+    // honours by rendering a plain div.
+    expect(POINTER_SRC, "the tracker must consult the reduced-motion preference")
+      .toMatch(/matchMedia\(\s*["']\(prefers-reduced-motion:\s*reduce\)["']\s*\)/);
+    expect(POINTER_SRC, "reduced motion must also disable the effects in CSS")
+      .toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  });
+
+  /**
+   * The Held Frame Rule, applied to the pointer.
+   *
+   * Chrome must never resize between screens; a pointer-driven layout property
+   * would resize things *continuously*, which is strictly worse. Transform and
+   * opacity composite without reflow, so they are the only properties allowed
+   * to change under the pointer.
+   *
+   * Asserted by reading the hover rules and checking what they set, rather than
+   * by naming the properties currently in use — the invariant is "no layout",
+   * not "these three declarations".
+   */
+  it("animates no layout property under the pointer", () => {
+    const FORBIDDEN = [
+      "width", "height", "margin", "padding", "top", "left", "right", "bottom",
+      "font-size", "gap", "border-width",
+    ];
+
+    // Every hover rule body in the stylesheet.
+    const hoverRules = POINTER_SRC.match(/:hover[^{]*\{[^}]*\}/g) ?? [];
+    expect(hoverRules.length, "there must be hover rules to check").toBeGreaterThan(2);
+
+    for (const rule of hoverRules) {
+      for (const prop of FORBIDDEN) {
+        expect(rule, `a hover rule must not animate ${prop} — it reflows at pointer rate`)
+          .not.toMatch(new RegExp(`(^|[;{\\s])${prop}\\s*:`));
+      }
+    }
+  });
+
+  it("transitions only compositable properties", () => {
+    const transitions = POINTER_SRC.match(/transition:\s*[^;]+;/g) ?? [];
+    expect(transitions.length, "there must be transitions to check").toBeGreaterThan(2);
+
+    for (const t of transitions) {
+      // `none` is the reduced-motion escape and is always allowed.
+      if (/transition:\s*none/.test(t)) continue;
+      expect(t, "only transform, box-shadow and opacity may transition")
+        .toMatch(/^transition:\s*(transform|box-shadow|opacity)\b/);
+    }
+  });
+
+  /**
+   * Nothing may animate without a pointer. A CSS `animation`, or an
+   * `infinite` iteration count, is exactly the heartbeat motion.tsx forbids —
+   * and it would be invisible to every other test here.
+   */
+  it("gives no effect a heartbeat of its own", () => {
+    expect(POINTER_SRC, "the pointer layer must declare no keyframe animation")
+      .not.toMatch(/@keyframes|animation-name|animation:\s*[^;]*infinite/);
+    // A rAF loop that re-schedules unconditionally is the same defect in JS.
+    // The only requestAnimationFrame here must be the coalescing one, which is
+    // scheduled from a pointer event and clears its own handle.
+    const rafs = POINTER_SRC.match(/requestAnimationFrame\(/g) ?? [];
+    expect(rafs.length, "rAF is for coalescing pointer writes only").toBeLessThanOrEqual(2);
+    for (const m of POINTER_SRC.matchAll(/requestAnimationFrame\(/g)) {
+      const before = POINTER_SRC.slice(Math.max(0, m.index - 60), m.index);
+      expect(before, "every rAF must be guarded by `if (!frame)` so it cannot self-perpetuate")
+        .toMatch(/!frame/);
+    }
+  });
+
+  /**
+   * The glow covers the viewport. Without `pointer-events: none` it swallows
+   * every click on the page beneath it — including the one button the page
+   * has, which is the page's entire call to action.
+   */
+  it("lets clicks through the full-viewport glow", () => {
+    const glow = POINTER_SRC.match(/data-pointer-glow[\s\S]{0,400}/)?.[0] ?? "";
+    expect(glow, "the glow must not intercept pointer events")
+      .toMatch(/pointer-events-none/);
+  });
+
+  /** Every listener must be removed, and every frame cancelled, on unmount. */
+  it("tears down every listener it adds", () => {
+    const added = (POINTER_SRC.match(/addEventListener\(/g) ?? []).length;
+    const removed = (POINTER_SRC.match(/removeEventListener\(/g) ?? []).length;
+    expect(added, "there must be listeners to tear down").toBeGreaterThan(0);
+    expect(removed, "every addEventListener needs a matching removeEventListener")
+      .toBe(added);
+    expect(POINTER_SRC, "pending frames must be cancelled on unmount")
+      .toMatch(/cancelAnimationFrame\(/);
+  });
+
+  /**
+   * The page must opt in through the shared helpers, not by hand.
+   *
+   * `Card` and `Photo` carry the attributes, so a card added later is reactive
+   * by construction. A hand-decorated card is how a page ends up with three
+   * that light and two that do not.
+   */
+  it("puts the effect on the shared Card and Photo helpers", () => {
+    // Anchored to a closing brace at column 0: a non-greedy match stops at the
+    // destructured parameter list's own `\n}` and reads an empty body, which
+    // would make every assertion below vacuous.
+    const card = stripComments(PAGE_SRC.match(/function Card\([\s\S]*?\n\}$/m)?.[0] ?? "");
+    expect(card, "Card must lift").toMatch(/data-lift/);
+    expect(card, "Card must carry the sheen").toMatch(/data-sheen/);
+    // The sheen is painted by an ::after that inherits the radius; without
+    // overflow-hidden the gradient squares off the rounded corners.
+    expect(card, "the sheen needs the card to clip it").toMatch(/overflow-hidden/);
+
+    const photo = PAGE_SRC.match(/function Photo\([\s\S]*?\n\}$/m)?.[0] ?? "";
+    // Comments stripped FIRST. Both helpers carry a comment explaining the
+    // attribute, so a bare search of the function body finds the word even
+    // after the attribute itself has been deleted from the JSX — the guard
+    // passes while the effect is gone. Caught by mutation-testing this very
+    // assertion on 2026-09-07; it is the one guard here that was vacuous.
+    expect(stripComments(photo), "Photo must parallax").toMatch(/data-parallax/);
+  });
+});

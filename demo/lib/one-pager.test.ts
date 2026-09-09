@@ -126,30 +126,33 @@ describe("the content the page is allowed to carry", () => {
   });
 
   /**
-   * The 17% is NIDCD's, and it is about US adults.
+   * The 17% is WHO's, and it is global — reverted 2026-09-10.
    *
-   * It shipped credited to WHO until 2026-09-02. That was wrong twice over:
-   * wrong organisation, and a US rate presented as a global one — directly
-   * above a section that sizes the market worldwide. WHO's own global figure
-   * is under 10%, so the mistake also flattered the industry by roughly two
-   * to one.
+   * It shipped as WHO's figure, was changed to NIDCD's US-only rate on
+   * 2026-09-02 (reasoning at the time: WHO's own equivalent read "far
+   * starker" — under 10% worldwide — so citing WHO here would understate
+   * the true gap), then reverted back to WHO here. Both the reasoning and
+   * the "under 10%" figure it relied on were stale: that was WHO's 2013-era
+   * estimate. WHO's current one, the World Report on Hearing (2021), states
+   * an 83% global service gap — ~17% coverage — verified directly against
+   * the report on 2026-09-09. NIDCD's real US figure (~16%) and WHO's real
+   * global figure (~17%) turn out to be genuinely close on their own, not
+   * one number miscredited as the other either way.
    *
-   * This pins both halves of the correction, because either could be undone
-   * alone: someone tidying sources back to a single "WHO" would restore the
-   * mis-citation, and someone shortening the label would drop the scope and
-   * leave a US number reading as global.
+   * This pins the reverted state so a future "tidy-up" doesn't silently
+   * reintroduce the US-only citation next to two globally-scoped WHO cards.
    */
-  it("credits the 17% to NIDCD and says it is US adults", () => {
+  it("credits the 17% to WHO and does not scope it to the US", () => {
     const stat = PROBLEM.stats.find((s) => s.value === "17%");
     expect(stat, "the 17% stat is gone").toBeDefined();
-    expect(stat!.source, "the 17% is NIDCD's figure, not WHO's").toBe("NIDCD");
-    expect(stat!.label, "the 17% must say it is US adults, or it reads as global")
-      .toMatch(/\bUS\b/);
+    expect(stat!.source, "the 17% is WHO's global figure, not NIDCD's US one").toBe("WHO");
+    expect(stat!.label, "the 17% must not claim a US-only scope it doesn't have")
+      .not.toMatch(/\bUS\b/);
   });
 
-  /** The two genuine WHO figures must keep saying WHO. */
+  /** All three prevalence figures are WHO's. */
   it("keeps WHO on the figures that are WHO's", () => {
-    for (const value of ["1.5B", "430M"]) {
+    for (const value of ["1.5B", "430M", "17%"]) {
       const stat = PROBLEM.stats.find((s) => s.value === value);
       expect(stat!.source).toBe("WHO");
     }

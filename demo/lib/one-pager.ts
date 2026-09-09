@@ -19,11 +19,11 @@
  * `lib/one-pager.test.ts` fails the build if any of them reappear.
  *
  * WHAT IS ALLOWED, and why:
- *   - the public-health prevalence figures (1.5B / 430M from WHO, 17% from
- *     NIDCD). These are published statistics, not Hearfy business
- *     information, and they are the public case for the product existing.
- *     The deck cites all three as WHO; the 17% is NIDCD's, for US adults
- *     only, and was corrected here on 2026-09-02 — see PROBLEM.stats.
+ *   - the public-health prevalence figures (1.5B / 430M / 17%, all from WHO).
+ *     These are published statistics, not Hearfy business information, and
+ *     they are the public case for the product existing. The 17% briefly
+ *     carried NIDCD's US-only figure (2026-09-02 to 2026-09-10) before being
+ *     reverted to WHO's own global rate — see PROBLEM.stats.
  *   - third-party MARKET SIZE figures (see MARKET below). These are published
  *     analyst forecasts of an industry, not Hearfy's own numbers: they say how
  *     big hearing care is, never what Hearfy earns, charges, or projects. The
@@ -87,35 +87,41 @@ export const PROBLEM = {
       sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
     },
     /**
-     * NIDCD, not WHO, and US adults, not the world.
+     * WHO, not NIDCD — reverted 2026-09-10.
      *
-     * This shipped as a WHO figure until 2026-09-02. It is not one: 17% is
-     * NIDCD's number for US adults aged 20-69 who could benefit from hearing
-     * aids and have ever used them. WHO's global equivalent is far starker —
-     * production meets under 10% of need worldwide, and about 3% in low- and
-     * middle-income countries.
+     * Shipped as a WHO figure until 2026-09-02, when it was changed to
+     * NIDCD's US-only 16-17% on the reasoning that WHO's own equivalent was
+     * "far starker" (under 10% worldwide) and citing WHO here would overstate
+     * global coverage. That WHO figure was itself stale: it was the 2013-era
+     * estimate. WHO's current one — the World Report on Hearing (2021) —
+     * states "an estimated gap of 83% between the need for and access to
+     * services for such care – using hearing aid use as a tracer indicator",
+     * i.e. ~17% global coverage, verified directly against the report on
+     * 2026-09-09. NIDCD's US figure (~16%) and WHO's global figure (~17%)
+     * turn out to be genuinely close, not the same number mislabeled either
+     * way — see the audit from that date for the full reconciliation.
      *
-     * The error mattered more than a stray label: the stat sits directly
-     * above a section that sizes the market WORLDWIDE, so a US rate was
-     * being read as a global one. The owner's call was to keep 17% and fix
-     * the citation, so the label now says "US adults" in words — the source
-     * pill alone would not stop the same misreading.
+     * Reverted to WHO/worldwide because the stat sits directly above a
+     * section that sizes the market WORLDWIDE, and the two WHO cards beside
+     * it (1.5B, 430M) are also global — a US-sourced rate here was the
+     * original mismatch this label exists to prevent, just pointing the
+     * other way than the 2026-09-02 fix assumed.
      */
     {
       value: "17%",
-      label: "of US adults who need aids use them",
-      source: "NIDCD",
-      sourceUrl: "https://www.nidcd.nih.gov/health/statistics/quick-statistics-hearing",
+      label: "worldwide who need aids use them",
+      source: "WHO",
+      sourceUrl:
+        "https://cdn.who.int/media/docs/default-source/documents/health-topics/deafness-and-hearing-loss/world-report-on-hearing/wrh-executive-summary.en.pdf",
     },
   ],
   /**
    * The dot-grid figure ("17 in 100 have them") shipped with no source at
    * all, unlike the three stats above it — an omission flagged 2026-09-09.
-   * WHO's own figure, not NIDCD's: the World Report on Hearing (2021) states
-   * "an estimated gap of 83% between the need for and access to services for
-   * such care – using hearing aid use as a tracer indicator", independent of
-   * NIDCD's US-only 16%. The two agree by coincidence; this card cites WHO,
-   * which is the one that actually states a global 17%/83% split.
+   * Same WHO figure as the third stat card above (both now read the World
+   * Report on Hearing's 17%/83% split) — deliberately not de-duplicated:
+   * the stat card states the number, the grid shows it, and both earn their
+   * place as different representations of the same real figure.
    */
   dotGridSource: "WHO",
   dotGridSourceUrl:

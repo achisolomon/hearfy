@@ -86,34 +86,6 @@ export const PROBLEM = {
       source: "WHO",
       sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
     },
-    /**
-     * WHO, not NIDCD — reverted 2026-09-10.
-     *
-     * Shipped as a WHO figure until 2026-09-02, when it was changed to
-     * NIDCD's US-only 16-17% on the reasoning that WHO's own equivalent was
-     * "far starker" (under 10% worldwide) and citing WHO here would overstate
-     * global coverage. That WHO figure was itself stale: it was the 2013-era
-     * estimate. WHO's current one — the World Report on Hearing (2021) —
-     * states "an estimated gap of 83% between the need for and access to
-     * services for such care – using hearing aid use as a tracer indicator",
-     * i.e. ~17% global coverage, verified directly against the report on
-     * 2026-09-09. NIDCD's US figure (~16%) and WHO's global figure (~17%)
-     * turn out to be genuinely close, not the same number mislabeled either
-     * way — see the audit from that date for the full reconciliation.
-     *
-     * Reverted to WHO/worldwide because the stat sits directly above a
-     * section that sizes the market WORLDWIDE, and the two WHO cards beside
-     * it (1.5B, 430M) are also global — a US-sourced rate here was the
-     * original mismatch this label exists to prevent, just pointing the
-     * other way than the 2026-09-02 fix assumed.
-     */
-    {
-      value: "17%",
-      label: "worldwide who need aids use them",
-      source: "WHO",
-      sourceUrl:
-        "https://cdn.who.int/media/docs/default-source/documents/health-topics/deafness-and-hearing-loss/world-report-on-hearing/wrh-executive-summary.en.pdf",
-    },
   ],
   /**
    * The dot-grid figure ("17 in 100 have them") shipped with no source at

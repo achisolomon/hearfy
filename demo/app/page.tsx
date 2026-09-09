@@ -293,7 +293,7 @@ export default function OnePagerPage() {
             because a 10x10 grid is simply taller than three one-line cards.
             Pairing the grid with the four barriers instead gives it a
             neighbour of its own height, and nothing has to stretch. */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {PROBLEM.stats.map((stat, i) => (
             <Reveal key={stat.label} delay={i * 0.08}>
               {/* `min-w-0` on the flex child and no `shrink-0` on the figure:

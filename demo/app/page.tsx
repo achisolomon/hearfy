@@ -293,7 +293,7 @@ export default function OnePagerPage() {
             because a 10x10 grid is simply taller than three one-line cards.
             Pairing the grid with the four barriers instead gives it a
             neighbour of its own height, and nothing has to stretch. */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {PROBLEM.stats.map((stat, i) => (
             <Reveal key={stat.label} delay={i * 0.08}>
               {/* `min-w-0` on the flex child and no `shrink-0` on the figure:
@@ -308,9 +308,14 @@ export default function OnePagerPage() {
                   <span className="block break-words text-[14px] leading-snug text-slate-500">
                     {stat.label}
                   </span>
-                  <span className="mt-1 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
+                  <a
+                    href={stat.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block text-[7px] font-extrabold uppercase tracking-[0.16em] text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-brand-teal"
+                  >
                     {stat.source}
-                  </span>
+                  </a>
                 </span>
               </Card>
             </Reveal>
@@ -331,6 +336,14 @@ export default function OnePagerPage() {
               <p className="mt-4 flex items-center gap-2 text-[13px] text-slate-500">
                 <span className="h-3 w-3 rounded-[2px] bg-brand-teal" />
                 17 in 100 have them
+                <a
+                  href={PROBLEM.dotGridSourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[7px] font-extrabold uppercase tracking-[0.16em] text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-brand-teal"
+                >
+                  {PROBLEM.dotGridSource}
+                </a>
               </p>
             </Card>
           </Reveal>
@@ -431,8 +444,20 @@ export default function OnePagerPage() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
-                {MARKET.sources}
+              <p className="mt-4 flex flex-wrap gap-x-2 text-[7px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
+                {MARKET.sources.map((src, i) => (
+                  <span key={src.name}>
+                    {i > 0 && <span className="mr-2 normal-case tracking-normal">&middot;</span>}
+                    <a
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-slate-300 underline-offset-2 hover:text-brand-teal"
+                    >
+                      {src.name}
+                    </a>
+                  </span>
+                ))}
               </p>
             </Card>
           </Reveal>

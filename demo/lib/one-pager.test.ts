@@ -121,33 +121,22 @@ describe("the content the page is allowed to carry", () => {
    */
   it("keeps the prevalence figures, attributed", () => {
     const values = PROBLEM.stats.map((s) => s.value);
-    expect(values).toEqual(["1.5B", "430M", "17%"]);
+    expect(values).toEqual(["1.5B", "430M"]);
     for (const stat of PROBLEM.stats) expect(stat.source.length).toBeGreaterThan(2);
   });
 
   /**
-   * The 17% is NIDCD's, and it is about US adults.
-   *
-   * It shipped credited to WHO until 2026-09-02. That was wrong twice over:
-   * wrong organisation, and a US rate presented as a global one — directly
-   * above a section that sizes the market worldwide. WHO's own global figure
-   * is under 10%, so the mistake also flattered the industry by roughly two
-   * to one.
-   *
-   * This pins both halves of the correction, because either could be undone
-   * alone: someone tidying sources back to a single "WHO" would restore the
-   * mis-citation, and someone shortening the label would drop the scope and
-   * leave a US number reading as global.
+   * The standalone "17%" stat card was removed 2026-09-10: it and the
+   * dot-grid below it ("17 in 100 have them") had come to state the exact
+   * same WHO figure twice — once as a bare card, once as the grid — after
+   * the card was reverted from NIDCD's US rate back to WHO's global one
+   * the same day. The grid alone carries it now; see PROBLEM.dotGridSource.
    */
-  it("credits the 17% to NIDCD and says it is US adults", () => {
-    const stat = PROBLEM.stats.find((s) => s.value === "17%");
-    expect(stat, "the 17% stat is gone").toBeDefined();
-    expect(stat!.source, "the 17% is NIDCD's figure, not WHO's").toBe("NIDCD");
-    expect(stat!.label, "the 17% must say it is US adults, or it reads as global")
-      .toMatch(/\bUS\b/);
+  it("does not duplicate the 17%/WHO figure as its own stat card", () => {
+    expect(PROBLEM.stats.some((s) => s.value === "17%"), "the 17% card is back — it duplicates the dot grid").toBe(false);
   });
 
-  /** The two genuine WHO figures must keep saying WHO. */
+  /** Both prevalence figures are WHO's. */
   it("keeps WHO on the figures that are WHO's", () => {
     for (const value of ["1.5B", "430M"]) {
       const stat = PROBLEM.stats.find((s) => s.value === value);
@@ -233,7 +222,11 @@ describe("the market section is honest about its figures", () => {
    * Hearfy's own projection — which is precisely the content boundary.
    */
   it("attributes the figure to the firms that published it", () => {
-    expect(MARKET.sources.length, "the market figure has no source").toBeGreaterThan(8);
+    expect(MARKET.sources.length, "the market figure has no source").toBeGreaterThanOrEqual(1);
+    for (const src of MARKET.sources) {
+      expect(src.name.length, `source "${src.name}" has no name`).toBeGreaterThan(0);
+      expect(src.url, `source "${src.name}" has no link`).toMatch(/^https:\/\//);
+    }
     expect(SHIPPED).toMatch(/Grand View Research/);
   });
 

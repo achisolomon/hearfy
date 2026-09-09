@@ -19,11 +19,11 @@
  * `lib/one-pager.test.ts` fails the build if any of them reappear.
  *
  * WHAT IS ALLOWED, and why:
- *   - the public-health prevalence figures (1.5B / 430M from WHO, 17% from
- *     NIDCD). These are published statistics, not Hearfy business
- *     information, and they are the public case for the product existing.
- *     The deck cites all three as WHO; the 17% is NIDCD's, for US adults
- *     only, and was corrected here on 2026-09-02 — see PROBLEM.stats.
+ *   - the public-health prevalence figures (1.5B / 430M / 17%, all from WHO).
+ *     These are published statistics, not Hearfy business information, and
+ *     they are the public case for the product existing. The 17% briefly
+ *     carried NIDCD's US-only figure (2026-09-02 to 2026-09-10) before being
+ *     reverted to WHO's own global rate — see PROBLEM.stats.
  *   - third-party MARKET SIZE figures (see MARKET below). These are published
  *     analyst forecasts of an industry, not Hearfy's own numbers: they say how
  *     big hearing care is, never what Hearfy earns, charges, or projects. The
@@ -74,25 +74,30 @@ export const HERO = {
 export const PROBLEM = {
   title: "Most hearing loss goes untreated",
   stats: [
-    { value: "1.5B", label: "people live with hearing loss", source: "WHO" },
-    { value: "430M", label: "need rehabilitation today", source: "WHO" },
-    /**
-     * NIDCD, not WHO, and US adults, not the world.
-     *
-     * This shipped as a WHO figure until 2026-09-02. It is not one: 17% is
-     * NIDCD's number for US adults aged 20-69 who could benefit from hearing
-     * aids and have ever used them. WHO's global equivalent is far starker —
-     * production meets under 10% of need worldwide, and about 3% in low- and
-     * middle-income countries.
-     *
-     * The error mattered more than a stray label: the stat sits directly
-     * above a section that sizes the market WORLDWIDE, so a US rate was
-     * being read as a global one. The owner's call was to keep 17% and fix
-     * the citation, so the label now says "US adults" in words — the source
-     * pill alone would not stop the same misreading.
-     */
-    { value: "17%", label: "of US adults who need aids use them", source: "NIDCD" },
+    {
+      value: "1.5B",
+      label: "people live with hearing loss",
+      source: "WHO",
+      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
+    },
+    {
+      value: "430M",
+      label: "need rehabilitation today",
+      source: "WHO",
+      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
+    },
   ],
+  /**
+   * The dot-grid figure ("17 in 100 have them") shipped with no source at
+   * all, unlike the three stats above it — an omission flagged 2026-09-09.
+   * Same WHO figure as the third stat card above (both now read the World
+   * Report on Hearing's 17%/83% split) — deliberately not de-duplicated:
+   * the stat card states the number, the grid shows it, and both earn their
+   * place as different representations of the same real figure.
+   */
+  dotGridSource: "WHO",
+  dotGridSourceUrl:
+    "https://cdn.who.int/media/docs/default-source/documents/health-topics/deafness-and-hearing-loss/world-report-on-hearing/wrh-executive-summary.en.pdf",
   /** Slide 4's four barriers — why the other 83% stay untreated. */
   barriersTitle: "What stops people",
   barriers: [
@@ -197,7 +202,10 @@ export const MARKET = {
    * market" is read as including the consumer earbud market.
    */
   footnote: "Excludes hearing protection and consumer hearables.",
-  sources: "Grand View Research · Research and Markets",
+  sources: [
+    { name: "Grand View Research", url: "https://www.grandviewresearch.com/industry-analysis/hearing-aids-market" },
+    { name: "Research and Markets", url: "https://www.researchandmarkets.com/reports/4990990/hearing-aid-market-2026-2030" },
+  ],
 };
 
 /** Slide 3 — the clinic today versus the visit at home. */

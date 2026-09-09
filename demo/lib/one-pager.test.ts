@@ -233,7 +233,11 @@ describe("the market section is honest about its figures", () => {
    * Hearfy's own projection — which is precisely the content boundary.
    */
   it("attributes the figure to the firms that published it", () => {
-    expect(MARKET.sources.length, "the market figure has no source").toBeGreaterThan(8);
+    expect(MARKET.sources.length, "the market figure has no source").toBeGreaterThanOrEqual(1);
+    for (const src of MARKET.sources) {
+      expect(src.name.length, `source "${src.name}" has no name`).toBeGreaterThan(0);
+      expect(src.url, `source "${src.name}" has no link`).toMatch(/^https:\/\//);
+    }
     expect(SHIPPED).toMatch(/Grand View Research/);
   });
 

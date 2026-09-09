@@ -74,8 +74,18 @@ export const HERO = {
 export const PROBLEM = {
   title: "Most hearing loss goes untreated",
   stats: [
-    { value: "1.5B", label: "people live with hearing loss", source: "WHO" },
-    { value: "430M", label: "need rehabilitation today", source: "WHO" },
+    {
+      value: "1.5B",
+      label: "people live with hearing loss",
+      source: "WHO",
+      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
+    },
+    {
+      value: "430M",
+      label: "need rehabilitation today",
+      source: "WHO",
+      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
+    },
     /**
      * NIDCD, not WHO, and US adults, not the world.
      *
@@ -91,8 +101,25 @@ export const PROBLEM = {
      * the citation, so the label now says "US adults" in words — the source
      * pill alone would not stop the same misreading.
      */
-    { value: "17%", label: "of US adults who need aids use them", source: "NIDCD" },
+    {
+      value: "17%",
+      label: "of US adults who need aids use them",
+      source: "NIDCD",
+      sourceUrl: "https://www.nidcd.nih.gov/health/statistics/quick-statistics-hearing",
+    },
   ],
+  /**
+   * The dot-grid figure ("17 in 100 have them") shipped with no source at
+   * all, unlike the three stats above it — an omission flagged 2026-09-09.
+   * WHO's own figure, not NIDCD's: the World Report on Hearing (2021) states
+   * "an estimated gap of 83% between the need for and access to services for
+   * such care – using hearing aid use as a tracer indicator", independent of
+   * NIDCD's US-only 16%. The two agree by coincidence; this card cites WHO,
+   * which is the one that actually states a global 17%/83% split.
+   */
+  dotGridSource: "WHO",
+  dotGridSourceUrl:
+    "https://cdn.who.int/media/docs/default-source/documents/health-topics/deafness-and-hearing-loss/world-report-on-hearing/wrh-executive-summary.en.pdf",
   /** Slide 4's four barriers — why the other 83% stay untreated. */
   barriersTitle: "What stops people",
   barriers: [
@@ -197,7 +224,10 @@ export const MARKET = {
    * market" is read as including the consumer earbud market.
    */
   footnote: "Excludes hearing protection and consumer hearables.",
-  sources: "Grand View Research · Research and Markets",
+  sources: [
+    { name: "Grand View Research", url: "https://www.grandviewresearch.com/industry-analysis/hearing-aids-market" },
+    { name: "Research and Markets", url: "https://www.researchandmarkets.com/reports/4990990/hearing-aid-market-2026-2030" },
+  ],
 };
 
 /** Slide 3 — the clinic today versus the visit at home. */

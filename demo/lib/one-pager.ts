@@ -14,7 +14,6 @@
  *   - CMA headcount, annual visit volume, and the supervision ratio
  *   - per-unit economics (device gross profit, conversion, CMA share) — these
  *     have no source at all; see the economics memory note
- *   - founder names and the investor-deck team slide
  *   - every price: the visit fee, the membership tiers, and any monthly figure
  * `lib/one-pager.test.ts` fails the build if any of them reappear.
  *
@@ -29,6 +28,13 @@
  *     big hearing care is, never what Hearfy earns, charges, or projects. The
  *     forbidden list above is about OUR figures, and none of these are ours.
  *     Every one carries the firm that published it.
+ *   - the founders' names, titles, and bios, and a link to each one's LinkedIn
+ *     profile — added 2026-09-13 by the owner's explicit instruction,
+ *     reversing the founders-are-investor-only stance above. A public page
+ *     asking someone to trust a home visit from strangers benefits from
+ *     naming who is behind it; that is a legitimate consumer-facing use even
+ *     though the same three names also appear in the investor deck. The
+ *     bios and photos are the deck's own ("The Team" slide) — see TEAM.
  *
  * NO PRICES. The page carried a pricing section — $99 for the visit and the
  * three membership tiers — on the reasoning that those are consumer-facing in
@@ -293,6 +299,50 @@ export const SYSTEM = {
     },
   ],
 };
+
+/**
+ * The deck's "The Team" slide, ported here 2026-09-13.
+ *
+ * Names, titles and bio lines are the slide's own verbatim, including its
+ * quirks ("Bsc.", the trailing comma) — Achi's bio is the one exception,
+ * rewritten by the owner (2026-09-03) to lead with being a second-time
+ * founder rather than a tool list; mirror any future edit back into the
+ * deck rather than letting the two drift apart again.
+ *
+ * `linkedin` is new on this page — the deck slide itself carries no profile
+ * links; these come from the deck's separate contact-card data, which lists
+ * the same three people.
+ */
+export const TEAM = [
+  {
+    name: "Dr. Michael Mastai",
+    title: "CMO",
+    lines: ["MD, BSc in Biology.", "4+ Years Medical Entrepreneurship,", "Expert in AI Healthcare Products."],
+    photo: "/one-pager/team-michael.jpg",
+    logos: "/one-pager/logos-michael.png",
+    linkedin: "https://www.linkedin.com/in/michael-mastai-md-723a96183/",
+  },
+  {
+    name: "Eyal Harel",
+    title: "CEO",
+    lines: [
+      "Bsc. Technology Management",
+      "Serial entrepreneur with 20+ years building and scaling tech ventures.",
+      "Product-driven leader from ideas to market.",
+    ],
+    photo: "/one-pager/team-eyal.jpg",
+    logos: "/one-pager/logos-eyal.png",
+    linkedin: "https://www.linkedin.com/in/eyalharel1/",
+  },
+  {
+    name: "Achi Solomon",
+    title: "CTO",
+    lines: ["2nd time founder | B.A. CS", "20+ yrs leading R&D teams", "Scalable cloud-native platforms and GenAI"],
+    photo: "/one-pager/team-achi.jpg",
+    logos: "/one-pager/logos-achi.png",
+    linkedin: "https://www.linkedin.com/in/achisolomon/",
+  },
+];
 
 /** Closing reassurance — the trust checklist, then the call to action. */
 export const TRUST = [

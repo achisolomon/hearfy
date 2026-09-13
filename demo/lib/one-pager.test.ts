@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONTRAST, CTA, HERO, HOW, MARKET, PROBLEM, SYSTEM, TRUST } from "./one-pager";
+import { CONTRAST, CTA, HERO, HOW, MARKET, PROBLEM, SYSTEM, TEAM, TRUST } from "./one-pager";
 
 /**
  * The public one-pager must never carry business information.
@@ -89,16 +89,6 @@ describe("public one-pager carries no business information", () => {
 
   it.each(FORBIDDEN)("never ships %s", (_label, pattern) => {
     expect(SHIPPED).not.toMatch(pattern);
-  });
-
-  /**
-   * The deck's team slide carries the founders by name. A consumer page has no
-   * reason to, and the deck's version of it is investor material.
-   */
-  it("names no founders", () => {
-    for (const name of ["Michael Kertes", "Eyal Nussbaum", "Achi Solomon"]) {
-      expect(SHIPPED).not.toContain(name);
-    }
   });
 
   /**
@@ -476,6 +466,7 @@ describe("the page is complete enough to stand alone", () => {
     expect(SYSTEM.parts.length).toBe(3);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
     expect(CTA.contact.email.length).toBeGreaterThan(0);
+    expect(TEAM.length).toBe(3);
   });
 
   /** The visit steps are numbered in the UI; the numbering must be in order. */
@@ -865,6 +856,54 @@ describe("the page identifies no individual", () => {
     for (const name of ["Susan Reed", "Dr. Reed", "Alex Rivera", "Maya"]) {
       expect(SHIPPED).not.toContain(name);
     }
+  });
+});
+
+/**
+ * The Team section — added 2026-09-13, the owner's explicit reversal of the
+ * founders-are-investor-only stance. Unlike the fictional personas above,
+ * these three are real and named on purpose: see the TEAM allowance in
+ * lib/one-pager.ts's header.
+ */
+describe("the team section names the real founders", () => {
+  it("carries all three founders with a title, a bio and a LinkedIn link", () => {
+    expect(TEAM.length).toBe(3);
+    for (const m of TEAM) {
+      expect(m.name.length).toBeGreaterThan(0);
+      expect(m.title.length).toBeGreaterThan(0);
+      expect(m.lines.length).toBeGreaterThan(0);
+      expect(m.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\/in\//);
+    }
+  });
+
+  it("names the three founders", () => {
+    const names = TEAM.map((m) => m.name);
+    expect(names).toEqual(["Dr. Michael Mastai", "Eyal Harel", "Achi Solomon"]);
+  });
+
+  it("ships every founder photo and logo strip it references", async () => {
+    const { existsSync } = await import("node:fs");
+    for (const m of TEAM) {
+      expect(existsSync(join(HERE, "public", m.photo)), `missing: ${m.photo}`).toBe(true);
+      expect(existsSync(join(HERE, "public", m.logos)), `missing: ${m.logos}`).toBe(true);
+    }
+  });
+
+  it("renders a LinkedIn link for every founder card", () => {
+    const stripped = stripComments(PAGE_SRC);
+    const matches = stripped.match(/href=\{m\.linkedin\}/g) ?? [];
+    expect(matches.length, "the LinkedIn link is missing from the team card").toBeGreaterThan(0);
+    expect(stripped, "founder LinkedIn links must open in a new tab safely")
+      .toMatch(/target="_blank"[^>]*rel="noopener noreferrer"/);
+  });
+
+  it("routes team photos and logos through asset()", () => {
+    // Same rule as the rest of the page's media: a bare "/..." src bypasses
+    // the basePath helper and breaks if one is ever restored.
+    const stripped = stripComments(PAGE_SRC);
+    const teamBlock = stripped.slice(stripped.indexOf("{TEAM.map"), stripped.indexOf("{TEAM.map") + 2000);
+    expect(teamBlock).toMatch(/src=\{m\.photo\}/);
+    expect(teamBlock).toMatch(/src=\{asset\(m\.logos\)\}/);
   });
 });
 

@@ -1,0 +1,44 @@
+name: Verify demo build
+
+# Backstop for the pre-push gate (scripts/pre-push-gate.mjs), not a
+# replacement for it. The gate catches these same failures locally before a
+# push ever leaves a machine; this exists for the pushes that bypass it —
+# --no-verify, a clone without the hook installed, or a machine where
+# install-hooks was never run. Runs the identical checks Cloudflare Pages
+# runs in `prebuild`, so a red run here is a red Cloudflare build, visible
+# here first.
+
+on:
+  push:
+    paths:
+      - "demo/**"
+      - ".github/workflows/demo-verify.yml"
+  pull_request:
+    paths:
+      - "demo/**"
+      - ".github/workflows/demo-verify.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: demo/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+        env:
+          CI: "1"

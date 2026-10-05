@@ -1,16 +1,23 @@
 "use client";
-import { Star } from "lucide-react";
+import { Bell, Clock, Star } from "lucide-react";
 import { Card,PageHeader,PrimaryButton,SecondaryButton,StatusPill } from "../../ui";
-import { cma } from "@/lib/mock-data";
+import { BRAND_NAME, appointment, arrival, cma } from "@/lib/mock-data";
+import { dayShort, useBookingDay } from "@/lib/booking-days";
 import { ScreenId } from "../registry";
-import { Shell, Avatar, RouteMap, AudiologistStatusLine } from "../shared";
+import { Shell, Avatar, AudiologistStatusLine } from "../shared";
 
-export function Assigned({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Maya is assigned" subtitle="Your care team is ready for your visit." onBack={back} eyebrow="Visit status"/><RouteMap/><Card className="mt-4 p-4 text-brand-navy"><div className="flex flex-wrap items-center gap-3"><Avatar/><div className="min-w-0 flex-1"><b>{cma.name}</b><p className="text-xs text-slate-500">Certified Medical Assistant</p><p className="mt-1 flex items-center gap-1 text-xs"><Star size={13} fill="currentColor"/> 4.9 · 128 visits</p></div><StatusPill tone="green">Confirmed</StatusPill></div><div className="mt-4 grid grid-cols-2 gap-2"><SecondaryButton>Message</SecondaryButton><SecondaryButton>Call</SecondaryButton></div></Card><div className="mt-4"><PrimaryButton onClick={()=>go("driving")}>Simulate visit day</PrimaryButton></div></Shell>}
+// No map and no live position (Issac, 2026-10-05: caregivers don't like being
+// tracked). The patient is told what will happen on visit day — a message
+// when Maya sets off, with an arrival time — and nothing about where she is.
+export function Assigned({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){const day=useBookingDay();return <Shell><PageHeader title="Maya is assigned" subtitle={`She’ll visit you on ${dayShort(day)}, ${appointment.time}.`} onBack={back} eyebrow="Visit status"/><Card className="p-4 text-brand-navy"><div className="flex flex-wrap items-center gap-3"><Avatar/><div className="min-w-0 flex-1"><b>{cma.name}</b><p className="text-xs text-slate-500">Certified Medical Assistant</p><p className="mt-1 flex items-center gap-1 text-xs"><Star size={13} fill="currentColor"/> 4.9 · 128 visits</p></div><StatusPill tone="green">Confirmed</StatusPill></div><div className="mt-4 grid grid-cols-2 gap-2"><SecondaryButton>Message</SecondaryButton><SecondaryButton>Call</SecondaryButton></div></Card><div className="mt-4 rounded-[26px] bg-[#eef7f7] p-5"><span className="text-xs font-bold uppercase tracking-widest text-teal-ink">On visit day</span><p className="mt-2 text-[15px] leading-6 text-brand-navy">We’ll send you a message when Maya sets off, with the time she’ll arrive.</p><OnTheWayNotice className="mt-4"/></div><div className="mt-4"><PrimaryButton onClick={()=>go("driving")}>Simulate visit day</PrimaryButton></div></Shell>}
+// The message itself, drawn as a phone notification so the patient recognises
+// it when it comes. It carries the arrival time only.
+function OnTheWayNotice({className=""}:{className?:string}){return <div className={`flex items-start gap-3 rounded-[20px] border border-[#e4eef0] bg-white p-4 shadow-card ${className}`}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-ink text-white"><Bell size={18}/></span><div className="min-w-0 flex-1 text-brand-navy"><div className="flex items-baseline justify-between gap-2"><b className="text-sm">{BRAND_NAME}</b><span className="text-xs text-slate-500">now</span></div><p className="mt-0.5 text-sm leading-5">Maya is on her way. She’ll arrive around {arrival.eta}.</p></div></div>}
 // The patient's screen carries no button for a clinical act someone else
 // performs — here, Maya arriving. The chrome's Next advances the story
 // instead. The subtitle already says "We'll notify you when she arrives", so
 // no extra status line is added; the button is simply dropped.
-export function Driving({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Maya is on the way" subtitle="We’ll notify you when she arrives." onBack={back} eyebrow="Live tracking"/><RouteMap moving/><Card className="mt-4 p-5 text-brand-navy"><span className="text-xs font-bold uppercase tracking-widest text-teal-ink">Estimated arrival</span><div className="mt-1 flex items-end justify-between"><b className="text-4xl">12 <span className="text-lg">min</span></b><span className="text-xs text-slate-500">8.4 miles away</span></div></Card></Shell>}
+export function Driving({go,back}:{go:(s:ScreenId)=>void;back:()=>void}){return <Shell><PageHeader title="Maya is on her way" subtitle="We’ll let you know when she’s at your door." onBack={back} eyebrow="Visit day"/><OnTheWayNotice/><Card className="mt-4 p-6 text-center text-brand-navy"><span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#e8f9f8] text-teal-ink"><Clock size={26}/></span><span className="mt-4 block text-xs font-bold uppercase tracking-widest text-teal-ink">Estimated arrival</span><b className="mt-1 block text-4xl">{arrival.eta}</b><p className="mt-1 text-sm text-slate-500">In about {arrival.minutes} minutes</p></Card><Card className="mt-4 p-4 text-brand-navy"><div className="flex items-center gap-3"><Avatar/><div className="min-w-0 flex-1"><b>{cma.name}</b><p className="text-xs text-slate-500">Certified Medical Assistant</p></div></div><div className="mt-4 grid grid-cols-2 gap-2"><SecondaryButton>Message</SecondaryButton><SecondaryButton>Call</SecondaryButton></div></Card></Shell>}
 // Same reasoning as Driving. Starting the visit is Maya's act, not Alex's, so
 // the button is replaced with a status line naming who acts next, matching
 // AudiologistStrip's visual language elsewhere in this flow.

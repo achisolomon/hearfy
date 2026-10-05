@@ -2651,12 +2651,56 @@ describe("route map direction", () => {
     expect(routeMap).toMatch(/repeatType\s*:\s*["']loop["']/);
   });
 
-  // Both the CMA's "En route" screen and the patient's live-tracking screen
-  // render the same moving map, so neither can regress independently.
-  it("shares one moving map between the CMA and patient screens", () => {
-    const movers = ["components/screens/cma/day.tsx", "components/screens/patient/dispatch.tsx"]
-      .filter(f => /<RouteMap\s+moving/.test(sourceOf(f)));
-    expect(movers.length).toBe(2);
+  // The map is the CMA's own navigation on her "En route" screen. It is no
+  // longer shown to the patient at all (see "no CMA tracking" below).
+  it("keeps the moving map on the CMA's en-route screen", () => {
+    expect(sourceOf("components/screens/cma/day.tsx")).toMatch(/<RouteMap\s+moving/);
+  });
+});
+
+// Issac, 2026-10-05: "care givers does not like to be tracked — this page is
+// about a notification to the patient [that] the CMA is on the way and the
+// ETA, no tracking."
+//
+// The patient's "assigned" and "on the way" screens showed a route map with
+// Maya's position moving along it, plus her distance in miles. CMAs object
+// to their live location being shown, so the patient gets a notification
+// and an arrival time instead. A map, a position marker or a distance on any
+// patient screen is the regression.
+describe("no CMA tracking on the patient's screens", () => {
+  const patientScreens = componentFiles().filter(f => f.startsWith("components/screens/patient/"));
+
+  it("finds the patient screens to check", () => {
+    expect(patientScreens).toContain("components/screens/patient/dispatch.tsx");
+  });
+
+  it("never renders the route map", () => {
+    for (const f of patientScreens) expect(sourceOf(f), f).not.toMatch(/<RouteMap\b/);
+  });
+
+  it("never shows the CMA's distance or speaks of tracking her", () => {
+    for (const f of patientScreens) {
+      const src = sourceOf(f);
+      expect(src, f).not.toMatch(/\b(miles?|km|kilomet(er|re)s?)\s+away\b/i);
+      expect(src, f).not.toMatch(/live tracking|track your visit/i);
+    }
+  });
+
+  it("tells the patient when the CMA will arrive", () => {
+    const dispatch = sourceOf("components/screens/patient/dispatch.tsx");
+    const driving = dispatch.split(/(?=export function )/).find(s => s.startsWith("export function Driving")) ?? "";
+    expect(driving, "Driving not found").toBeTruthy();
+    expect(driving, "the on-the-way screen must state the ETA").toMatch(/arrival\.eta/);
+  });
+
+  // The visit date shown on "assigned" is the day the patient picked in
+  // booking, not the frozen mock date (which contradicted the rolling days).
+  it("shows the booked day on the assigned screen", () => {
+    const dispatch = sourceOf("components/screens/patient/dispatch.tsx");
+    const assigned = dispatch.split(/(?=export function )/).find(s => s.startsWith("export function Assigned")) ?? "";
+    expect(assigned, "Assigned not found").toBeTruthy();
+    expect(assigned).toMatch(/useBookingDay\(\)/);
+    expect(assigned).not.toMatch(/appointment\.date/);
   });
 });
 

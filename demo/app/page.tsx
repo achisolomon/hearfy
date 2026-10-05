@@ -7,6 +7,7 @@ import {
   FileHeart,
   Headphones,
   Home,
+  Linkedin,
   Mail,
   Stethoscope,
   Video,
@@ -30,6 +31,7 @@ import {
   MEDIA,
   PROBLEM,
   SYSTEM,
+  TEAM,
   TRUST,
 } from "@/lib/one-pager";
 
@@ -697,6 +699,58 @@ export default function OnePagerPage() {
               </Reveal>
             );
           })}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- *
+       * Team
+       * ---------------------------------------------------------- */}
+      <section className="mt-16">
+        <Reveal>
+          <SectionLabel>Team</SectionLabel>
+          <SectionTitle>The Team</SectionTitle>
+        </Reveal>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {TEAM.map((m, i) => (
+            <Reveal key={m.name} delay={i * 0.08}>
+              <Card className="flex h-full flex-col p-4 text-left sm:p-6 sm:text-center">
+                <div className="flex items-center gap-3.5 sm:block">
+                  <Photo
+                    src={m.photo}
+                    alt={m.name}
+                    className="h-20 w-20 shrink-0 rounded-full ring-4 ring-[#E8F9F8] sm:mx-auto sm:h-28 sm:w-28"
+                  />
+                  <p className="min-w-0 text-balance text-base font-extrabold leading-tight text-teal-ink sm:mt-5 sm:text-lg">
+                    {m.name}, {m.title}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex-1 space-y-0.5 text-balance text-sm leading-snug text-slate-600 sm:mt-2">
+                  {m.lines.map((l) => (
+                    <p key={l}>{l}</p>
+                  ))}
+                </div>
+
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={asset(m.logos)}
+                  alt=""
+                  className="mt-4 h-8 w-auto max-w-full shrink-0 object-contain sm:mx-auto sm:mt-6 sm:h-10"
+                />
+
+                <a
+                  href={m.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-1.5 self-start text-[13px] font-extrabold text-teal-ink sm:mt-5 sm:self-center"
+                >
+                  <Linkedin aria-hidden className="h-4 w-4" />
+                  LinkedIn
+                </a>
+              </Card>
+            </Reveal>
+          ))}
         </div>
       </section>
 

@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Hearfy pre-push gate.
+#
+# Runs the same checks Cloudflare Pages runs in `prebuild`, here, before the
+# push leaves the machine. Installed by `npm run install-hooks`.
+#
+# Hooks live in the repo's COMMON git dir, so one install covers every
+# worktree of this repo.
+#
+# To bypass in a genuine emergency:  git push --no-verify
+# (Expect the Cloudflare build to fail instead — that is the whole point.)
+
+set -e
+
+repo_root=$(git rev-parse --show-toplevel)
+
+# The deck app is the gated project in hearfy-internal; the demo app in hearfy.
+if [ -f "$repo_root/deck/scripts/pre-push-gate.mjs" ]; then
+  gate_dir="$repo_root/deck"
+elif [ -f "$repo_root/demo/scripts/pre-push-gate.mjs" ]; then
+  gate_dir="$repo_root/demo"
+else
+  echo "pre-push: no gate script found in this repo — skipping." >&2
+  exit 0
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-push: node is not on PATH — cannot verify this push." >&2
+  echo "pre-push: refusing rather than pushing unverified code." >&2
+  exit 1
+fi
+
+cd "$gate_dir"
+exec node scripts/pre-push-gate.mjs

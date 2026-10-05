@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONTRAST, CTA, HERO, HOW, MARKET, PROBLEM, SYSTEM, TEAM, TRUST } from "./one-pager";
+import { CONTRAST, CTA, HERO, HOW, MARKET, PROBLEM, TEAM, TRUST } from "./one-pager";
 
 /**
  * The public one-pager must never carry business information.
@@ -432,9 +432,6 @@ describe("the page is complete enough to stand alone", () => {
     expect(PROBLEM.clinicTags.length).toBe(PROBLEM.remoteTags.length);
     expect(CONTRAST.clinic.points.length).toBe(CONTRAST.home.points.length);
     expect(HOW.line.length).toBeGreaterThan(0);
-    // The three role cards were removed (owner, 2026-10-05); the section is
-    // its title, subtitle and the home/audiologist photo pair.
-    expect(SYSTEM.subtitle.length).toBeGreaterThan(0);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
     expect(CTA.contact.email.length).toBeGreaterThan(0);
     expect(TEAM.length).toBe(3);
@@ -523,6 +520,17 @@ describe("the page's media", () => {
    * How it works is the deck's film, not step cards (owner, 2026-10-05), and
    * the problem section is the deck's photo pair over the WHO bar.
    */
+  /**
+   * "Behind every visit" was removed (owner, 2026-10-05: "the vid covers
+   * it") — the film shows the CMA at home and the audiologist on video, which
+   * is all that section's photo pair said.
+   */
+  it("has no separate 'behind every visit' section", () => {
+    const page = stripComments(PAGE_SRC);
+    expect(page).not.toContain("Behind every visit");
+    expect(page).not.toMatch(/SYSTEM\./);
+  });
+
   it("plays the deck's film under How it works", () => {
     const page = stripComments(PAGE_SRC);
     const how = page.slice(page.indexOf("How it works"), page.indexOf("</section>", page.indexOf("How it works")));

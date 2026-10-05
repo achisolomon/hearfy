@@ -31,7 +31,6 @@ import {
   MARKET,
   MEDIA,
   PROBLEM,
-  SYSTEM,
   TEAM,
   TRUST,
 } from "@/lib/one-pager";
@@ -611,57 +610,6 @@ export default function OnePagerPage() {
             lineFrom={HOW.lineFrom}
           />
         </Reveal>
-      </section>
-
-      {/* ---------------------------------------------------------- *
-       * The system — who is responsible for what
-       * ---------------------------------------------------------- */}
-      <section className="mt-16">
-        <Reveal>
-          <SectionLabel>Behind every visit</SectionLabel>
-          <SectionTitle>{SYSTEM.title}</SectionTitle>
-          <p className="mt-3 max-w-2xl text-[16px] text-slate-500">
-            {SYSTEM.subtitle}
-          </p>
-        </Reveal>
-
-        {/* The two halves of the visit, side by side.
-            Both cells are given the SAME aspect ratio and each image fills its
-            frame with object-cover, so the pair aligns on both edges. Before,
-            one was a fixed aspect and the other stretched to `h-full`, so the
-            two photos ended at different heights — the misalignment the owner
-            flagged. object-position is set per image because the subject is
-            off-centre in each crop. */}
-        <Reveal>
-          <div className="mt-8 grid gap-4 sm:grid-cols-[1.55fr_1fr]">
-            <Photo
-              src={MEDIA.visitHome.src}
-              alt={MEDIA.visitHome.alt}
-              className="h-full"
-              imgClassName="aspect-[16/10] object-[50%_45%]"
-            />
-            {/* The clinician side is a still, not a video: the only clinician
-                footage the demo owns has a fictional persona's name legibly on
-                the coat. This crop from the deck carries no name. */}
-            {/* The aspect ratio must sit on the IMG, not the wrapper: the
-                wrapper is a grid item and `align-items: stretch` overrides its
-                own aspect, so the two photos ended at different heights. With
-                both images on the same ratio the pair aligns top and bottom. */}
-            <div className="relative">
-              <Photo
-                src={MEDIA.audiologist.src}
-                alt={MEDIA.audiologist.alt}
-                className="h-full"
-                imgClassName="aspect-[16/10] object-[50%_28%]"
-              />
-              <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[12px] font-extrabold text-teal-ink shadow-soft">
-                <span className="h-2 w-2 rounded-full bg-brand-teal" />
-                Supervising live
-              </span>
-            </div>
-          </div>
-        </Reveal>
-
       </section>
 
       {/* ---------------------------------------------------------- *

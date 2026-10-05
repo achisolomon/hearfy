@@ -276,18 +276,6 @@ export const HOW = {
 };
 
 /**
- * Slide 7's three-sided system. Its three role cards were removed 2026-10-05
- * (owner); the section is now the title, subtitle and the photo pair.
- * Told as reassurance rather than architecture:
- * the public reader cares who is in the room and who is responsible.
- */
-export const SYSTEM = {
-  title: "The clinic, distributed",
-  subtitle:
-    `${BRAND_NAME} coordinates qualified professionals, clinic-grade equipment and remote clinical expertise into one seamless home visit — bringing the care to the patient, instead of the patient to the clinic.`,
-};
-
-/**
  * The deck's "The Team" slide, ported here 2026-09-13.
  *
  * Names, titles and bio lines are the slide's own verbatim, including its
@@ -401,16 +389,6 @@ export const MEDIA = {
     src: "/video/room-listening.mp4",
     poster: "/video/room-listening-poster.jpg",
     alt: "A patient sits at home wearing headphones during a hearing exam.",
-  },
-  /** Slide 7's left photo: the CMA fitting a device with the patient. */
-  visitHome: {
-    src: "/one-pager/visit-home.jpg",
-    alt: "A Certified Medical Assistant sits beside a patient at home, showing her a hearing aid, with the exam kit and a tablet on the table.",
-  },
-  /** Slide 7's call panel: the supervising audiologist, mid-session. */
-  audiologist: {
-    src: "/one-pager/audiologist.jpg",
-    alt: "An audiologist in a white coat and headset supervises the exam over video.",
   },
   /**
    * The problem section's pair, copied from the deck's own slide

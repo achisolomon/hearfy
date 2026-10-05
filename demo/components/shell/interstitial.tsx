@@ -5,6 +5,7 @@ import { STAGES } from "@/lib/story";
 import { personaFor } from "@/lib/personas";
 import { PersonaAvatar } from "../persona-avatar";
 import { useStory } from "./story-context";
+import { jsDriven } from "../motion-safe";
 
 /** ~1s role-handoff announcement with the persona's face, tap to skip. */
 export function Interstitial() {
@@ -22,6 +23,7 @@ export function Interstitial() {
     <AnimatePresence>
       {handoff && (
         <motion.button
+          {...jsDriven}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

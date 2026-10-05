@@ -1,6 +1,5 @@
 "use client";
 import { useEffect } from "react";
-import { motion } from "framer-motion";
 import { CalendarDays } from "lucide-react";
 import { Card, LiveBrandLogo, PrimaryButton, SecondaryButton, StatusPill } from "../ui";
 import { clinician, devices, patient, visitHistory } from "@/lib/mock-data";
@@ -26,7 +25,7 @@ export function Cover() {
   // reset alongside the gates.
   useEffect(() => { resetAllLatches(); resetTextSize(); resetSelection(); resetSigning(); reviewStore.reset(); }, []);
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
+    <div className="fade-in grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full max-w-md text-center">
         {/* The mark arrives, then keeps breathing. `BrandLogo animate` stopped
             after its entry, which reads as an animation that broke; this is the
@@ -70,7 +69,7 @@ export function Cover() {
 
         <p className="mt-8 text-[11px] leading-5 text-slate-400">{DISCLAIMER}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -83,7 +82,7 @@ export function EndCap() {
   // the journey the viewer just watched (in-home fitting, not a shipment).
   const followUp = visitHistory.find(v => !v.done);
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
+    <div className="fade-in grid min-h-[100dvh] place-items-center bg-brand-bg px-6 py-10">
       <div className="w-full min-w-0 max-w-md text-center">
         {/* Alive here too — the end-cap bookends the cover, and the walkthrough
             has stopped, so the mark is again the only thing on screen moving. */}
@@ -141,6 +140,6 @@ export function EndCap() {
           <SecondaryButton onClick={exploreFreely}>Explore freely</SecondaryButton>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -32,6 +32,9 @@ export const identity = {
 };
 export const cma = { name: "Maya L.", role: "Certified Medical Assistant", rating: 4.9, reviews: 128 };
 export const appointment = { date: "Wed, May 21", fullDate: "May 21, 2025", time: "9:00 – 10:00 AM", price: 99 };
+// What the patient is told on visit day: an arrival time, never the CMA's
+// location or distance (Issac, 2026-10-05: caregivers don't like being tracked).
+export const arrival = { eta: "9:12 AM", minutes: 12 };
 export const devices = [
   { name: "Phonak Audéo L50", badge: "Best match", price: "$1,590 / pair", fit: 94, features: ["Rechargeable", "Bluetooth", "3-year warranty"] },
   { name: "Signia Pure Charge&Go", badge: "Best value", price: "$1,290 / pair", fit: 88, features: ["Rechargeable", "App control", "Remote support"] },

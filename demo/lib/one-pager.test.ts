@@ -432,7 +432,9 @@ describe("the page is complete enough to stand alone", () => {
     expect(PROBLEM.clinicTags.length).toBe(PROBLEM.remoteTags.length);
     expect(CONTRAST.clinic.points.length).toBe(CONTRAST.home.points.length);
     expect(HOW.line.length).toBeGreaterThan(0);
-    expect(SYSTEM.parts.length).toBe(3);
+    // The three role cards were removed (owner, 2026-10-05); the section is
+    // its title, subtitle and the home/audiologist photo pair.
+    expect(SYSTEM.subtitle.length).toBeGreaterThan(0);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
     expect(CTA.contact.email.length).toBeGreaterThan(0);
     expect(TEAM.length).toBe(3);

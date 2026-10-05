@@ -276,30 +276,15 @@ export const HOW = {
 };
 
 /**
- * Slide 7's three-sided system, told as reassurance rather than architecture:
+ * Slide 7's three-sided system. Its three role cards were removed 2026-10-05
+ * (owner); the section is now the title, subtitle and the photo pair.
+ * Told as reassurance rather than architecture:
  * the public reader cares who is in the room and who is responsible.
  */
 export const SYSTEM = {
   title: "The clinic, distributed",
   subtitle:
     `${BRAND_NAME} coordinates qualified professionals, clinic-grade equipment and remote clinical expertise into one seamless home visit — bringing the care to the patient, instead of the patient to the clinic.`,
-  parts: [
-    {
-      name: "In your home",
-      role: "We bring and operate the clinical equipment",
-      line: "A Certified Medical Assistant sets up and operates everything, while the patient simply follows the same steps as in a traditional hearing clinic.",
-    },
-    {
-      name: "Connected in real time",
-      role: "Led by a licensed audiologist",
-      line: "A licensed audiologist remotely supervises the entire exam, reviews each result as it is captured, and provides the final clinical sign-off.",
-    },
-    {
-      name: "On the record",
-      role: "One continuous chart",
-      line: "Your exam, results, fitting, and follow-up care live in one record — so the next visit starts where this one ended.",
-    },
-  ],
 };
 
 /**

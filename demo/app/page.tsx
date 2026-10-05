@@ -4,15 +4,12 @@ import {
   Check,
   CircleCheck,
   CircleX,
-  ClipboardList,
   Clock,
   DollarSign,
-  Home,
   Hourglass,
   Linkedin,
   Mail,
   Users,
-  Video,
   Wifi,
   type LucideIcon,
 } from "lucide-react";
@@ -188,7 +185,6 @@ function TagRow({
 
 const CLINIC_ICONS = [Clock, DollarSign, Hourglass, CircleX];
 const REMOTE_ICONS = [CircleCheck, Clock, Users, Wifi];
-const SYSTEM_ICONS = [Home, Video, ClipboardList];
 
 export default function OnePagerPage() {
   return (
@@ -666,29 +662,6 @@ export default function OnePagerPage() {
           </div>
         </Reveal>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {SYSTEM.parts.map((part, i) => {
-            const Icon = SYSTEM_ICONS[i];
-            return (
-              <Reveal key={part.name} delay={i * 0.08}>
-                <Card className="h-full">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-brand-navy">
-                    <Icon aria-hidden className="h-5 w-5 text-white" />
-                  </span>
-                  <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.18em] text-teal-ink">
-                    {part.name}
-                  </p>
-                  <p className="mt-2 text-[17px] font-extrabold leading-tight text-brand-navy">
-                    {part.role}
-                  </p>
-                  <p className="mt-2 text-[14px] leading-[1.55] text-slate-500">
-                    {part.line}
-                  </p>
-                </Card>
-              </Reveal>
-            );
-          })}
-        </div>
       </section>
 
       {/* ---------------------------------------------------------- *

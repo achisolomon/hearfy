@@ -1709,21 +1709,6 @@ describe("back from We're here after delivery", () => {
   });
 });
 
-describe("route map scales to any column", () => {
-  // In the CMA's tablet column the map's fixed 360×280 viewBox centered
-  // itself while the markers kept phone-pixel offsets: the dashed route
-  // floated in the middle, detached from the home and destination pins
-  // (found 2026-08-31). The map must be drawn in container percentages.
-  it("draws the route and markers in percentages, not phone pixels", () => {
-    const src = sourceOf("components/screens/shared.tsx");
-    const map = src.split(/(?=export function RouteMap)/)[1]?.split(/(?=export function )/)[0] ?? "";
-    expect(map).toContain('preserveAspectRatio="none"');
-    expect(map, "dashes must be normalised so they stay uniform at any width").toContain("pathLength");
-    expect(map, "markers must sit at percentage coordinates").toMatch(/left-\[\d+%\]/);
-    expect(map, "no fixed-pixel marker offsets or x/y animation").not.toMatch(/left-\d|top-\d|\{x:/);
-  });
-});
-
 describe("pure-tone ring label clearance", () => {
   // On a real phone the sweep's completion label read "OTH EARS COMPLET" —
   // the first and last glyphs were gone (found 2026-08-31). Measured
@@ -2632,58 +2617,52 @@ describe("medical safety red flags", () => {
   });
 });
 
-describe("route map direction", () => {
-  const shared = sourceOf("components/screens/shared.tsx");
-  const routeMap = shared
-    .split(/(?=export function )/)
-    .find(s => s.startsWith("export function RouteMap"));
-
-  // The courier marker animated with repeatType "reverse", so every other
-  // cycle drove it backwards down the route — the CMA appeared to be leaving
-  // the visit she was en route to. The trip is one-way by definition.
-  it("never plays the courier's leg in reverse", () => {
-    expect(routeMap, "RouteMap not found").toBeTruthy();
-    expect(routeMap, "reverse drives the courier away from the patient")
-      .not.toMatch(/repeatType\s*:\s*["']reverse["']/);
-  });
-
-  it("loops the courier forward from the start of the route", () => {
-    expect(routeMap).toMatch(/repeatType\s*:\s*["']loop["']/);
-  });
-
-  // The map is the CMA's own navigation on her "En route" screen. It is no
-  // longer shown to the patient at all (see "no CMA tracking" below).
-  it("keeps the moving map on the CMA's en-route screen", () => {
-    expect(sourceOf("components/screens/cma/day.tsx")).toMatch(/<RouteMap\s+moving/);
-  });
-});
-
 // Issac, 2026-10-05: "care givers does not like to be tracked — this page is
 // about a notification to the patient [that] the CMA is on the way and the
 // ETA, no tracking."
 //
 // The patient's "assigned" and "on the way" screens showed a route map with
-// Maya's position moving along it, plus her distance in miles. CMAs object
-// to their live location being shown, so the patient gets a notification
-// and an arrival time instead. A map, a position marker or a distance on any
-// patient screen is the regression.
-describe("no CMA tracking on the patient's screens", () => {
-  const patientScreens = componentFiles().filter(f => f.startsWith("components/screens/patient/"));
+// Maya's position moving along it, plus her distance in miles; her own
+// "En route" screen showed the same moving map. CMAs object to their live
+// location being shown, so the patient gets a notification and an arrival
+// time instead, and Maya sees that same notification plus a line saying her
+// location is not shared. The map component is gone. A map, a position
+// marker or a distance on ANY screen, for any persona, is the regression.
+describe("no CMA tracking on any screen", () => {
+  const screens = componentFiles();
+  const patientScreens = screens.filter(f => f.startsWith("components/screens/patient/"));
 
-  it("finds the patient screens to check", () => {
+  it("finds the screens to check", () => {
     expect(patientScreens).toContain("components/screens/patient/dispatch.tsx");
+    expect(screens).toContain("components/screens/cma/day.tsx");
   });
 
-  it("never renders the route map", () => {
-    for (const f of patientScreens) expect(sourceOf(f), f).not.toMatch(/<RouteMap\b/);
+  it("has no route map, on any screen", () => {
+    for (const f of screens) expect(sourceOf(f), f).not.toMatch(/RouteMap|map-grid/);
   });
 
   it("never shows the CMA's distance or speaks of tracking her", () => {
-    for (const f of patientScreens) {
+    for (const f of screens) {
       const src = sourceOf(f);
       expect(src, f).not.toMatch(/\b(miles?|km|kilomet(er|re)s?)\s+away\b/i);
       expect(src, f).not.toMatch(/live tracking|track your visit/i);
     }
+  });
+
+  // Both sides read the one arrival time: the CMA's screen once said "about
+  // 6 minutes" while the patient was told 12.
+  it("tells the CMA the same arrival time the patient was sent", () => {
+    const day = sourceOf("components/screens/cma/day.tsx");
+    const enroute = day.split(/(?=export function )/).find(s => s.startsWith("export function CmaEnroute")) ?? "";
+    expect(enroute, "CmaEnroute not found").toBeTruthy();
+    expect(enroute).toMatch(/<OnTheWayNotice\b/);
+    expect(enroute, "no hand-typed minutes").not.toMatch(/\d+\s*minutes/);
+  });
+
+  it("uses no GPS-arrow icon for the patient's visit tab", () => {
+    const nav = sourceOf("components/screens/shared.tsx").split(/(?=export function )/).find(s => s.startsWith("export function BottomNav")) ?? "";
+    expect(nav, "BottomNav not found").toBeTruthy();
+    expect(nav).not.toMatch(/\bNavigation\b/);
   });
 
   it("tells the patient when the CMA will arrive", () => {

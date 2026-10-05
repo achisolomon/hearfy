@@ -1,8 +1,8 @@
 "use client";
-import { MapPin, Navigation } from "lucide-react";
+import { MapPin, ShieldCheck } from "lucide-react";
 import { Card, PageHeader, PrimaryButton, StatusPill } from "../../ui";
-import { Shell, RouteMap } from "../shared";
-import { cmaDay, kit, visit } from "@/lib/mock-data";
+import { Shell, OnTheWayNotice } from "../shared";
+import { cmaDay, kit, patient, visit } from "@/lib/mock-data";
 
 export function CmaDay({ next }: { next: () => void }) {
   return (
@@ -45,12 +45,27 @@ export function CmaDay({ next }: { next: () => void }) {
   );
 }
 
+// No map of Maya's own position (Issac, 2026-10-05: caregivers don't like
+// being tracked). She sees what the patient was told — the same notification
+// and arrival time — and that her location is not shared.
 export function CmaEnroute({ next }: { next: () => void }) {
   return (
     <Shell tablet>
-      <PageHeader title="En route" subtitle={visit.address} eyebrow="Visit" />
-      <RouteMap moving />
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <PageHeader title="On your way" subtitle={visit.address} eyebrow="Visit" />
+      <div className="rounded-[26px] bg-[#eef7f7] p-5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-bold uppercase tracking-widest text-teal-ink">Sent to {patient.name}</span>
+          <StatusPill tone="green">Delivered</StatusPill>
+        </div>
+        <OnTheWayNotice className="mt-4" />
+      </div>
+      <Card className="mt-3 flex items-center gap-3 p-4">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#edf8f7] text-teal-ink">
+          <ShieldCheck size={18} />
+        </span>
+        <p className="text-sm text-slate-500">Your location isn’t shared. {patient.name} only sees your arrival time.</p>
+      </Card>
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <Card className="p-4">
           <span className="text-xs text-slate-400">Visit ID</span>
           <b className="mt-1 block text-sm">{visit.id}</b>
@@ -60,10 +75,6 @@ export function CmaEnroute({ next }: { next: () => void }) {
           <b className="mt-1 block text-sm">{kit.id}</b>
         </Card>
       </div>
-      <Card className="mt-3 flex items-center gap-3 p-4">
-        <Navigation className="text-teal-ink" size={18} />
-        <p className="text-sm text-slate-500">Arriving in about 6 minutes</p>
-      </Card>
       <div className="mt-6"><PrimaryButton onClick={next}>I have arrived</PrimaryButton></div>
     </Shell>
   );

@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import {
   Ban,
-  CalendarCheck,
   Check,
+  CircleCheck,
+  CircleX,
   ClipboardList,
-  FileHeart,
-  Headphones,
+  Clock,
+  DollarSign,
   Home,
+  Hourglass,
   Mail,
-  Stethoscope,
+  Users,
   Video,
+  Wifi,
+  type LucideIcon,
 } from "lucide-react";
 import { BrandLogo } from "@/components/ui";
-import { CountUp, DotGrid, LiveBrandLogo, LoopVideo, Reveal } from "@/components/one-pager/motion";
+import { CountUp, FilmPlayer, GapBar, LiveBrandLogo, LoopVideo, Reveal } from "@/components/one-pager/motion";
 import {
   PointerField,
   PointerGlow,
@@ -148,24 +152,40 @@ function Photo({
 }
 
 /**
- * The 17-in-100 figure.
- *
- * The filled marks are spread one-or-two per row rather than packed into the
- * first seventeen cells. Packed, they read as a solid block occupying the top
- * fifth of the grid — the eye measures the block's area and the proportion
- * still lands, but it looks like a bar chart with a stray tail. Distributed,
- * the only available reading is the true one: scattered individuals among
- * many.
- *
- * Deterministic (every 100/17th cell), not random, so the figure is honest
- * and the server and client render identically.
+ * The small icon tags under each problem photo, as the deck draws them: muted
+ * for the clinic, teal for the remote visit. Labels, not controls — they wrap
+ * on a narrow screen rather than scroll.
  */
-const TREATED_CELLS = Array.from(
-  { length: 100 },
-  (_, i) => Math.floor((i * 17) / 100) !== Math.floor(((i + 1) * 17) / 100),
-);
+function TagRow({
+  tags,
+  icons,
+  tone,
+}: {
+  tags: string[];
+  icons: LucideIcon[];
+  tone: "mute" | "teal";
+}) {
+  const color = tone === "teal" ? "bg-[#E8F9F8] text-teal-ink" : "bg-[#EEF3F5] text-slate-600";
+  return (
+    <ul className="mt-4 flex flex-wrap gap-1.5">
+      {tags.map((t, i) => {
+        const Icon = icons[i];
+        return (
+          <li
+            key={t}
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-bold ${color}`}
+          >
+            <Icon aria-hidden className="h-3.5 w-3.5" strokeWidth={2.2} />
+            {t}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
-const HOW_ICONS = [CalendarCheck, Home, Stethoscope, FileHeart, Headphones];
+const CLINIC_ICONS = [Clock, DollarSign, Hourglass, CircleX];
+const REMOTE_ICONS = [CircleCheck, Clock, Users, Wifi];
 const SYSTEM_ICONS = [Home, Video, ClipboardList];
 
 export default function OnePagerPage() {
@@ -285,90 +305,47 @@ export default function OnePagerPage() {
         <Reveal>
           <SectionLabel>The problem</SectionLabel>
           <SectionTitle>{PROBLEM.title}</SectionTitle>
+          <p className="mt-3 text-[16px] leading-[1.6] text-slate-500 sm:text-[17px]">
+            {PROBLEM.lede}
+          </p>
         </Reveal>
 
-        {/* One dense block: three stats across the top, then the figure and
-            the barriers side by side. Every earlier arrangement left a hole —
-            stats in a row above a tall grid, or a stretched column beside it —
-            because a 10x10 grid is simply taller than three one-line cards.
-            Pairing the grid with the four barriers instead gives it a
-            neighbour of its own height, and nothing has to stretch. */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {PROBLEM.stats.map((stat, i) => (
-            <Reveal key={stat.label} delay={i * 0.08}>
-              {/* `min-w-0` on the flex child and no `shrink-0` on the figure:
-                  at 320px with a large accessibility font the old row could not
-                  fit, and pushed the card past the viewport. */}
-              <Card className="flex h-full items-center gap-4 !p-5">
-                <CountUp
-                  value={stat.value}
-                  className="text-[30px] font-extrabold leading-none tracking-[-0.03em] text-brand-navy"
-                />
-                <span className="min-w-0">
-                  <span className="block break-words text-[14px] leading-snug text-slate-500">
-                    {stat.label}
-                  </span>
-                  <a
-                    href={stat.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 block text-[7px] font-extrabold uppercase tracking-[0.16em] text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-brand-teal"
-                  >
-                    {stat.source}
-                  </a>
-                </span>
-              </Card>
-            </Reveal>
-          ))}
-        </div>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
-          <Reveal>
-            <Card className="flex h-full flex-col">
-              <p className="text-[13px] font-bold text-brand-navy">
-                Of everyone who needs hearing aids
-              </p>
-              <div className="mt-4 flex flex-1 items-center">
-                <div className="mx-auto w-full max-w-[300px]">
-                  <DotGrid cells={TREATED_CELLS} />
-                </div>
-              </div>
-              <p className="mt-4 flex items-center gap-2 text-[13px] text-slate-500">
-                <span className="h-3 w-3 rounded-[2px] bg-brand-teal" />
-                17 in 100 have them
-                <a
-                  href={PROBLEM.dotGridSourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[7px] font-extrabold uppercase tracking-[0.16em] text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-brand-teal"
-                >
-                  {PROBLEM.dotGridSource}
-                </a>
-              </p>
-            </Card>
+        {/* The deck's problem slide, taken whole (2026-10-05): the booth and
+            the living room are the evidence for the headline, the arrow is the
+            change of room, and the figures below say why it matters. Replaces
+            the dot grid and the four barrier cards. */}
+        <div className="mt-8 grid items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
+          <Reveal className="min-w-0">
+            <Photo
+              src={MEDIA.todayBooth.src}
+              alt={MEDIA.todayBooth.alt}
+              className="aspect-[4/3] w-full rounded-[24px] shadow-card print:shadow-none"
+            />
+            <TagRow tags={PROBLEM.clinicTags} icons={CLINIC_ICONS} tone="mute" />
           </Reveal>
-
-          {/* The barriers move up beside the figure: they answer the question
-              the figure raises ("why only 17?"), so the pairing reads better
-              than the stack did, and it fills the row. */}
-          <Reveal delay={0.1}>
-            <Card className="flex h-full flex-col">
-              <p className="text-[13px] font-bold text-brand-navy">
-                {PROBLEM.barriersTitle}
-              </p>
-              <ul className="mt-4 flex flex-1 flex-col justify-between gap-4">
-                {PROBLEM.barriers.map((b) => (
-                  <li key={b.name}>
-                    <p className="text-[15px] font-extrabold text-brand-navy">
-                      {b.name}
-                    </p>
-                    <p className="mt-1 text-[14px] leading-[1.5] text-slate-500">
-                      {b.line}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+          <Reveal delay={0.1} className="flex justify-center">
+            <svg
+              aria-hidden
+              viewBox="0 0 60 24"
+              className="h-6 w-[60px] rotate-90 text-brand-teal lg:rotate-0"
+            >
+              <path
+                d="M2 12 H56 M46 4 L58 12 L46 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Reveal>
+          <Reveal delay={0.15} className="min-w-0">
+            <Photo
+              src={MEDIA.todayCall.src}
+              alt={MEDIA.todayCall.alt}
+              className="aspect-[4/3] w-full rounded-[24px] shadow-card print:shadow-none"
+            />
+            <TagRow tags={PROBLEM.remoteTags} icons={REMOTE_ICONS} tone="teal" />
           </Reveal>
         </div>
       </section>
@@ -385,6 +362,61 @@ export default function OnePagerPage() {
           <SectionTitle>{MARKET.title}</SectionTitle>
         </Reveal>
 
+        {/* Moved here from the problem section (owner, 2026-10-05): the
+            "underserved" in the heading is this bar. One funnel, laid out as
+            one: the population narrows left to right and the bar is its last
+            step. No cards — the figures carry themselves at this size, as on
+            the deck. */}
+        <div className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-[auto_auto_minmax(0,1fr)] lg:items-end lg:gap-x-14">
+          {MARKET.stats.map((stat, i) => (
+            <Reveal key={stat.label} delay={i * 0.08} className="min-w-0">
+              {/* No `shrink-0` on the figure and `min-w-0` on its cell: at 320px
+                  with a large accessibility font a fixed figure pushed the row
+                  past the viewport. */}
+              <CountUp
+                value={stat.value}
+                className="block text-[clamp(2rem,9vw,3rem)] font-extrabold leading-none tracking-[-0.03em] text-teal-ink"
+              />
+              <span className="mt-2 block break-words text-[14px] text-slate-500">
+                {stat.label}
+              </span>
+            </Reveal>
+          ))}
+          <Reveal delay={0.16} className="min-w-0 sm:col-span-2 lg:col-span-1">
+            <p className="text-[14px] text-slate-500">of whom only</p>
+            <div className="mt-2">
+              <GapBar treated={MARKET.treated} untreated={MARKET.untreated} />
+            </div>
+            {/* Each label centred on its own segment's midpoint: "Treated" is
+                wider than a 17% segment, so a zero-width anchor lets it
+                overhang symmetrically instead of clipping on a phone. */}
+            <div className="relative mt-2 h-4 text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
+              <span
+                className="absolute -translate-x-1/2 whitespace-nowrap"
+                style={{ left: `${MARKET.treated / 2}%` }}
+              >
+                Treated
+              </span>
+              <span
+                className="absolute -translate-x-1/2 whitespace-nowrap"
+                style={{ left: `${MARKET.treated + MARKET.untreated / 2}%` }}
+              >
+                Untreated
+              </span>
+            </div>
+          </Reveal>
+        </div>
+        <Reveal className="mt-3">
+          <a
+            href={MARKET.gapSourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[7px] font-extrabold uppercase tracking-[0.16em] text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-brand-teal"
+          >
+            {MARKET.gapSource}
+          </a>
+        </Reveal>
+
         {/* The page's rhythm is a modular grid of small cards: three-up stat
             rows and two-up split rows, every card 345-348px wide. The first
             version of this section was a single 1080px slab at a 6.4:1 aspect
@@ -397,7 +429,7 @@ export default function OnePagerPage() {
             The figure takes the narrower cell, its qualifiers the wider one,
             and both cards match the height and width of every other card on
             the page. */}
-        <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
+        <div className="mt-10 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
           <Reveal>
             {/* The number, given a card of its own so it reads as a single
                 fact rather than a banner. `items-center` + `flex-1` centres
@@ -424,9 +456,8 @@ export default function OnePagerPage() {
           </Reveal>
 
           {/* The qualifiers answer the question the number raises ("$36B of
-              what?"), so they pair with it the way the barriers pair with the
-              17-in-100 figure above — a neighbour of its own height, nothing
-              stretched. */}
+              what?"), so they pair with it as a neighbour of its own height,
+              nothing stretched. */}
           <Reveal delay={0.1}>
             <Card className="flex h-full flex-col">
               <p className="text-[13px] font-bold text-brand-navy">
@@ -567,63 +598,21 @@ export default function OnePagerPage() {
         <Reveal>
           <SectionLabel>How it works</SectionLabel>
           <SectionTitle>{HOW.title}</SectionTitle>
-          <p className="mt-3 text-[16px] text-slate-500">{HOW.subtitle}</p>
         </Reveal>
 
-        {/* `auto-rows-fr` makes every row the same height, so all six cells are
-            one size regardless of how long a step's copy runs (owner, 2026-09-02:
-            "make all these square the same size"). The stretch has to be carried
-            all the way down — the `Reveal` wrapper is the actual grid item, so
-            without `h-full` on it the cards' own `h-full` resolves against a
-            wrapper that never grew, and the row height is set by the video
-            alone. */}
-        <ol className="mt-8 grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {HOW.steps.map((step, i) => {
-            const Icon = HOW_ICONS[i];
-            return (
-              <Reveal key={step.n} delay={i * 0.06} className="h-full">
-                <li className="h-full list-none">
-                  <Card className="h-full !p-5">
-                    <div className="flex items-center justify-between">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#E8F9F8]">
-                        <Icon aria-hidden className="h-[18px] w-[18px] text-teal-ink" />
-                      </span>
-                      <span className="text-[13px] font-extrabold tracking-[0.12em] text-slate-400">
-                        {step.n}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-[17px] font-extrabold leading-tight text-brand-navy">
-                      {step.name}
-                    </p>
-                    <p className="mt-1.5 text-[14px] leading-[1.5] text-slate-500">
-                      {step.line}
-                    </p>
-                  </Card>
-                </li>
-              </Reveal>
-            );
-          })}
-
-          {/* The sixth cell of a five-step grid: the exam photograph, so the
-              row completes instead of ending on a gap.
-
-              `absolute inset-0` inside a `relative` cell is load-bearing. The
-              photo has an intrinsic height, and with `auto-rows-fr` that height
-              became the floor for EVERY row — five text cards were padded out
-              to match a picture, which is the empty space the owner flagged.
-              Taken out of flow, the photo contributes no height of its own and
-              simply fills whatever the copy asks for. */}
-          <Reveal delay={0.3} className="h-full">
-            <li className="relative h-full list-none">
-              <Photo
-                src={MEDIA.examLive.src}
-                alt={MEDIA.examLive.alt}
-                className="absolute inset-0"
-                imgClassName="object-[50%_40%]"
-              />
-            </li>
-          </Reveal>
-        </ol>
+        {/* The deck's film, in place of the five step cards (owner,
+            2026-10-05). The steps ride on it as captions, each timed to the
+            moment the film shows it. */}
+        <Reveal className="mt-8">
+          <FilmPlayer
+            src={MEDIA.film.src}
+            poster={MEDIA.film.poster}
+            alt={MEDIA.film.alt}
+            line={HOW.line}
+            captions={HOW.steps}
+            lineFrom={HOW.lineFrom}
+          />
+        </Reveal>
       </section>
 
       {/* ---------------------------------------------------------- *

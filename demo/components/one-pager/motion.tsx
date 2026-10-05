@@ -1,5 +1,6 @@
 "use client";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { asset } from "@/lib/asset";
 
@@ -231,36 +232,250 @@ export function CountUp({ value, className = "" }: { value: string; className?: 
 }
 
 /**
- * The 17-in-100 grid, with each filled mark arriving in turn.
+ * The treated/untreated bar, as the deck draws it: the treated segment grows
+ * from nothing to its share once, when scrolled into view.
  *
- * The distribution is computed by the caller and passed in, so the animation
- * cannot change which cells are filled — only when they appear.
+ * The segment carries its own `whileInView` rather than inheriting a parent's
+ * variant, for the same blank-on-deep-link reason as `RevealGroup`. The final
+ * width is the quoted figure itself, so the animation cannot misstate it.
  */
-export function DotGrid({ cells }: { cells: boolean[] }) {
+export function GapBar({ treated, untreated }: { treated: number; untreated: number }) {
   const still = useReducedMotion();
-  let filledSeen = 0;
+  const width = `${treated}%`;
+  return (
+    <div
+      role="img"
+      aria-label={`${treated}% treated, ${untreated}% untreated`}
+      className="flex h-11 w-full overflow-hidden rounded-full bg-[#E4EEF0]"
+    >
+      <motion.div
+        className="flex items-center justify-center bg-teal-ink text-[14px] font-extrabold text-white"
+        initial={{ width: still ? width : 0 }}
+        whileInView={{ width }}
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ duration: still ? 0 : 1.2, delay: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
+      >
+        {treated}%
+      </motion.div>
+      <div className="flex flex-1 items-center justify-center text-[14px] font-extrabold text-slate-500">
+        {untreated}%
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The How-it-works film, ported from the deck's Room slide (2026-10-05).
+ *
+ * Unlike `LoopVideo` this is a film someone may want to watch, not a
+ * decorative loop, so it carries the deck's controls: click anywhere to
+ * play/pause, a corner button that appears on hover, and a scrub bar under the
+ * caption. It still only plays while on screen, for the same battery reason.
+ *
+ * Reduced motion: no autoplay, and the browser's native controls instead of
+ * the custom bar (they include their own seek bar).
+ *
+ * The duration is read off the element on mount as well as from the event:
+ * from a warm cache `loadedmetadata` can fire before React attaches the
+ * listener, which left the deck's bar ending at ~60% (Achi, 2026-09-06).
+ */
+export type FilmCaption = { n: string; from: number; name: string; line: string };
+
+export function FilmPlayer({
+  src,
+  poster,
+  alt,
+  line,
+  captions = [],
+  lineFrom = 0,
+}: {
+  src: string;
+  poster: string;
+  alt: string;
+  line: string;
+  /** Step captions, each shown from its `from` second until the next one. */
+  captions?: FilmCaption[];
+  /** The second at which the captions hand back to `line`. */
+  lineFrom?: number;
+}) {
+  const still = useReducedMotion() === true;
+  const ref = useRef<HTMLVideoElement>(null);
+  const [hover, setHover] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const known = duration > 0 && Number.isFinite(duration);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const read = () => {
+      if (v.readyState >= 1 && Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
+    };
+    read();
+    v.addEventListener("loadedmetadata", read);
+    v.addEventListener("durationchange", read);
+    return () => {
+      v.removeEventListener("loadedmetadata", read);
+      v.removeEventListener("durationchange", read);
+    };
+  }, []);
+
+  // Autoplay while on screen, pause when scrolled away. A viewer who paused it
+  // themselves is not overridden when it comes back into view.
+  const userPaused = useRef(false);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || still) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !userPaused.current) void v.play().catch(() => {});
+        else if (!entry.isIntersecting) v.pause();
+      },
+      { threshold: 0.3 },
+    );
+    io.observe(v);
+    return () => io.disconnect();
+  }, [still]);
+
+  // The caption the film has reached. Before the first step, or past
+  // `lineFrom`, the film's own line is shown instead.
+  const step =
+    captions.length > 0 && time < lineFrom
+      ? [...captions].reverse().find((c) => time >= c.from)
+      : undefined;
+
+  const toggle = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (v.paused) {
+      userPaused.current = false;
+      void v.play().catch(() => {});
+    } else {
+      userPaused.current = true;
+      v.pause();
+    }
+  };
 
   return (
-    <div aria-hidden className="grid grid-cols-10 gap-[3px]">
-      {cells.map((filled, i) => {
-        // Filled marks stagger in reading order; empty cells are just there.
-        const delay = filled ? 0.24 + filledSeen++ * 0.045 : 0;
-        const base = "aspect-square rounded-[2px]";
-        const tone = filled ? "bg-brand-teal" : "bg-[#D8E5E8]";
-
-        if (still || !filled) return <span key={i} className={`${base} ${tone}`} />;
-
-        return (
-          <motion.span
-            key={i}
-            className={`${base} ${tone}`}
-            initial={{ opacity: 0, scale: 0.4 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.32, delay, ease: "easeOut" }}
+    <div
+      className="group relative min-w-0 cursor-pointer overflow-hidden rounded-[28px] bg-brand-navy shadow-card print:shadow-none"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={() => {
+        setHover(true);
+        if (!still) toggle();
+      }}
+    >
+      {/* 4:5 below sm so a phone gets a picture rather than a letterbox;
+          object-cover shows more of the same frame's centre. */}
+      <video
+        ref={ref}
+        className="block aspect-[4/5] w-full max-w-full object-cover sm:aspect-video"
+        src={asset(src)}
+        poster={asset(poster)}
+        muted
+        loop
+        playsInline
+        controls={still}
+        preload="metadata"
+        aria-label={alt}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+      />
+      {!still && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle();
+          }}
+          aria-label={playing ? "Pause the film" : "Play the film"}
+          className={`absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/90 text-brand-navy shadow-soft backdrop-blur transition-opacity duration-200 hover:bg-white ${
+            hover || !playing ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {playing ? (
+            <Pause size={18} strokeWidth={2.4} aria-hidden />
+          ) : (
+            <Play size={18} strokeWidth={2.4} aria-hidden className="ml-0.5" />
+          )}
+        </button>
+      )}
+      {/* The caption and, under it, the scrub bar, in one gradient. The strip
+          ignores the pointer so a click on the picture reaches the toggle;
+          only the range input opts back in, and it stops its own click so
+          seeking never also pauses. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0B2340]/85 via-[#0B2340]/40 to-transparent px-6 pb-6 pt-24 sm:px-10 sm:pb-8">
+        {/* One caption at a time, cross-fading on the step boundary. The
+            min-height holds the strip steady so the scrub bar under it does
+            not jump as captions of different lengths come and go. */}
+        <div className="min-h-[7.5rem] sm:min-h-[8.5rem] flex flex-col justify-end" aria-hidden>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={step ? step.n : "line"}
+              initial={{ opacity: 0, y: still ? 0 : 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: still ? 0 : -4 }}
+              transition={{ duration: still ? 0 : 0.35, ease: [0.22, 0.61, 0.36, 1] }}
+            >
+              {step ? (
+                <>
+                  <p className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#7FE0DC]">
+                    {step.n} &middot; {step.name}
+                  </p>
+                  <p className="mt-2 max-w-[46ch] text-pretty text-[15px] font-semibold leading-[1.45] text-white sm:text-[19px]">
+                    {step.line}
+                  </p>
+                </>
+              ) : (
+                <p className="max-w-[22ch] text-balance text-[24px] font-extrabold leading-[1.1] tracking-[-0.02em] text-white sm:text-[36px]">
+                  {line}
+                </p>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+        {!still && (
+          <input
+            type="range"
+            aria-label="Seek the film"
+            min={0}
+            max={known ? duration : 0}
+            disabled={!known}
+            step={0.01}
+            value={known ? Math.min(time, duration) : 0}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              const v = ref.current;
+              const t = Number(e.currentTarget.value);
+              if (!v || Number.isNaN(t) || !known) return;
+              v.currentTime = Math.min(Math.max(t, 0), duration);
+              setTime(v.currentTime);
+            }}
+            className={`pointer-events-auto mt-5 block h-4 w-full cursor-pointer accent-[#12AAA5] transition-opacity duration-200 sm:mt-6 ${
+              hover || !playing ? "opacity-100" : "opacity-60"
+            }`}
           />
-        );
-      })}
+        )}
+      </div>
+      {/* Every caption, for a screen reader: the visible one changes with the
+          film, so on its own it would read out one step in five. */}
+      <div className="sr-only">
+        <p>{line}</p>
+        {captions.length > 0 && (
+          <ol>
+            {captions.map((c) => (
+              <li key={c.n}>
+                {c.name}: {c.line}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 }

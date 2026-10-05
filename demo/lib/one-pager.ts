@@ -23,7 +23,7 @@
  *     These are published statistics, not Hearfy business information, and
  *     they are the public case for the product existing. The 17% briefly
  *     carried NIDCD's US-only figure (2026-09-02 to 2026-09-10) before being
- *     reverted to WHO's own global rate — see PROBLEM.stats.
+ *     reverted to WHO's own global rate — see MARKET.stats.
  *   - third-party MARKET SIZE figures (see MARKET below). These are published
  *     analyst forecasts of an industry, not Hearfy's own numbers: they say how
  *     big hearing care is, never what Hearfy earns, charges, or projects. The
@@ -68,44 +68,22 @@ export const HERO = {
 };
 
 /**
- * The problem, as the deck states it on slide 4 — WHO prevalence and the
- * adoption gap it implies. Public health figures, not company figures.
+ * The problem, as the deck's "THE PROBLEM" slide now states it (taken from the
+ * deck 2026-10-05, replacing the dot grid and the four barriers): the headline
+ * names the problem, the booth-to-living-room photo pair is the evidence, and
+ * the WHO figures underneath say why it matters. Public health figures, not
+ * company figures.
+ *
+ * The WHO figures that sat under the photos (1.5B / 430M and the 17/83 bar)
+ * moved to MARKET on 2026-10-05 (owner: "move this to the market"), where they
+ * are the evidence for "underserved". The dot grid and its "17 in 100"
+ * caption are gone, so the 17% is stated once.
  */
 export const PROBLEM = {
-  title: "Most hearing loss goes untreated",
-  stats: [
-    {
-      value: "1.5B",
-      label: "people live with hearing loss",
-      source: "WHO",
-      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
-    },
-    {
-      value: "430M",
-      label: "need rehabilitation today",
-      source: "WHO",
-      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
-    },
-  ],
-  /**
-   * The dot-grid figure ("17 in 100 have them") shipped with no source at
-   * all, unlike the three stats above it — an omission flagged 2026-09-09.
-   * Same WHO figure as the third stat card above (both now read the World
-   * Report on Hearing's 17%/83% split) — deliberately not de-duplicated:
-   * the stat card states the number, the grid shows it, and both earn their
-   * place as different representations of the same real figure.
-   */
-  dotGridSource: "WHO",
-  dotGridSourceUrl:
-    "https://cdn.who.int/media/docs/default-source/documents/health-topics/deafness-and-hearing-loss/world-report-on-hearing/wrh-executive-summary.en.pdf",
-  /** Slide 4's four barriers — why the other 83% stay untreated. */
-  barriersTitle: "What stops people",
-  barriers: [
-    { name: "Stigma", line: "Care that happens in public feels like an admission." },
-    { name: "Availability", line: "Clinics are far, and the next opening is months out." },
-    { name: "Cost", line: "The full journey runs well past what people expect." },
-    { name: "Bureaucracy", line: "Referrals, paperwork, and repeat visits before anyone is helped." },
-  ],
+  title: "A simple hearing test shouldn’t be this hard.",
+  lede: "Clinics. Long waits. High costs. A fragmented journey.",
+  clinicTags: ["Old workflow", "High cost", "Long waits", "Inefficient"],
+  remoteTags: ["Convenient", "Available", "Accessible", "Remote"],
 };
 
 /**
@@ -149,6 +127,37 @@ export const MARKET = {
    * why it read as an orphan rather than a section.
    */
   title: "A market that is growing, and underserved",
+  /**
+   * The need, in WHO's public-health figures — moved here from PROBLEM on
+   * 2026-10-05. They come first in the section: how many people, then how
+   * few are served, then the money.
+   */
+  stats: [
+    {
+      value: "1.5B",
+      label: "live with hearing loss",
+      source: "WHO",
+      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
+    },
+    {
+      value: "430M",
+      label: "need rehabilitation",
+      source: "WHO",
+      sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/deafness-and-hearing-loss",
+    },
+  ],
+  /**
+   * The treated/untreated split. WHO's World Report on Hearing (2021): "an
+   * estimated gap of 83% between the need for and access to services for such
+   * care – using hearing aid use as a tracer indicator." Not NIDCD's US 16%,
+   * which is close by coincidence rather than derivation.
+   */
+  treated: 17,
+  untreated: 83,
+  gapSource: "WHO",
+  gapSourceUrl:
+    "https://cdn.who.int/media/docs/default-source/documents/health-topics/deafness-and-hearing-loss/world-report-on-hearing/wrh-executive-summary.en.pdf",
+
   figure: "$28",
   unit: "B",
   headline: "Global hearing care market",
@@ -158,9 +167,8 @@ export const MARKET = {
    * These were chips ("~6% a year", "Devices + services", "Clinical, not
    * consumer"). Chips read as filter controls — an interactive affordance on
    * a page with no interaction — and they could not carry the reason behind
-   * each qualifier. As name + line they match the barriers list directly
-   * above them, which is the page's established pattern for exactly this:
-   * short label, one line of explanation.
+   * each qualifier. As name + line they follow the page's established
+   * pattern for exactly this: short label, one line of explanation.
    *
    * "Clinical, not consumer" earns its place most: it is why this figure is
    * smaller than the broader ecosystem number, and why hearables are absent.
@@ -214,57 +222,51 @@ export const CONTRAST = {
   clinic: {
     label: "A Traditional Clinic Visit",
     tone: "muted" as const,
-    points: ["Wait weeks or months", "Travel to the clinic", "Test in a sound booth", "Return for the fitting"],
+    points: ["Wait weeks or months", "Travel to the clinic", "Test in a sound booth", "Return for the fitting", "Pay for the hearing aids up front"],
   },
   home: {
     label: `A ${BRAND_NAME} Home Visit`,
     tone: "brand" as const,
-    points: ["Book within days", "We come to you", "Test in your own home", "Get fitted in the same visit"],
+    /**
+     * The last pair is affordability (owner, 2026-10-05: "add affordability
+     * to the table"), from the deck's outright-purchase comparison: about the
+     * price of the aids, with the whole care journey included. In words only;
+     * the deck's figures are barred from this page.
+     */
+    points: ["Book within days", "We come to you", "Test in your own home", "Get fitted in the same visit", "Aids plus care, similar price"],
   },
 };
 
 /**
- * Slide 9 — how a visit actually runs, start to finish. The spine of the page:
- * a reader who only skims this section still understands the product.
+ * How it works — the deck's film, in place of the five step cards
+ * (owner, 2026-10-05: "replace the how it works with the video from the
+ * deck"). The film is the visit start to finish, so the cards and the exam
+ * photo beside them would only re-tell it in words.
+ *
+ * `line` is the film's own caption on the deck, kept word for word.
  */
 export const HOW = {
   title: "How a visit works",
-  subtitle: "One appointment, about an hour, in the patient's own home.",
+  line: "Hearing loss starts at home. So should care.",
+  /**
+   * The five steps, as captions on the film (owner, 2026-10-05: "these should
+   * be captions on the mov"). `from` is the second each one comes up, read
+   * off the film frame by frame: the daughter booking on her phone, the CMA
+   * at the door, the test at the table with the audiologist on the tablet,
+   * the audiologist reviewing results, then choosing and unboxing the aids.
+   * The film's last stretch (the audiologist's patient grid) carries `line`.
+   * Timed against Eyal's 45s re-edit (deck commit 7185336, 2026-09-29), the
+   * film origin/main ships. Re-time these if the film is re-cut.
+   */
   steps: [
-    {
-      n: "01",
-      name: "Booking time",
-      line: "A slot is booked online. A short intake beforehand sets the visit up for the patient's needs before anyone arrives.",
-    },
-    {
-      n: "02",
-      /**
-       * "We arrive at your home", not "Your CMA arrives". The owner's wording,
-       * 2026-09-02: an abbreviation in a heading makes the reader stop and
-       * decode before they learn anything. "We" is who is coming, and it is
-       * the promise the whole page rests on — the travelling is ours. The full
-       * role title still appears in the body copy, where there is room to say
-       * it properly.
-       */
-      name: "We arrive at the home",
-      line: "A Certified Medical Assistant arrives with the full exam kit and sets it up on the table.",
-    },
-    {
-      n: "03",
-      name: "The exam, guided live",
-      line: "A licensed audiologist joins by video and runs the exam: an ear inspection, a full hearing test, and a speech test in the room where the patient actually listens.",
-    },
-    {
-      n: "04",
-      name: "Results, explained",
-      line: "Results are shown on screen and the audiologist talks through what they mean — while still in the room.",
-    },
-    {
-      n: "05",
-      name: "Fitted the same day",
-      line: "If hearing aids are the right answer, they are matched to the results, fitted, and tuned before the visit ends.",
-    },
+    { n: "01", from: 0,  name: "Booking time", line: "A slot is booked online. A short intake beforehand sets the visit up for the patient's needs before anyone arrives." },
+    { n: "02", from: 8,  name: "We arrive at the home", line: "A Certified Medical Assistant arrives with the full exam kit and sets it up on the table." },
+    { n: "03", from: 11, name: "The exam, guided live", line: "A licensed audiologist joins by video and runs the exam: an ear inspection, a full hearing test, and a speech test in the room where the patient actually listens." },
+    { n: "04", from: 24, name: "Results, explained", line: "Results are shown on screen and the audiologist talks through what they mean — while still in the room." },
+    { n: "05", from: 30, name: "Fitted the same day", line: "If hearing aids are the right answer, they are matched to the results, fitted, and tuned before the visit ends." },
   ],
+  /** When the step captions hand back to `line` for the film's close. */
+  lineFrom: 40,
 };
 
 /**
@@ -375,9 +377,29 @@ export const MEDIA = {
     src: "/one-pager/audiologist.jpg",
     alt: "An audiologist in a white coat and headset supervises the exam over video.",
   },
-  /** Slide 6's exam panel: the patient at the laptop, clinician on screen. */
-  examLive: {
-    src: "/one-pager/exam-live.jpg",
-    alt: "A patient wearing headphones takes a hearing test at a laptop while the audiologist appears on screen.",
+  /**
+   * The problem section's pair, copied from the deck's own slide
+   * (internal/deck/public/deck/today-*.jpg, 2026-10-05). No name in the
+   * pixels: the mug in the call photo carries the mark alone.
+   */
+  todayBooth: {
+    src: "/one-pager/today-booth.jpg",
+    alt: "An older patient sits in a sound booth while an audiologist runs the hearing test from a console outside it.",
+  },
+  todayCall: {
+    src: "/one-pager/today-call.jpg",
+    alt: "An audiologist at a home desk runs the same hearing test over a video call, the patient and her audiogram on screen.",
+  },
+  /**
+   * The How-it-works film, copied from the deck's origin/main
+   * (internal/deck/public/deck/room.mp4: Eyal's 45s re-edit, 2026-09-29).
+   * Byte-identical to the deck's file; `lib/one-pager.test.ts` pins its
+   * length so a stale copy fails the build. The poster is its own first frame, so the frame is
+   * never blank while the file loads.
+   */
+  film: {
+    src: "/video/room.mp4",
+    poster: "/video/room-poster.jpg",
+    alt: "A home hearing visit from start to finish: an older man struggling to hear, a hearing test at his table, an audiologist joining by video, and hearing aids fitted at home.",
   },
 } as const;

@@ -120,26 +120,31 @@ describe("the content the page is allowed to carry", () => {
    * deliberately as the prohibitions.
    */
   it("keeps the prevalence figures, attributed", () => {
-    const values = PROBLEM.stats.map((s) => s.value);
+    const values = MARKET.stats.map((s) => s.value);
     expect(values).toEqual(["1.5B", "430M"]);
-    for (const stat of PROBLEM.stats) expect(stat.source.length).toBeGreaterThan(2);
+    for (const stat of MARKET.stats) expect(stat.source.length).toBeGreaterThan(2);
   });
 
   /**
-   * The standalone "17%" stat card was removed 2026-09-10: it and the
-   * dot-grid below it ("17 in 100 have them") had come to state the exact
-   * same WHO figure twice — once as a bare card, once as the grid — after
-   * the card was reverted from NIDCD's US rate back to WHO's global one
-   * the same day. The grid alone carries it now; see PROBLEM.dotGridSource.
+   * The standalone "17%" stat card was removed 2026-09-10 because it stated
+   * the same WHO figure as the figure beside it. Since 2026-10-05 that figure
+   * is the deck's treated/untreated bar (MARKET.treated), which must stay
+   * WHO's 17/83 split and must still be the only place the 17% appears.
    */
   it("does not duplicate the 17%/WHO figure as its own stat card", () => {
-    expect(PROBLEM.stats.some((s) => s.value === "17%"), "the 17% card is back — it duplicates the dot grid").toBe(false);
+    expect(MARKET.stats.some((s) => s.value === "17%"), "the 17% card is back — it duplicates the bar").toBe(false);
+  });
+
+  it("states the treated/untreated split as WHO's 17/83, attributed", () => {
+    expect([MARKET.treated, MARKET.untreated]).toEqual([17, 83]);
+    expect(MARKET.gapSource).toBe("WHO");
+    expect(stripComments(PAGE_SRC)).toMatch(/MARKET\.gapSourceUrl/);
   });
 
   /** Both prevalence figures are WHO's. */
   it("keeps WHO on the figures that are WHO's", () => {
     for (const value of ["1.5B", "430M"]) {
-      const stat = PROBLEM.stats.find((s) => s.value === value);
+      const stat = MARKET.stats.find((s) => s.value === value);
       expect(stat!.source).toBe("WHO");
     }
   });
@@ -312,42 +317,6 @@ describe("the market section is honest about its figures", () => {
 });
 
 /**
- * The five step cards and the photograph beside them are one size.
- *
- * Owner, 2026-09-02: "make all these square the same size". Two rules do it
- * together, and both are easy to remove by accident:
- *
- *  - `auto-rows-fr` on the grid, so both rows are equal;
- *  - the photo positioned `absolute inset-0` inside a `relative` cell, so its
- *    intrinsic aspect ratio stops dictating the height of all six. Without
- *    this the grid equalises at the PICTURE's height and every text card is
- *    padded out with dead space.
- */
-describe("the visit-step grid is uniform", () => {
-  const grid = PAGE_SRC.slice(
-    PAGE_SRC.indexOf("{HOW.steps.map"),
-    PAGE_SRC.indexOf("MEDIA.examLive.alt") + 200,
-  );
-
-  it("gives every row the same height", () => {
-    expect(grid.length).toBeGreaterThan(0);
-    const ol = PAGE_SRC.slice(
-      PAGE_SRC.lastIndexOf("<ol", PAGE_SRC.indexOf("{HOW.steps.map")),
-      PAGE_SRC.indexOf("{HOW.steps.map"),
-    );
-    expect(ol, "the steps grid lost auto-rows-fr").toMatch(/auto-rows-fr/);
-  });
-
-  it("keeps the photo from setting the row height", () => {
-    // Against the STRIPPED source: the phrase also appears in the comment that
-    // explains this rule, so matching the raw text would pass on broken markup.
-    const stripped = stripComments(grid);
-    expect(stripped, "the sixth-cell photo is back in flow and will dictate the row height")
-      .toMatch(/className="absolute inset-0"/);
-  });
-});
-
-/**
  * The three cells of the clinic-vs-home comparison are one row, one size.
  *
  * Owner, 2026-09-02: "don't take space, put this like three evenly size square
@@ -400,8 +369,8 @@ describe("the contrast row is three even cells", () => {
  */
 describe("the stat cards fit a narrow screen", () => {
   const block = PAGE_SRC.slice(
-    PAGE_SRC.indexOf("{PROBLEM.stats.map"),
-    PAGE_SRC.indexOf("{PROBLEM.stats.map") + 1200,
+    PAGE_SRC.indexOf("{MARKET.stats.map"),
+    PAGE_SRC.indexOf("{MARKET.stats.map") + 1200,
   );
 
   it("lets the figure shrink rather than forcing the row wide", () => {
@@ -470,17 +439,12 @@ describe("the page is complete enough to stand alone", () => {
   it("carries every section a one-pager needs", () => {
     expect(HERO.title.join(" ")).toMatch(/hearing care/i);
     expect(HERO.chips.length).toBeGreaterThanOrEqual(3);
-    expect(PROBLEM.barriers.length).toBe(4);
+    expect(PROBLEM.clinicTags.length).toBe(PROBLEM.remoteTags.length);
     expect(CONTRAST.clinic.points.length).toBe(CONTRAST.home.points.length);
-    expect(HOW.steps.length).toBe(5);
+    expect(HOW.line.length).toBeGreaterThan(0);
     expect(SYSTEM.parts.length).toBe(3);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
     expect(CTA.contact.email.length).toBeGreaterThan(0);
-  });
-
-  /** The visit steps are numbered in the UI; the numbering must be in order. */
-  it("numbers the visit steps in order", () => {
-    expect(HOW.steps.map((s) => s.n)).toEqual(["01", "02", "03", "04", "05"]);
   });
 
   /**
@@ -489,16 +453,14 @@ describe("the page is complete enough to stand alone", () => {
    * to an investor versus talking to a patient" — so "results are shown", not
    * "you see your own audiogram".
    *
-   * Only the step bodies and the section subtitle are checked. The rest of the
+   * Since 2026-10-05 the section is the deck's film, so only its caption and
+   * title are left to check. The rest of the
    * page speaks to the reader on purpose, and the step *headings* keep "we",
    * which is the company describing itself rather than casting the reader.
    */
   it("describes the visit without addressing the reader as the patient", () => {
     const secondPerson = /\b(you|your|yours|yourself)\b/i;
-    for (const step of HOW.steps) {
-      expect(step.line, `step ${step.n} body speaks to the reader`).not.toMatch(secondPerson);
-    }
-    expect(HOW.subtitle).not.toMatch(secondPerson);
+    expect(HOW.line).not.toMatch(secondPerson);
     expect(HOW.title).not.toMatch(secondPerson);
   });
 
@@ -551,6 +513,95 @@ describe("the page's media", () => {
     expect(bare, "a media src bypasses asset()").toBeNull();
   });
 
+  /**
+   * The converse of "ships every file": every manifest entry must be RENDERED.
+   * Swapping sections (2026-10-05: the problem photos in, the step-card photo
+   * out) is exactly when an entry is left behind, shipping a file nobody sees.
+   */
+  it("renders every entry in its manifest", async () => {
+    const { MEDIA } = await import("./one-pager");
+    const page = stripComments(PAGE_SRC);
+    for (const key of Object.keys(MEDIA)) {
+      expect(page, `MEDIA.${key} is in the manifest but not on the page`).toContain(`MEDIA.${key}.src`);
+    }
+  });
+
+  /**
+   * How it works is the deck's film, not step cards (owner, 2026-10-05), and
+   * the problem section is the deck's photo pair over the WHO bar.
+   */
+  it("plays the deck's film under How it works", () => {
+    const page = stripComments(PAGE_SRC);
+    const how = page.slice(page.indexOf("How it works"), page.indexOf("</section>", page.indexOf("How it works")));
+    expect(how).toContain("<FilmPlayer");
+    expect(how).toContain("MEDIA.film.src");
+    // The steps are captions on the film now, never a grid of cards again.
+    expect(how).not.toMatch(/HOW\.steps\.map/);
+  });
+
+  it("shows the deck's problem slide: both photos, no figures", () => {
+    const page = stripComments(PAGE_SRC);
+    const problem = page.slice(page.indexOf("The problem"), page.indexOf("</section>", page.indexOf("The problem")));
+    expect(problem).toContain("MEDIA.todayBooth.src");
+    expect(problem).toContain("MEDIA.todayCall.src");
+    expect(problem).not.toMatch(/DotGrid|<GapBar|\.stats\.map/);
+  });
+
+  /** The WHO figures row moved into the market section (owner, 2026-10-05). */
+  it("carries the WHO figures and the treated bar in the market section", () => {
+    const page = stripComments(PAGE_SRC);
+    const market = page.slice(page.indexOf("The market"), page.indexOf("</section>", page.indexOf("The market")));
+    expect(market).toContain("{MARKET.stats.map");
+    expect(market).toContain("<GapBar");
+    expect(market).toContain("MARKET.gapSourceUrl");
+  });
+
+  /**
+   * The film must be the deck's CURRENT cut. The first copy here was the
+   * retired 62s cut (2026-10-05), taken from a stale checkout while the deck
+   * on origin/main had moved to Eyal's 45s re-edit — and the captions are
+   * timed to the cut, so a stale file mis-captions every step. The mp4's
+   * duration is read from its own `mvhd` header, no ffprobe needed.
+   */
+  it("ships the deck's current 45s cut of the film", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { MEDIA } = await import("./one-pager");
+    const buf = readFileSync(join(HERE, "public", MEDIA.film.src));
+    const at = buf.indexOf("mvhd");
+    expect(at, "no mvhd box in the film").toBeGreaterThan(0);
+    const version = buf[at + 4];
+    const scale = version === 1 ? buf.readUInt32BE(at + 24) : buf.readUInt32BE(at + 16);
+    const length = version === 1 ? Number(buf.readBigUInt64BE(at + 28)) : buf.readUInt32BE(at + 20);
+    expect(length / scale).toBeCloseTo(45.4, 0);
+  });
+
+  /**
+   * The five steps ride on the film as captions (owner, 2026-10-05). They must
+   * run in order and all fall inside the film, or a step is never shown.
+   */
+  it("times the step captions in order, inside the film", () => {
+    const times = HOW.steps.map((s) => s.from);
+    expect(HOW.steps.map((s) => s.n)).toEqual(["01", "02", "03", "04", "05"]);
+    expect(times[0]).toBe(0);
+    for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]);
+    expect(HOW.lineFrom).toBeGreaterThan(times[times.length - 1]);
+    // The film is 45.4s; the closing line needs a few seconds of its own.
+    expect(HOW.lineFrom).toBeLessThan(42);
+    const page = stripComments(PAGE_SRC);
+    expect(page).toMatch(/captions=\{HOW\.steps\}/);
+  });
+
+  /**
+   * Affordability is a row of the clinic/home table (owner, 2026-10-05), in
+   * words only: the deck's ~$3,300 and monthly fee stay barred.
+   */
+  it("compares affordability in the table, without a price", () => {
+    const clinic = CONTRAST.clinic.points.at(-1)!;
+    const home = CONTRAST.home.points.at(-1)!;
+    expect(clinic).toMatch(/up front/i);
+    expect(home).toMatch(/price/i);
+    expect(clinic + home).not.toMatch(/\$|\d/);
+  });
   /** Alt text must describe what is happening, not be empty or a filename. */
   it("gives every image meaningful alt text", async () => {
     const { MEDIA } = await import("./one-pager");

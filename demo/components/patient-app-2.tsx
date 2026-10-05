@@ -116,8 +116,11 @@ export function PatientApp2() {
   } as Record<ScreenId, React.ReactNode>), [current, beat, screen]);
 
   return (
-    <main>
-      {/* A CSS fade, not framer: a keyed framer opacity fade blinks to 0 for
+    <main className="bg-brand-bg">
+      {/* The backdrop is the Shell's own flat colour, so the fade below only
+          ever reveals that — never the body's teal top-left glow, which used
+          to pop through at the start of every screen change.
+          A CSS fade, not framer: a keyed framer opacity fade blinks to 0 for
           one frame as it ends whenever nothing else is animating (see
           "screen transitions cannot blink" in lib/chrome-stability.test.ts). */}
       <div key={current} className="screen-in">

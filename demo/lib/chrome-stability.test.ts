@@ -195,6 +195,23 @@ describe("screen transitions cannot blink", () => {
     expect(cover.match(/className="fade-in\b/g)?.length).toBe(2);
   });
 
+  // Owner, 2026-10-05 (after the blink fix shipped): "in prod I still see
+  // flickers — like a green background that pops when I go next next … on
+  // the top left side of the screen." Each screen's Shell paints its opaque
+  // bg-brand-bg INSIDE the fading wrapper, so every Next began with the Shell
+  // background at opacity 0 and the body showed through — including its teal
+  // radial glow anchored at the top left — until the fade covered it again.
+  // The container around the fade must paint the same flat colour, so a fade
+  // can only ever reveal that colour.
+  it("the screen fades over a flat backdrop, not the body's teal glow", () => {
+    const app = sourceOf("components/patient-app-2.tsx");
+    const around = app.match(/<(\w+)\s+className="([^"]*)"\s*>\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)?<div\s+key=\{current\}\s+className="[^"]*\bscreen-in\b/);
+    expect(around, "the screen-in wrapper must sit directly in a container with a className").toBeTruthy();
+    expect(around![2].split(/\s+/)).toContain("bg-brand-bg");
+    expect(sourceOf("components/screens/shared.tsx"), "the backdrop must match the Shell's own background")
+      .toMatch(/export function Shell[^]*?className="[^"]*\bbg-brand-bg\b/);
+  });
+
   it("the patient screen wrapper replays a CSS fade on every screen", () => {
     const app = sourceOf("components/patient-app-2.tsx");
     expect(app).toMatch(/<div\s+key=\{current\}\s+className="[^"]*\bscreen-in\b/);

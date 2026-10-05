@@ -1,6 +1,5 @@
 "use client";
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { ScreenId, order } from "./screens/registry";
 import { BottomNav } from "./screens/shared";
 import { beatForScreen, beatIndexById, type AnyScreenId } from "@/lib/story";
@@ -117,10 +116,16 @@ export function PatientApp2() {
   } as Record<ScreenId, React.ReactNode>), [current, beat, screen]);
 
   return (
-    <main>
-      <motion.div key={current} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .2 }}>
+    <main className="bg-brand-bg">
+      {/* The backdrop is the Shell's own flat colour, so the fade below only
+          ever reveals that — never the body's teal top-left glow, which used
+          to pop through at the start of every screen change.
+          A CSS fade, not framer: a keyed framer opacity fade blinks to 0 for
+          one frame as it ends whenever nothing else is animating (see
+          "screen transitions cannot blink" in lib/chrome-stability.test.ts). */}
+      <div key={current} className="screen-in">
         {screens[current]}
-      </motion.div>
+      </div>
       <BottomNav current={current} go={go}/>
     </main>
   );

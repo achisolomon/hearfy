@@ -146,3 +146,77 @@ describe("persistent chrome reserves space instead of resizing", () => {
       .toBeTruthy();
   });
 });
+
+// Owner, 2026-10-05: "we get flickers in the demo, like the screen is
+// flickering — this did not happen until now."
+//
+// Every screen change faded the new screen in with a framer-motion element
+// keyed by the screen id (initial opacity 0 → 1 over 200ms). framer hands
+// opacity to a browser (WAAPI) animation; when that animation finishes it is
+// cancelled and the final value is committed on framer's NEXT frame-loop
+// tick. With nothing else animating, the loop is idle, so for one frame the
+// element falls back to its initial inline opacity: 0 — a full-screen blink
+// right after each fade-in. Measured headed: 1.00 at 210ms, 0.00 at 227ms,
+// 1.00 at 244ms.
+//
+// It had always happened on the first eleven beats. The route map's endless
+// courier animation kept framer's loop ticking from "on the way" onward,
+// which hid the blink there; removing the map (CMA-tracking change) exposed
+// it across the rest of the walk, which is why it looked new.
+//
+// A CSS keyframe animation with `fill-mode: both` holds its end state with no
+// hand-off, so the remounting screen wrapper must use that, not framer.
+describe("screen transitions cannot blink", () => {
+  // Every framer element in the demo that animates opacity must be
+  // JS-driven (`{...jsDriven}`), or be a CSS animation instead. The handoff
+  // overlay blinked twice per handoff (to 0 after fading in, back to 1 just
+  // before unmounting) and the cover blinked once on load, by the same
+  // mechanism. The one-pager is a separate page with its own reveals.
+  it("no demo framer element animates opacity through WAAPI", () => {
+    const offenders: string[] = [];
+    for (const f of componentFiles().filter(f => !f.startsWith("components/one-pager/"))) {
+      for (const m of sourceOf(f).matchAll(/<motion\.[a-z]+\b[^>]*>/g)) {
+        const fadesOpacity = /(initial|animate|exit)=\{\{[^}]*\bopacity\b/.test(m[0]);
+        // An endless loop never ends, so it never reaches the hand-off.
+        const endless = /repeat:\s*Infinity/.test(m[0]);
+        if (fadesOpacity && !endless && !/\{\.\.\.jsDriven\}/.test(m[0])) offenders.push(`${f}: ${m[0].replace(/\s+/g, " ").slice(0, 90)}`);
+      }
+    }
+    expect(offenders, "a WAAPI opacity fade blinks for one frame when it ends").toEqual([]);
+  });
+
+  it("jsDriven really opts out of WAAPI (framer skips it when onUpdate is set)", () => {
+    expect(sourceOf("components/motion-safe.ts")).toMatch(/jsDriven\s*=\s*\{\s*onUpdate:/);
+  });
+
+  it("the cover fades in with CSS", () => {
+    const cover = sourceOf("components/shell/cover.tsx");
+    expect(cover).not.toMatch(/<motion\./);
+    expect(cover.match(/className="fade-in\b/g)?.length).toBe(2);
+  });
+
+  // Owner, 2026-10-05 (after the blink fix shipped): "in prod I still see
+  // flickers — like a green background that pops when I go next next … on
+  // the top left side of the screen." Each screen's Shell paints its opaque
+  // bg-brand-bg INSIDE the fading wrapper, so every Next began with the Shell
+  // background at opacity 0 and the body showed through — including its teal
+  // radial glow anchored at the top left — until the fade covered it again.
+  // The container around the fade must paint the same flat colour, so a fade
+  // can only ever reveal that colour.
+  it("the screen fades over a flat backdrop, not the body's teal glow", () => {
+    const app = sourceOf("components/patient-app-2.tsx");
+    const around = app.match(/<(\w+)\s+className="([^"]*)"\s*>\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)?<div\s+key=\{current\}\s+className="[^"]*\bscreen-in\b/);
+    expect(around, "the screen-in wrapper must sit directly in a container with a className").toBeTruthy();
+    expect(around![2].split(/\s+/)).toContain("bg-brand-bg");
+    expect(sourceOf("components/screens/shared.tsx"), "the backdrop must match the Shell's own background")
+      .toMatch(/export function Shell[^]*?className="[^"]*\bbg-brand-bg\b/);
+  });
+
+  it("the patient screen wrapper replays a CSS fade on every screen", () => {
+    const app = sourceOf("components/patient-app-2.tsx");
+    expect(app).toMatch(/<div\s+key=\{current\}\s+className="[^"]*\bscreen-in\b/);
+    const css = sourceOf("app/globals.css");
+    expect(css).toMatch(/\.screen-in\s*\{[^}]*animation:\s*screen-in\b[^}]*\bboth\b/);
+    expect(css).toMatch(/@keyframes\s+screen-in/);
+  });
+});

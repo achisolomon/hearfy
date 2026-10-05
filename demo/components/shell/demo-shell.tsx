@@ -8,6 +8,7 @@ import { PersonaAvatar } from "../persona-avatar";
 import { useIsLargestTextSize } from "../a11y/text-size";
 import { Cover, EndCap } from "./cover";
 import { Interstitial } from "./interstitial";
+import { jsDriven } from "../motion-safe";
 import { RoleTabs, SHORT } from "./role-tabs";
 import { RoleView } from "./role-view";
 import { Timeline } from "./timeline";
@@ -262,6 +263,7 @@ export function DemoShell() {
       <AnimatePresence>
         {sheet && (
           <motion.div
+            {...jsDriven}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setSheet(false)}
             className="fixed inset-0 z-50 bg-brand-navy/40 md:hidden"

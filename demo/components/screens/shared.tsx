@@ -1,6 +1,6 @@
 "use client";
-import { motion } from "framer-motion";
-import { Check,Home,MapPin,MessageCircle,Navigation,UserRound } from "lucide-react";
+import { Bell,CalendarCheck,Check,Home,MessageCircle,UserRound } from "lucide-react";
+import { BRAND_NAME, arrival } from "@/lib/mock-data";
 import { TextSize } from "../a11y/text-size";
 import { PageHeader,PrimaryButton,Progress } from "../ui";
 import { cn } from "@/lib/cn";
@@ -76,32 +76,11 @@ export function Option({title,sub,active,onClick,icon:Icon,multi=false}:{title:s
 // as before. Only the multi-select needs step starts genuinely empty, and an
 // empty answer to "what are you noticing?" must not walk the viewer forward.
 export function StepPage({title,subtitle,step,children,onBack,onNext,next="Continue",nextDisabled=false}:{title:string;subtitle:string;step:number;children:React.ReactNode;onBack:()=>void;onNext:()=>void;next?:string;nextDisabled?:boolean}){return <Shell><PageHeader title={title} subtitle={subtitle} onBack={onBack} eyebrow="Smart matching"/><Progress step={step} total={5}/><div className="space-y-3">{children}</div><div className="mt-7"><PrimaryButton onClick={onNext} disabled={nextDisabled}>{next}</PrimaryButton></div></Shell>}
-// Everything is in PERCENTAGES of the container: the original fixed 360×280
-// viewBox centered itself inside the CMA's tablet column while the markers
-// kept phone-pixel offsets, so the route floated detached from its own
-// endpoints (found 2026-08-31). `preserveAspectRatio="none"` stretches the
-// path with the box, `vector-effect` keeps the stroke width honest, and
-// `pathLength={100}` keeps the dashes uniform at any width. Markers sit on
-// path coordinates and self-center with translate.
-export function RouteMap({moving=false}:{moving?:boolean}){
-  const marker="absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white";
-  return <div className="map-grid relative h-72 overflow-hidden rounded-[26px]">
-    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <path d="M8 84 C22 72,30 65,43 55 S70 30,92 14" fill="none" stroke="#12aaa5" strokeWidth="7"
-        vectorEffect="non-scaling-stroke" strokeLinecap="round" pathLength={100} strokeDasharray={moving?"2.6 2.2":"0"}/>
-    </svg>
-    <div className={`${marker} left-[8%] top-[84%] bg-brand-navy text-white`}><Home size={20}/></div>
-    {/* The courier only ever travels toward the patient. repeatType "reverse"
-        played the leg backwards on every other cycle, which read as the CMA
-        driving away from the visit; "loop" restarts at the origin instead, and
-        the opacity keyframes hide the instant snap-back at the wrap. */}
-    <motion.div animate={moving?{left:["33%","72%"],top:["63%","32%"],opacity:[0,1,1,0]}:{}}
-      transition={{duration:3,repeat:Infinity,repeatType:"loop",ease:"linear",
-        opacity:{duration:3,repeat:Infinity,repeatType:"loop",ease:"linear",times:[0,0.12,0.88,1]}}}
-      className={`${marker} left-[33%] top-[63%] bg-brand-teal text-white`}><Navigation size={20}/></motion.div>
-    <div className={`${marker} left-[92%] top-[14%] bg-white text-brand-navy`}><MapPin size={20}/></div>
-  </div>;
-}
+// The "Maya is on her way" message, drawn as a phone notification. The patient
+// receives it; Maya's own en-route screen shows the same card as what was
+// sent. It carries the arrival time only — never her location or distance
+// (Issac, 2026-10-05: caregivers don't like being tracked).
+export function OnTheWayNotice({className=""}:{className?:string}){return <div className={cn("flex items-start gap-3 rounded-[20px] border border-[#e4eef0] bg-white p-4 shadow-card",className)}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-ink text-white"><Bell size={18}/></span><div className="min-w-0 flex-1 text-brand-navy"><div className="flex items-baseline justify-between gap-2"><b className="text-sm">{BRAND_NAME}</b><span className="text-xs text-slate-500">now</span></div><p className="mt-0.5 text-sm leading-5">Maya is on her way. She’ll arrive around {arrival.eta}.</p></div></div>}
 /**
  * A plain "who is acting now" line, for the moments a persona-lock removes a
  * patient's action button but no live call panel is on screen yet to say it
@@ -121,7 +100,7 @@ export function DeviceVisual(){return <div className="flex h-52 items-center jus
 // pattern) — there BottomNav keeps its original bottom-0 position. This is a
 // positioning change only: BottomNav's own items, height, and behavior are
 // unchanged either way.
-export function BottomNav({current,go}:{current:ScreenId;go:(s:ScreenId)=>void}){if(["welcome","signin"].includes(current))return null;const story=useStoryOptional();const items:[[string,any,ScreenId],[string,any,ScreenId],[string,any,ScreenId],[string,any,ScreenId]]=[["Home",Home,"home"],["Journey",Navigation,"assigned"],["Messages",MessageCircle,"support"],["Profile",UserRound,"intake-for"]];return <div className={cn("fixed inset-x-0 z-30 border-t border-[#dce7e9] bg-white/95 backdrop-blur",story?"bottom-14 md:bottom-0":"bottom-0")}>{/* The tab label is the only thing naming each destination, so it is held
+export function BottomNav({current,go}:{current:ScreenId;go:(s:ScreenId)=>void}){if(["welcome","signin"].includes(current))return null;const story=useStoryOptional();const items:[[string,any,ScreenId],[string,any,ScreenId],[string,any,ScreenId],[string,any,ScreenId]]=[["Home",Home,"home"],["Journey",CalendarCheck,"assigned"],["Messages",MessageCircle,"support"],["Profile",UserRound,"intake-for"]];return <div className={cn("fixed inset-x-0 z-30 border-t border-[#dce7e9] bg-white/95 backdrop-blur",story?"bottom-14 md:bottom-0":"bottom-0")}>{/* The tab label is the only thing naming each destination, so it is held
     to the same 4.5:1 floor as body text, not treated as decorative chrome:
     the active tab was Vital Teal (2.86:1 at 10px) and the rest slate-400
     (2.40:1). Active now uses Teal Ink and carries its own weight step, so

@@ -42,3 +42,14 @@ To generate the token: Cloudflare dashboard → profile icon → **My Profile** 
 
 `git push --no-verify` skips the hook. Expect the Cloudflare build (and the
 Actions backstop) to fail instead.
+
+## Manual sweep, not part of the gate
+
+`npm run flicker-sweep` (with `npm run dev` running) walks the whole guided
+story and fails on any element that blinks for a frame. It takes a few
+minutes, so it is **not** run on push, by owner decision. Run it when a change
+touches animation (framer-motion or an upgrade of it, fades, transitions,
+AnimatePresence, the handoff overlay, the role sheet) or when a flicker is
+reported. Add `SWEEP_WIDTH=390` for the phone run, which also covers the role
+sheet. Every push still runs the fast source guard in
+`lib/chrome-stability.test.ts`.

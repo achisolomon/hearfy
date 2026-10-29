@@ -621,7 +621,7 @@ export default function OnePagerPage() {
           <SectionTitle>The Team</SectionTitle>
         </Reveal>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {TEAM.map((m, i) => (
             <Reveal key={m.name} delay={i * 0.08}>
               <Card className="flex h-full flex-col p-4 text-left sm:p-6 sm:text-center">

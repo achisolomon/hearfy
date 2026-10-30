@@ -16,6 +16,7 @@ If the logo changes, regenerate these — they will not update themselves.
 | Social avatar, favicon source | `hearfy-mark-512h.png` |
 | A tool that rejects transparency | `hearfy-logo-512h-white.jpg` |
 | Showing the logo animating | `hearfy-logo-animated.gif` |
+| App icon (iPhone, Android, app stores) | `hearfy-app-icon-512.png` |
 | Animation, but smooth edges | `hearfy-logo-animated.webp` or `.mp4` |
 
 ## What is in here
@@ -47,6 +48,15 @@ then the dot, left to right, 110ms apart, then the wordmark. About 1.9s, loops.
   but GIF alpha is 1-bit, so edges fringe slightly against non-white backgrounds
 - `hearfy-logo-animated.webp` — transparent with smooth edges; use where WebP works
 - `hearfy-logo-animated.mp4` — smallest and smoothest, but **no transparency**
+
+**App icon** (2026-10-30) — the mark in Vital Teal on a full-bleed Harbor Navy
+square, 192px and 512px. Do not round the corners: iOS and Android apply their
+own mask. The mark sits inside Android's 80% safe circle, so the same file is
+the "maskable" icon. The site's favicon, `apple-icon.png` and the link banners
+(`opengraph-image.png`) live in `app/` and come from the same script:
+`scripts/brand-icons.mjs` (usage in its header). Re-run it if the mark changes.
+
+- `hearfy-app-icon-192.png`, `hearfy-app-icon-512.png`
 
 ## Colours
 

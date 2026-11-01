@@ -1126,3 +1126,22 @@ describe("the pointer layer is reader-driven and gated", () => {
     expect(stripComments(photo), "Photo must parallax").toMatch(/data-parallax/);
   });
 });
+
+describe("the film section keeps its public link target (2026-11-01)", () => {
+  // The investor deck PDF links its film to https://hearfy.org/#how-it-works.
+  // Renaming or dropping this id breaks every PDF already sent out.
+  it("the section holding the film carries id=how-it-works", () => {
+    const section = PAGE_SRC.match(/<section id="how-it-works"[\s\S]*?<\/section>/)?.[0] ?? "";
+    expect(section, "no section with id how-it-works").not.toBe("");
+    expect(section).toMatch(/<FilmPlayer\b/);
+  });
+});
+
+describe("browser extensions do not raise a hydration error (2026-11-01)", () => {
+  // Grammarly adds data-gr-* attributes to <body> before React loads, and the
+  // dev overlay showed "1 Issue" on every load of the page.
+  it("the root <body> ignores attribute mismatches", () => {
+    const layout = readFileSync(join(HERE, "app/layout.tsx"), "utf8");
+    expect(layout).toMatch(/<body\s[^>]*suppressHydrationWarning/);
+  });
+});

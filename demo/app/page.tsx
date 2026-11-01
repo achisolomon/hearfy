@@ -589,9 +589,10 @@ export default function OnePagerPage() {
       </section>
 
       {/* ---------------------------------------------------------- *
-       * How a visit works — the spine of the page
+       * How a visit works — the spine of the page. The id is a public
+       * link target: the investor deck PDF links its film here.
        * ---------------------------------------------------------- */}
-      <section className="mt-16">
+      <section id="how-it-works" className="mt-16 scroll-mt-8">
         <Reveal>
           <SectionLabel>How it works</SectionLabel>
           <SectionTitle>{HOW.title}</SectionTitle>

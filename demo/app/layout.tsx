@@ -27,7 +27,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      {/* Browser extensions (Grammarly) add attributes to <body> before React
+          loads; this ignores them on this one element only, not its children. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

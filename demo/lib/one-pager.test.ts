@@ -434,7 +434,7 @@ describe("the page is complete enough to stand alone", () => {
     expect(HOW.line.length).toBeGreaterThan(0);
     expect(TRUST.length).toBeGreaterThanOrEqual(4);
     expect(CTA.contact.email.length).toBeGreaterThan(0);
-    expect(TEAM.length).toBe(3);
+    expect(TEAM.length).toBe(4);
   });
 
   /**
@@ -923,12 +923,12 @@ describe("the page identifies no individual", () => {
 /**
  * The Team section — added 2026-09-13, the owner's explicit reversal of the
  * founders-are-investor-only stance. Unlike the fictional personas above,
- * these three are real and named on purpose: see the TEAM allowance in
+ * these four are real and named on purpose: see the TEAM allowance in
  * lib/one-pager.ts's header.
  */
 describe("the team section names the real founders", () => {
-  it("carries all three founders with a title, a bio and a LinkedIn link", () => {
-    expect(TEAM.length).toBe(3);
+  it("carries all four founders with a title, a bio and a LinkedIn link", () => {
+    expect(TEAM.length).toBe(4);
     for (const m of TEAM) {
       expect(m.name.length).toBeGreaterThan(0);
       expect(m.title.length).toBeGreaterThan(0);
@@ -937,9 +937,9 @@ describe("the team section names the real founders", () => {
     }
   });
 
-  it("names the three founders", () => {
+  it("names the four founders", () => {
     const names = TEAM.map((m) => m.name);
-    expect(names).toEqual(["Dr. Michael Mastai", "Eyal Harel", "Achi Solomon"]);
+    expect(names).toEqual(["Dr. Michael Mastai", "Eyal Harel", "Achi Solomon", "Isaac Greszes"]);
   });
 
   it("ships every founder photo and logo strip it references", async () => {

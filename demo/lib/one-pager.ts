@@ -317,6 +317,20 @@ export const TEAM = [
     logos: "/one-pager/logos-achi.png",
     linkedin: "https://www.linkedin.com/in/achisolomon/",
   },
+  // Joined 2026-10-14; on the deck he sits in OPEN_ROLES, not TEAM. Bio is the
+  // deck's, except "revenue" for the deck's investor acronym, which this page bars.
+  {
+    name: "Isaac Greszes",
+    title: "CCO",
+    lines: [
+      "B.A. Clinical Psychology, NYU.",
+      "30+ years leading healthcare sales and GTM teams.",
+      "Scaled revenue 80%+ at Medflyt; healthcare AI expansion at Eleos Health and Mobile Health.",
+    ],
+    photo: "/one-pager/team-isaac.jpg",
+    logos: "/one-pager/logos-isaac.png",
+    linkedin: "https://www.linkedin.com/in/isaacgreszes/",
+  },
 ];
 
 /** Closing reassurance — the trust checklist, then the call to action. */

@@ -79,7 +79,7 @@ export function StepPage({title,subtitle,step,children,onBack,onNext,next="Conti
 // The "Maya is on her way" message, drawn as a phone notification. The patient
 // receives it; Maya's own en-route screen shows the same card as what was
 // sent. It carries the arrival time only — never her location or distance
-// (Issac, 2026-10-05: caregivers don't like being tracked).
+// (Isaac, 2026-10-05: caregivers don't like being tracked).
 export function OnTheWayNotice({className=""}:{className?:string}){return <div className={cn("flex items-start gap-3 rounded-[20px] border border-[#e4eef0] bg-white p-4 shadow-card",className)}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-ink text-white"><Bell size={18}/></span><div className="min-w-0 flex-1 text-brand-navy"><div className="flex items-baseline justify-between gap-2"><b className="text-sm">{BRAND_NAME}</b><span className="text-xs text-slate-500">now</span></div><p className="mt-0.5 text-sm leading-5">Maya is on her way. She’ll arrive around {arrival.eta}.</p></div></div>}
 /**
  * A plain "who is acting now" line, for the moments a persona-lock removes a

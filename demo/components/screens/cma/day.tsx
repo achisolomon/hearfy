@@ -45,7 +45,7 @@ export function CmaDay({ next }: { next: () => void }) {
   );
 }
 
-// No map of Maya's own position (Issac, 2026-10-05: caregivers don't like
+// No map of Maya's own position (Isaac, 2026-10-05: caregivers don't like
 // being tracked). She sees what the patient was told — the same notification
 // and arrival time — and that her location is not shared.
 export function CmaEnroute({ next }: { next: () => void }) {

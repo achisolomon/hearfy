@@ -2617,7 +2617,7 @@ describe("medical safety red flags", () => {
   });
 });
 
-// Issac, 2026-10-05: "care givers does not like to be tracked — this page is
+// Isaac, 2026-10-05: "care givers does not like to be tracked — this page is
 // about a notification to the patient [that] the CMA is on the way and the
 // ETA, no tracking."
 //
@@ -4037,5 +4037,14 @@ describe("the brand mark's entry animation", () => {
     );
     expect(wearers, "a new surface may wear the living mark, but say so in ALLOWED above")
       .toEqual([]);
+  });
+});
+
+// Isaac Greszes (CCO). Achi typed his name wrong at first, and five comments here
+// copied it (fixed 2026-11-16). The pattern is written so this file cannot match it.
+describe("Isaac's name is spelled right", () => {
+  it("has no misspelled Isaac in the source, comments included", () => {
+    const offenders = brandScopeFiles().filter((f) => /\bIs{2}ac\b/i.test(sourceOf(f)));
+    expect(offenders).toEqual([]);
   });
 });

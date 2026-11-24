@@ -1,0 +1,342 @@
+/* /sales deck. "Navy evening": dark slides, with light slides where numbers
+   must read. One unit (--u) sizes everything.
+   Desktop: 1u is 1% of the largest 16:9 box that fits the window, so a slide
+   looks the same from 1280x720 to 1920x1080 and never needs inner scrolling.
+   Phone: 1u is a rem fraction (the root is already clamped to 18-22px in
+   globals.css), so large-text settings cannot blow the layout up. */
+
+.sales {
+  --navy: #0b2340;
+  --deep: #071830;
+  --aqua: #7fd9d5;
+  --teal-ink: #087d7a;
+  --u: 0.62rem;
+  --fs-eyebrow: calc(var(--u) * 1.15);
+  --fs-title: calc(var(--u) * 3);
+  --fs-title-big: calc(var(--u) * 3.4);
+  --fs-lede: calc(var(--u) * 1.5);
+  --fs-body: calc(var(--u) * 1.4);
+  --fs-card-title: calc(var(--u) * 1.9);
+  --fs-stat: calc(var(--u) * 5);
+  --fs-small: calc(var(--u) * 1.1);
+  --pad-x: 1.25rem;
+  --pad-y: 2.5rem;
+  --gap: calc(var(--u) * 1.8);
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+@media (min-width: 1024px) {
+  .sales {
+    --u: min(1vw, 1.778vh);
+    --fs-eyebrow: calc(var(--u) * 1.15);
+    --fs-title: calc(var(--u) * 4.1);
+    --fs-title-big: calc(var(--u) * 6.4);
+    --fs-lede: calc(var(--u) * 1.6);
+    --fs-body: calc(var(--u) * 1.3);
+    --fs-card-title: calc(var(--u) * 2.2);
+    --fs-stat: calc(var(--u) * 6.6);
+    --fs-small: calc(var(--u) * 1.05);
+    --pad-x: calc(var(--u) * 7);
+    --pad-y: calc(var(--u) * 5.5);
+    --gap: calc(var(--u) * 2.2);
+  }
+  html:has(.sales) {
+    scroll-snap-type: y proximity;
+  }
+  .s-slide {
+    min-height: 100vh;
+    min-height: 100svh;
+    scroll-snap-align: start;
+  }
+}
+
+.s-slide {
+  --fg: #fff;
+  --muted: #c9d6e3;
+  --accent: var(--aqua);
+  --eyebrow: var(--aqua);
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-bd: rgba(127, 217, 213, 0.22);
+  --hero-bg: rgba(18, 170, 165, 0.16);
+  --hero-bd: rgba(127, 217, 213, 0.55);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding: var(--pad-y) var(--pad-x);
+  background: var(--deep);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.s-slide--cover,
+.s-slide--close {
+  --eyebrow: #9fb3c8;
+  background: radial-gradient(60vw 40vw at 85% 110%, rgba(18, 170, 165, 0.22), transparent 70%), var(--navy);
+}
+
+.s-slide--light {
+  --fg: var(--navy);
+  --muted: #33475f;
+  --accent: var(--teal-ink);
+  --eyebrow: var(--teal-ink);
+  --card-bg: #fff;
+  --card-bd: #e4eef0;
+  --hero-bg: var(--navy);
+  --hero-bd: var(--navy);
+  background: #f4f8f8;
+}
+
+.s-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  margin-block: auto;
+}
+
+.s-mark {
+  height: calc(var(--u) * 4);
+  width: auto;
+  align-self: flex-start;
+}
+
+.s-eyebrow {
+  margin: 0;
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--eyebrow);
+}
+
+/* The company name is written in mixed case, never capitals. */
+.s-eyebrow--mixed {
+  text-transform: none;
+  letter-spacing: 0.12em;
+}
+
+.s-title {
+  margin: calc(var(--u) * 1.2) 0 0;
+  max-width: 28ch;
+  font-family: var(--font-cormorant), "Iowan Old Style", Georgia, serif;
+  font-weight: 500;
+  font-size: var(--fs-title);
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.s-title--big {
+  font-size: var(--fs-title-big);
+  max-width: 16ch;
+}
+
+.s-title em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.s-lede,
+.s-body,
+.s-label,
+.s-source,
+.s-tag {
+  margin: 0;
+  color: var(--muted);
+}
+
+.s-lede {
+  margin-top: calc(var(--u) * 1.4);
+  max-width: 62ch;
+  font-size: var(--fs-lede);
+}
+
+.s-body {
+  margin-top: calc(var(--u) * 0.7);
+  font-size: var(--fs-body);
+}
+
+.s-label {
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.s-source {
+  font-size: var(--fs-small);
+}
+
+.s-grid,
+.s-people,
+.s-chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.s-grid {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: 1fr;
+}
+
+/* Grid items stretch by default, so cards in a row share the tallest height. */
+.s-card {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--u) * 2);
+  border: 1px solid var(--card-bd);
+  border-radius: calc(var(--u) * 0.7);
+  background: var(--card-bg);
+}
+
+.s-card--hero {
+  background: var(--hero-bg);
+  border-color: var(--hero-bd);
+  color: #fff;
+}
+
+.s-card--hero .s-body,
+.s-card--hero .s-stat-label {
+  color: #c9d6e3;
+}
+
+.s-card--hero .s-stat-value,
+.s-card--hero .s-num {
+  color: var(--aqua);
+}
+
+.s-num {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.s-card-title {
+  margin: calc(var(--u) * 0.6) 0 0;
+  font-family: var(--font-cormorant), "Iowan Old Style", Georgia, serif;
+  font-weight: 500;
+  font-style: italic;
+  font-size: var(--fs-card-title);
+  line-height: 1.12;
+}
+
+.s-tag {
+  margin-top: auto;
+  padding-top: calc(var(--u) * 1);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.s-stat-value {
+  margin: 0;
+  font-family: var(--font-cormorant), "Iowan Old Style", Georgia, serif;
+  font-weight: 500;
+  font-size: var(--fs-stat);
+  line-height: 1;
+  color: var(--accent);
+}
+
+.s-stat-label {
+  margin: calc(var(--u) * 0.6) 0 0;
+  font-size: var(--fs-lede);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.s-card--hero .s-stat-label {
+  color: #fff;
+}
+
+.s-pillar-name {
+  margin: calc(var(--u) * 0.8) 0 0;
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9fb3c8;
+}
+
+.s-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 0.6);
+  margin-top: auto;
+  padding-top: calc(var(--u) * 1.2);
+}
+
+.s-chips li {
+  padding: calc(var(--u) * 0.35) calc(var(--u) * 0.9);
+  border: 1px solid var(--card-bd);
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.s-band {
+  margin: 0;
+  padding-top: calc(var(--u) * 1.6);
+  border-top: 1px solid var(--card-bd);
+  font-family: var(--font-cormorant), "Iowan Old Style", Georgia, serif;
+  font-weight: 500;
+  font-size: var(--fs-card-title);
+  line-height: 1.15;
+}
+
+.s-band em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.s-signature {
+  margin: 0;
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.s-leaders {
+  padding-top: calc(var(--u) * 1.6);
+  border-top: 1px solid var(--card-bd);
+}
+
+.s-people {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: 1fr;
+  margin-top: calc(var(--u) * 1.2);
+}
+
+.s-person {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.s-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: calc(var(--u) * 1) var(--gap);
+  font-size: var(--fs-eyebrow);
+  letter-spacing: 0.08em;
+  color: #9fb3c8;
+}
+
+.s-footer a {
+  color: var(--aqua);
+}
+
+@media (min-width: 1024px) {
+  .s-grid {
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  }
+  .s-people {
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  }
+}
